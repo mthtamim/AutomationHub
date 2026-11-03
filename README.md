@@ -1,9 +1,8 @@
 # Flows — standalone automation app (SKELETON)
 
-**Status: local skeleton only. NOT built by CI, NOT phone-proven.**
+**Status: skeleton pushed to PhoneLink-Flows, NOT built by CI, NOT phone-proven.**
 CI is the final judge for compile errors — local validation cannot catch
-Kotlin type/API errors. Nothing here has been pushed to GitHub, no
-repository has been created for it, and the PhoneLink source tree was
+Kotlin type/API errors. The PhoneLink source tree was
 only read, never modified.
 
 ## Origin
@@ -101,7 +100,7 @@ and a ⋮ menu: Import, .flo import, Export, Backup, Restore, Log.
    removed screens later; only `activity_flow_editor`,
    `activity_flow_scan`, `bottomsheet_palette` and `dialog_picker`
    are inflated by the kept code.
-6. **No CI workflow yet.** When the repository is created, the workflow
+6. **No CI workflow yet.** The repository now exists; the workflow
    file must be added via the GitHub web UI (the GitHub App cannot push
    `.github/workflows/*`), as with the other apps.
 
