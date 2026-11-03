@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Flows" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/md_primary</item>
+        <item name="colorOnPrimary">@color/md_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_onPrimaryContainer</item>
+        <item name="colorSecondary">@color/md_secondary</item>
+        <item name="colorOnSecondary">@color/md_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/md_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/md_onSecondaryContainer</item>
+        <item name="android:colorBackground">@color/md_background</item>
+        <item name="colorOnBackground">@color/md_onBackground</item>
+        <item name="colorSurface">@color/md_surface</item>
+        <item name="colorOnSurface">@color/md_onSurface</item>
+        <item name="colorSurfaceVariant">@color/md_surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/md_onSurfaceVariant</item>
+        <item name="colorSurfaceContainer">@color/md_surfaceContainer</item>
+        <item name="colorSurfaceContainerHigh">@color/md_surfaceContainerHigh</item>
+        <item name="colorOutline">@color/md_outline</item>
+        <item name="materialCardViewStyle">@style/PL.CardView</item>
+        <item name="materialButtonStyle">@style/PL.BtnFilled</item>
+        <item name="materialButtonOutlinedStyle">@style/PL.BtnOutlined</item>
+        <item name="colorError">@color/md_error</item>
+        <item name="colorOnError">@color/md_onError</item>
+        <item name="colorErrorContainer">@color/md_errorContainer</item>
+        <item name="android:statusBarColor">@color/md_background</item>
+        <item name="android:navigationBarColor">@color/md_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="plTileFill">@color/md_surface</item>
+        <item name="plBtnFill">@color/md_btnFill</item>
+        <item name="plBtnStroke">@color/md_outline</item>
+        <item name="plNavActive">@color/nav_active</item>
+        <item name="plNavInactive">@color/nav_inactive</item>
+        <item name="plNavIndicator">@color/nav_indicator</item>
+    </style>
+
+    <!-- v2.11 accent variants (primary family only) -->
+    <style name="Theme.FlowsBlue" parent="Theme.Flows">
+        <item name="colorPrimary">#2563EB</item>
+        <item name="colorPrimaryContainer">#D7E3FC</item>
+        <item name="colorOnPrimaryContainer">#0B2A6B</item>
+        <item name="colorSecondary">#2563EB</item>
+    </style>
+    <style name="Theme.FlowsPurple" parent="Theme.Flows">
+        <item name="colorPrimary">#7C3AED</item>
+        <item name="colorPrimaryContainer">#E9E0FD</item>
+        <item name="colorOnPrimaryContainer">#2E1065</item>
+        <item name="colorSecondary">#7C3AED</item>
+    </style>
+    <style name="Theme.FlowsAmber" parent="Theme.Flows">
+        <item name="colorPrimary">#D97706</item>
+        <item name="colorPrimaryContainer">#FDEBC8</item>
+        <item name="colorOnPrimaryContainer">#5B3400</item>
+        <item name="colorSecondary">#D97706</item>
+    </style>
+    <style name="Theme.FlowsRose" parent="Theme.Flows">
+        <item name="colorPrimary">#E11D48</item>
+        <item name="colorPrimaryContainer">#FBDCE4</item>
+        <item name="colorOnPrimaryContainer">#5F0A1E</item>
+        <item name="colorSecondary">#E11D48</item>
+    </style>
+
+    <!-- v2.25.0 optional app themes. Every style here is repeated in
+         values-night/themes.xml with the same overrides, so a theme
+         looks the same in light, dark and system mode; only Emerald
+         Dark follows the light/dark palettes. Glass themes use a
+         static gradient window background plus translucent surfaces
+         (no live blur). -->
+    <style name="Theme.FlowsEmeraldDark" parent="Theme.Flows">
+        <!-- No overrides: exactly the pre-2.25 look. -->
+    </style>
+    <style name="Theme.FlowsAurora" parent="Theme.Flows">
+        <item name="colorPrimary">#E879C6</item>
+        <item name="colorOnPrimary">#2A0A22</item>
+        <item name="colorPrimaryContainer">#3B1470</item>
+        <item name="colorOnPrimaryContainer">#F9D1EC</item>
+        <item name="colorSecondary">#E879C6</item>
+        <item name="colorOnSecondary">#2A0A22</item>
+        <item name="colorSecondaryContainer">#3B1470</item>
+        <item name="colorOnSecondaryContainer">#F9D1EC</item>
+        <item name="android:colorBackground">#160B36</item>
+        <item name="colorOnBackground">#FDF2FA</item>
+        <item name="colorSurface">#2EFFFFFF</item>
+        <item name="colorOnSurface">#FDF2FA</item>
+        <item name="colorSurfaceVariant">#24FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#D8B4D4</item>
+        <item name="colorSurfaceContainer">#26FFFFFF</item>
+        <item name="colorSurfaceContainerHigh">#33FFFFFF</item>
+        <item name="colorOutline">#33FFFFFF</item>
+        <item name="android:windowBackground">@drawable/bg_theme_aurora</item>
+        <item name="android:statusBarColor">#160B36</item>
+        <item name="android:navigationBarColor">#160B36</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorError">#F87171</item>
+        <item name="colorOnError">#450A0A</item>
+        <item name="colorErrorContainer">#33151A</item>
+        <item name="plTileFill">#33FFFFFF</item>
+        <item name="plBtnFill">#24FFFFFF</item>
+        <item name="plBtnStroke">#33FFFFFF</item>
+        <item name="plNavActive">#E879C6</item>
+        <item name="plNavInactive">#D8B4D4</item>
+        <item name="plNavIndicator">#3B1470</item>
+    </style>
+    <style name="Theme.FlowsOceanDeep" parent="Theme.Flows">
+        <item name="colorPrimary">#38BDF8</item>
+        <item name="colorOnPrimary">#03202E</item>
+        <item name="colorPrimaryContainer">#0E4A5E</item>
+        <item name="colorOnPrimaryContainer">#D0F0FF</item>
+        <item name="colorSecondary">#38BDF8</item>
+        <item name="colorOnSecondary">#03202E</item>
+        <item name="colorSecondaryContainer">#0E4A5E</item>
+        <item name="colorOnSecondaryContainer">#D0F0FF</item>
+        <item name="android:colorBackground">#04222F</item>
+        <item name="colorOnBackground">#EFF9FF</item>
+        <item name="colorSurface">#2EFFFFFF</item>
+        <item name="colorOnSurface">#EFF9FF</item>
+        <item name="colorSurfaceVariant">#24FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#9CC8D8</item>
+        <item name="colorSurfaceContainer">#26FFFFFF</item>
+        <item name="colorSurfaceContainerHigh">#33FFFFFF</item>
+        <item name="colorOutline">#33FFFFFF</item>
+        <item name="android:windowBackground">@drawable/bg_theme_ocean_deep</item>
+        <item name="android:statusBarColor">#04222F</item>
+        <item name="android:navigationBarColor">#04222F</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorError">#F87171</item>
+        <item name="colorOnError">#450A0A</item>
+        <item name="colorErrorContainer">#33151A</item>
+        <item name="plTileFill">#33FFFFFF</item>
+        <item name="plBtnFill">#24FFFFFF</item>
+        <item name="plBtnStroke">#33FFFFFF</item>
+        <item name="plNavActive">#38BDF8</item>
+        <item name="plNavInactive">#9CC8D8</item>
+        <item name="plNavIndicator">#0E4A5E</item>
+    </style>
+    <style name="Theme.FlowsMidnightSapphire" parent="Theme.Flows">
+        <item name="colorPrimary">#8EA2FF</item>
+        <item name="colorOnPrimary">#0A1230</item>
+        <item name="colorPrimaryContainer">#1E3A8A</item>
+        <item name="colorOnPrimaryContainer">#D6E0FF</item>
+        <item name="colorSecondary">#8EA2FF</item>
+        <item name="colorOnSecondary">#0A1230</item>
+        <item name="colorSecondaryContainer">#1E3A8A</item>
+        <item name="colorOnSecondaryContainer">#D6E0FF</item>
+        <item name="android:colorBackground">#0A1130</item>
+        <item name="colorOnBackground">#EEF2FF</item>
+        <item name="colorSurface">#2EFFFFFF</item>
+        <item name="colorOnSurface">#EEF2FF</item>
+        <item name="colorSurfaceVariant">#24FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#A8B4D8</item>
+        <item name="colorSurfaceContainer">#26FFFFFF</item>
+        <item name="colorSurfaceContainerHigh">#33FFFFFF</item>
+        <item name="colorOutline">#33FFFFFF</item>
+        <item name="android:windowBackground">@drawable/bg_theme_midnight_sapphire</item>
+        <item name="android:statusBarColor">#0A1130</item>
+        <item name="android:navigationBarColor">#0A1130</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorError">#F87171</item>
+        <item name="colorOnError">#450A0A</item>
+        <item name="colorErrorContainer">#33151A</item>
+        <item name="plTileFill">#33FFFFFF</item>
+        <item name="plBtnFill">#24FFFFFF</item>
+        <item name="plBtnStroke">#33FFFFFF</item>
+        <item name="plNavActive">#8EA2FF</item>
+        <item name="plNavInactive">#A8B4D8</item>
+        <item name="plNavIndicator">#1E3A8A</item>
+    </style>
+    <style name="Theme.FlowsSunsetEmber" parent="Theme.Flows">
+        <item name="colorPrimary">#FB923C</item>
+        <item name="colorOnPrimary">#2A1200</item>
+        <item name="colorPrimaryContainer">#7C2D12</item>
+        <item name="colorOnPrimaryContainer">#FFE7C7</item>
+        <item name="colorSecondary">#FB923C</item>
+        <item name="colorOnSecondary">#2A1200</item>
+        <item name="colorSecondaryContainer">#7C2D12</item>
+        <item name="colorOnSecondaryContainer">#FFE7C7</item>
+        <item name="android:colorBackground">#2A1008</item>
+        <item name="colorOnBackground">#FFF7ED</item>
+        <item name="colorSurface">#2EFFFFFF</item>
+        <item name="colorOnSurface">#FFF7ED</item>
+        <item name="colorSurfaceVariant">#24FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#E8C4A8</item>
+        <item name="colorSurfaceContainer">#26FFFFFF</item>
+        <item name="colorSurfaceContainerHigh">#33FFFFFF</item>
+        <item name="colorOutline">#33FFFFFF</item>
+        <item name="android:windowBackground">@drawable/bg_theme_sunset_ember</item>
+        <item name="android:statusBarColor">#2A1008</item>
+        <item name="android:navigationBarColor">#2A1008</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorError">#F87171</item>
+        <item name="colorOnError">#450A0A</item>
+        <item name="colorErrorContainer">#33151A</item>
+        <item name="plTileFill">#33FFFFFF</item>
+        <item name="plBtnFill">#24FFFFFF</item>
+        <item name="plBtnStroke">#33FFFFFF</item>
+        <item name="plNavActive">#FB923C</item>
+        <item name="plNavInactive">#E8C4A8</item>
+        <item name="plNavIndicator">#7C2D12</item>
+    </style>
+    <style name="Theme.FlowsRoseQuartz" parent="Theme.Flows">
+        <item name="colorPrimary">#F9A8D4</item>
+        <item name="colorOnPrimary">#2B0A1E</item>
+        <item name="colorPrimaryContainer">#500724</item>
+        <item name="colorOnPrimaryContainer">#FDD6E3</item>
+        <item name="colorSecondary">#F9A8D4</item>
+        <item name="colorOnSecondary">#2B0A1E</item>
+        <item name="colorSecondaryContainer">#500724</item>
+        <item name="colorOnSecondaryContainer">#FDD6E3</item>
+        <item name="android:colorBackground">#2B0A1E</item>
+        <item name="colorOnBackground">#FFF1F2</item>
+        <item name="colorSurface">#2EFFFFFF</item>
+        <item name="colorOnSurface">#FFF1F2</item>
+        <item name="colorSurfaceVariant">#24FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#E3B8C8</item>
+        <item name="colorSurfaceContainer">#26FFFFFF</item>
+        <item name="colorSurfaceContainerHigh">#33FFFFFF</item>
+        <item name="colorOutline">#33FFFFFF</item>
+        <item name="android:windowBackground">@drawable/bg_theme_rose_quartz</item>
+        <item name="android:statusBarColor">#2B0A1E</item>
+        <item name="android:navigationBarColor">#2B0A1E</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorError">#F87171</item>
+        <item name="colorOnError">#450A0A</item>
+        <item name="colorErrorContainer">#33151A</item>
+        <item name="plTileFill">#33FFFFFF</item>
+        <item name="plBtnFill">#24FFFFFF</item>
+        <item name="plBtnStroke">#33FFFFFF</item>
+        <item name="plNavActive">#F9A8D4</item>
+        <item name="plNavInactive">#E3B8C8</item>
+        <item name="plNavIndicator">#500724</item>
+    </style>
+    <style name="Theme.FlowsForestMist" parent="Theme.Flows">
+        <item name="colorPrimary">#6EE7B7</item>
+        <item name="colorOnPrimary">#06281A</item>
+        <item name="colorPrimaryContainer">#14532D</item>
+        <item name="colorOnPrimaryContainer">#D1FAE5</item>
+        <item name="colorSecondary">#6EE7B7</item>
+        <item name="colorOnSecondary">#06281A</item>
+        <item name="colorSecondaryContainer">#14532D</item>
+        <item name="colorOnSecondaryContainer">#D1FAE5</item>
+        <item name="android:colorBackground">#071A12</item>
+        <item name="colorOnBackground">#F0FDF4</item>
+        <item name="colorSurface">#2EFFFFFF</item>
+        <item name="colorOnSurface">#F0FDF4</item>
+        <item name="colorSurfaceVariant">#24FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#A8C8B4</item>
+        <item name="colorSurfaceContainer">#26FFFFFF</item>
+        <item name="colorSurfaceContainerHigh">#33FFFFFF</item>
+        <item name="colorOutline">#33FFFFFF</item>
+        <item name="android:windowBackground">@drawable/bg_theme_forest_mist</item>
+        <item name="android:statusBarColor">#071A12</item>
+        <item name="android:navigationBarColor">#071A12</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorError">#F87171</item>
+        <item name="colorOnError">#450A0A</item>
+        <item name="colorErrorContainer">#33151A</item>
+        <item name="plTileFill">#33FFFFFF</item>
+        <item name="plBtnFill">#24FFFFFF</item>
+        <item name="plBtnStroke">#33FFFFFF</item>
+        <item name="plNavActive">#6EE7B7</item>
+        <item name="plNavInactive">#A8C8B4</item>
+        <item name="plNavIndicator">#14532D</item>
+    </style>
+    <style name="Theme.FlowsGraphiteMono" parent="Theme.Flows">
+        <item name="colorPrimary">#E5E7EB</item>
+        <item name="colorOnPrimary">#111827</item>
+        <item name="colorPrimaryContainer">#3F3F46</item>
+        <item name="colorOnPrimaryContainer">#F4F4F5</item>
+        <item name="colorSecondary">#E5E7EB</item>
+        <item name="colorOnSecondary">#111827</item>
+        <item name="colorSecondaryContainer">#3F3F46</item>
+        <item name="colorOnSecondaryContainer">#F4F4F5</item>
+        <item name="android:colorBackground">#17171A</item>
+        <item name="colorOnBackground">#FAFAFA</item>
+        <item name="colorSurface">#2EFFFFFF</item>
+        <item name="colorOnSurface">#FAFAFA</item>
+        <item name="colorSurfaceVariant">#24FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#A1A1AA</item>
+        <item name="colorSurfaceContainer">#26FFFFFF</item>
+        <item name="colorSurfaceContainerHigh">#33FFFFFF</item>
+        <item name="colorOutline">#33FFFFFF</item>
+        <item name="android:windowBackground">@drawable/bg_theme_graphite_mono</item>
+        <item name="android:statusBarColor">#17171A</item>
+        <item name="android:navigationBarColor">#17171A</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorError">#F87171</item>
+        <item name="colorOnError">#450A0A</item>
+        <item name="colorErrorContainer">#33151A</item>
+        <item name="plTileFill">#33FFFFFF</item>
+        <item name="plBtnFill">#24FFFFFF</item>
+        <item name="plBtnStroke">#33FFFFFF</item>
+        <item name="plNavActive">#E5E7EB</item>
+        <item name="plNavInactive">#A1A1AA</item>
+        <item name="plNavIndicator">#3F3F46</item>
+    </style>
+</resources>

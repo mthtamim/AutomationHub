@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Visual rule editor (v2.17.2, approved preview): NO spinners.
+     Name + category chips, an amber WHEN card, a constraints section
+     with AND/OR chips, and a mint THEN DO card. Each chosen trigger /
+     condition / action is an inset card (built by
+     RuleEditorActivity) whose type chip opens the searchable visual
+     picker; the param field lives inside the card. All rows write
+     the exact same rule JSON as the old spinner editor. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btnEditorBack"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_back_chip"
+                android:contentDescription="@string/btn_back"
+                android:padding="10dp"
+                android:src="@drawable/ic_arrow_back"
+                android:tint="?attr/colorOnSurface" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:text="@string/auto_editor_title"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveRule"
+                style="@style/PL.BtnPill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_save"
+                app:icon="@drawable/ic_check" />
+        </LinearLayout>
+
+        <!-- ===== Name and category ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.BodySmall"
+                    android:text="@string/ed_name_label" />
+
+                <EditText
+                    android:id="@+id/etRuleName"
+                    style="@style/PL.FieldPlain"
+                    android:layout_marginTop="6dp"
+                    android:hint="@string/auto_rule_name_hint"
+                    android:inputType="text"
+                    android:maxLines="1" />
+
+                <TextView
+                    style="@style/PL.BodySmall"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/ed_cat_label" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/cgRuleCats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    app:singleSelection="true" />
+
+                <EditText
+                    android:id="@+id/etRuleCat"
+                    style="@style/PL.FieldPlain"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/auto_cat_hint"
+                    android:inputType="text"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== WHEN card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:strokeColor="@color/pair_code"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ed_when"
+                    android:textSize="16.5sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/trigContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddTrigger"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/auto_add_trigger"
+                    app:icon="@drawable/ic_plus" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddStudyGuard"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/btn_add_study_guard"
+                    app:icon="@drawable/ic_plus" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddScreenRest"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/btn_add_screen_rest"
+                    app:icon="@drawable/ic_plus" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddTimeAtDays"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/btn_add_time_at_days"
+                    app:icon="@drawable/ic_plus" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Constraints header + AND/OR chips ===== -->
+        <TextView
+            style="@style/PL.SecTitle"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="@string/ed_constraints" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/cgConsMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipConsAll"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/auto_cons_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipConsAny"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_cons_any" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- ===== Constraints card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:id="@+id/consContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddConstraint"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/auto_add_constraint"
+                    app:icon="@drawable/ic_plus" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddGroup"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/btn_add_group"
+                    app:icon="@drawable/ic_plus" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== THEN DO card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:strokeColor="?attr/colorPrimary"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ed_then"
+                    android:textSize="16.5sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/actContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddAction"
+                    style="@style/PL.BtnMint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/auto_add_action"
+                    app:icon="@drawable/ic_plus" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddIfElse"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/btn_add_ifelse"
+                    app:icon="@drawable/ic_plus" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddFocusLock"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/btn_add_focuslock"
+                    app:icon="@drawable/ic_plus" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddAutoTap"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/btn_add_autotap"
+                    app:icon="@drawable/ic_plus" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddRedial"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/btn_add_redial"
+                    app:icon="@drawable/ic_plus" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Test and delete ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTestRule"
+                style="@style/PL.BtnGhost"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:text="@string/ed_test_rule"
+                app:icon="@drawable/ic_check" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeleteRule"
+                style="@style/PL.BtnGhost"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:text="@string/ed_delete_rule"
+                android:textColor="?attr/colorError"
+                android:visibility="gone"
+                app:icon="@drawable/ic_trash" />
+        </LinearLayout>
+
+        <!-- ===== v2.18: Trace + version history ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTraceRule"
+                style="@style/PL.BtnGhost"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:text="@string/btn_trace"
+                app:icon="@drawable/ic_search" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHistoryRule"
+                style="@style/PL.BtnGhost"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:text="@string/btn_history"
+                android:visibility="gone"
+                app:icon="@drawable/ic_refresh" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

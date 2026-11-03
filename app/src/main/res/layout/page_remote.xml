@@ -1,0 +1,1003 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Command Hub (v2.17.2, approved preview): the same 51 commands,
+     each exactly once, regrouped into preview-style cards — mirror
+     card, live mic card, device-toggle tiles, the package launcher,
+     then the command groups. Ids, handlers and hub:* filter tags
+     are unchanged; search + chips only filter visibility. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/PL.H1"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="@string/hub_title"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/tvHubShizuku"
+                style="@style/PL.Pill" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/etHubSearch"
+            style="@style/PL.SearchBox"
+            android:drawableStart="@drawable/ic_search"
+            android:layout_marginTop="12dp"
+            android:hint="@string/hub_search_hint"
+            android:inputType="text"
+            android:maxLines="1" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/cgHubCats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipHubAll"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/hub_cat_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipHubSystem"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hub_cat_system" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipHubDisplay"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hub_cat_display" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipHubSecurity"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hub_cat_security" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- ===== Screen Mirror card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/hub_mirror" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnScreenShare"
+                        android:tag="hub:cam"
+                        style="@style/PL.BtnPill"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/btn_screen_share"
+                        app:icon="@drawable/ic_cast" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdSnap"
+                        android:tag="hub:cam"
+                        style="@style/PL.BtnGhost"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_snap"
+                        app:icon="@drawable/ic_camera" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnScreenshot"
+                        android:tag="hub:cam"
+                        style="@style/PL.BtnGhost"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/btn_screenshot_cmd"
+                        app:icon="@drawable/ic_image" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdScreen"
+                        android:tag="hub:cam"
+                        style="@style/PL.BtnGhost"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_screen"
+                        app:icon="@drawable/ic_msg" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Live Mic card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/PL.CardTitle"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/hub_mic" />
+
+                    <ImageView
+                        android:layout_width="118dp"
+                        android:layout_height="44dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_wave" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCmdListen"
+                    android:tag="hub:sec"
+                    style="@style/PL.BtnMint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/cmd_listen"
+                    app:icon="@drawable/ic_mic" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Device toggle tiles ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/rg_phone_control" />
+
+                <TextView
+                    style="@style/PL.BodySmall"
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/remote_control_note" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActWifi"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnTile"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:text="@string/aa_wifi_toggle"
+                        app:icon="@drawable/ic_tile_wifi"
+                        app:iconTint="@null" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActBt"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnTile"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="@string/aa_bt_toggle"
+                        app:icon="@drawable/ic_tile_bluetooth"
+                        app:iconTint="@null" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActData"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnTile"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:text="@string/aa_mobile_data_toggle"
+                        app:icon="@drawable/ic_tile_signal"
+                        app:iconTint="@null" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActAirplane"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnTile"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="@string/aa_airplane_toggle"
+                        app:icon="@drawable/ic_tile_plane"
+                        app:iconTint="@null" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActTorch"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnTile"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:text="@string/aa_torch_toggle"
+                        app:icon="@drawable/ic_tile_flash"
+                        app:iconTint="@null" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActHotspot"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnTile"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="@string/aa_hotspot_toggle"
+                        app:icon="@drawable/ic_tile_signal"
+                        app:iconTint="@null" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActDark"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnTile"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:text="@string/aa_dark_theme"
+                        app:icon="@drawable/ic_tile_moon"
+                        app:iconTint="@null" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActSaver"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnTile"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="@string/aa_battery_saver"
+                        app:icon="@drawable/ic_tile_batt"
+                        app:iconTint="@null" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Package launcher card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/hub_launcher_title" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/etRemotePkg"
+                        style="@style/PL.FieldPlain"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:fontFamily="monospace"
+                        android:hint="@string/remote_pkg_hint"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnActOpenApp"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnPill"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="@string/remote_open_app"
+                        app:icon="@drawable/ic_grid" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Quick actions card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/hub_quick" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdLock"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnGhost"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_lock"
+                        app:icon="@drawable/ic_lock" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdNote"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnGhost"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_note"
+                        app:icon="@drawable/ic_file" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvSenderSeen"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/sender_never_seen"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <TextView
+                    android:id="@+id/tvHubPeerState"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="?attr/colorPrimary" />
+
+                <!-- v2.17.2: the peer custom-status line (was on the
+                     removed dashboard status card; lives with the
+                     other peer state on the Command Hub now) -->
+                <TextView
+                    android:id="@+id/tvPeerStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Find and status card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/rg_find" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdLocation"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_location"
+                        app:icon="@drawable/ic_loc" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdRing"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_ring"
+                        app:icon="@drawable/ic_bell" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdStopRing"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_stop_ring"
+                        app:icon="@drawable/ic_bell_off" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdFlashOn"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_flash_on"
+                        app:icon="@drawable/ic_flash" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdFlashOff"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_flash_off"
+                        app:icon="@drawable/ic_flash" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdBattery"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_battery"
+                        app:icon="@drawable/ic_batt" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdPing"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_ping"
+                        app:icon="@drawable/ic_wave" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdInfo"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_info"
+                        app:icon="@drawable/ic_info" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdSummary"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_summary"
+                        app:icon="@drawable/ic_calendar" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdStatus"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_status"
+                        app:icon="@drawable/ic_shield_check" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Sound and media card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/rg_sound" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdSpeak"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_speak"
+                        app:icon="@drawable/ic_volume" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdAlarm"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_alarm"
+                        app:icon="@drawable/ic_bell" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMediaPlay"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnIcon"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" 
+                        android:contentDescription="@string/media_play_pause"
+                        app:icon="@drawable/ic_media_pp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMediaNext"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnIcon"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" 
+                        android:contentDescription="@string/media_next"
+                        app:icon="@drawable/ic_media_next" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMediaVolDown"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnIcon"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" 
+                        android:contentDescription="@string/media_vol_down"
+                        app:icon="@drawable/ic_vol_down" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMediaVolUp"
+                        android:tag="hub:sec"
+                        style="@style/PL.BtnIcon"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" 
+                        android:contentDescription="@string/media_vol_up"
+                        app:icon="@drawable/ic_vol_up" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCmdRinger"
+                    android:tag="hub:sec"
+                    style="@style/PL.BtnChip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/cmd_ringer"
+                    app:icon="@drawable/ic_bell" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Control and modes card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/rg_control" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCmdRemote"
+                    android:tag="hub:sec"
+                    style="@style/PL.BtnChip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_remote_panel"
+                    app:icon="@drawable/ic_term" />
+
+                <!-- v2.17.4: the Mode bundle moved to Settings →
+                     Smart & Automation (it is a setting, not a
+                     command); Lost Mode stays here as a command -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLostMode"
+                    android:tag="hub:sec"
+                    style="@style/PL.BtnPill"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/btn_lost_mode"
+                    app:icon="@drawable/ic_alert" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Remote info card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/sec_remote_info" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCmdGallery"
+                    android:tag="hub:sys"
+                    style="@style/PL.BtnChip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/cmd_gallery"
+                    app:icon="@drawable/ic_image" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdRecentCalls"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_recent_calls"
+                        app:icon="@drawable/ic_phone" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdRecentSms"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_recent_sms"
+                        app:icon="@drawable/ic_msg" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== More controls card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/rg_more" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdLs"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_ls"
+                        app:icon="@drawable/ic_folder" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdGetFile"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_getfile"
+                        app:icon="@drawable/ic_download" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdCallLog"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_calllog"
+                        app:icon="@drawable/ic_phone" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdContacts"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_contacts"
+                        app:icon="@drawable/ic_users" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdUsage"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_usage"
+                        app:icon="@drawable/ic_chart" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdStorage"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_storage"
+                        app:icon="@drawable/ic_db" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdNetTest"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_nettest"
+                        app:icon="@drawable/ic_wifi" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdRestartSvc"
+                        android:tag="hub:sys"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_restart"
+                        app:icon="@drawable/ic_refresh" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdCamPrev"
+                        android:tag="hub:cam"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/cmd_camrev"
+                        app:icon="@drawable/ic_camera" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCmdLiveView"
+                        android:tag="hub:cam"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/cmd_liveview"
+                        app:icon="@drawable/ic_video" />
+                </LinearLayout>
+
+                <!-- v2.17.4: Focus Guard moved to Settings →
+                     Smart & Automation (a setting, not a command) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCmdUrl"
+                    android:tag="hub:sys"
+                    style="@style/PL.BtnChip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/cmd_url"
+                    app:icon="@drawable/ic_link" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</ScrollView>
