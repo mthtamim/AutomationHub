@@ -46,14 +46,14 @@ class FlowsSettingsActivity : LocalizedActivity() {
         root.addView(LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, 24, 0, 0)
-            addView(TextView(this).apply {
+            addView(TextView(this@FlowsSettingsActivity).apply {
                 text = getString(R.string.flow_service_switch)
                 textSize = 16f
                 setTextColor(themeOnSurface())
                 layoutParams = LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
-            addView(Switch(this).apply {
+            addView(Switch(this@FlowsSettingsActivity).apply {
                 isChecked = svcOn
                 setOnCheckedChangeListener { _, on ->
                     FlowStore.setFlowServiceOn(
