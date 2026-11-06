@@ -34,12 +34,7 @@ import kotlin.concurrent.thread
 
 class MainActivity : LocalizedActivity() {
 
-    // v2.17.2: relay state is computed once per refresh and
-    // mirrored to the header pill, the Relay screen badge and the
-    // Settings hub tile (the old tvRelay view died with the
-    // dashboard status card).
-    // v2.18: MQTT broker card status + browser-session list.
-    private lateinit var tvMqttStatus: TextView
+    // v2.17.2: info lines refreshed by refreshStatus().
     private lateinit var tvQuietInfo: TextView
     private lateinit var tvDigestInfo: TextView
     private lateinit var tvRoutineInfo: TextView
@@ -59,7 +54,6 @@ class MainActivity : LocalizedActivity() {
     private lateinit var tvDashWifi: TextView
     private lateinit var pbDashBattery: android.widget.ProgressBar
     private lateinit var tvDashBatteryPct: TextView
-    private lateinit var tvDashLoc: TextView
     private lateinit var tvDashRecent: TextView
     // v2.21 AutoTap dashboard card views
     private lateinit var tvDashAutoTapStatus: TextView
@@ -86,9 +80,6 @@ class MainActivity : LocalizedActivity() {
     private var dashRedialOnanswer: String = "stop"
     private var dashRedialSpeaker: Boolean = false
     private lateinit var tvSetPill: TextView
-    private lateinit var tvHubDevice: TextView
-    private lateinit var tvHubDeviceSub: TextView
-    private lateinit var tvHubRelaySub: TextView
     private lateinit var tvHubPermsSub: TextView
     private lateinit var tvHubSecSub: TextView
     private lateinit var tvHubDataSub: TextView
@@ -97,7 +88,6 @@ class MainActivity : LocalizedActivity() {
     // Automation Studio info line and the General version line
     private lateinit var tvSmartUsageState: TextView
     private lateinit var tvA11yState: TextView
-    private lateinit var tvShizukuRelayState: TextView
     private lateinit var tvSmartStudioInfo: TextView
     private lateinit var tvGeneralDiag: TextView
     private lateinit var bottomNav: BottomNavigationView
@@ -282,7 +272,6 @@ class MainActivity : LocalizedActivity() {
         tvDashWifi = findViewById(R.id.tvDashWifi)
         pbDashBattery = findViewById(R.id.pbDashBattery)
         tvDashBatteryPct = findViewById(R.id.tvDashBatteryPct)
-        tvDashLoc = findViewById(R.id.tvDashLoc)
         tvDashRecent = findViewById(R.id.tvDashRecent)
         tvDashAutoTapStatus = findViewById(R.id.tvDashAutoTapStatus)
         etDashAutoTapScript = findViewById(R.id.etDashAutoTapScript)
@@ -305,15 +294,11 @@ class MainActivity : LocalizedActivity() {
         btnDashRedialOnanswerResume =
             findViewById(R.id.btnDashRedialOnanswerResume)
         tvSetPill = findViewById(R.id.tvSetPill)
-        tvHubDevice = findViewById(R.id.tvHubDevice)
-        tvHubDeviceSub = findViewById(R.id.tvHubDeviceSub)
-        tvHubRelaySub = findViewById(R.id.tvHubRelaySub)
         tvHubPermsSub = findViewById(R.id.tvHubPermsSub)
         tvHubSecSub = findViewById(R.id.tvHubSecSub)
         tvHubDataSub = findViewById(R.id.tvHubDataSub)
         tvHubDiag = findViewById(R.id.tvHubDiag)
 
-        tvMqttStatus = findViewById(R.id.tvMqttStatus)
         tvQuietInfo = findViewById(R.id.tvQuietInfo)
         tvDigestInfo = findViewById(R.id.tvDigestInfo)
         tvRoutineInfo = findViewById(R.id.tvRoutineInfo)
@@ -323,7 +308,6 @@ class MainActivity : LocalizedActivity() {
         tvStats = findViewById(R.id.tvStats)
         tvSmartUsageState = findViewById(R.id.tvSmartUsageState)
         tvA11yState = findViewById(R.id.tvA11yState)
-        tvShizukuRelayState = findViewById(R.id.tvShizukuRelayState)
         tvSmartStudioInfo = findViewById(R.id.tvSmartStudioInfo)
         tvGeneralDiag = findViewById(R.id.tvGeneralDiag)
 
@@ -421,8 +405,6 @@ class MainActivity : LocalizedActivity() {
         findViewById<Button>(R.id.btnSecPermsLink).setOnClickListener {
             startActivity(Intent(this, PermissionsActivity::class.java))
         }
-        // Bluetooth share link row in the Relay panel's peers card.
-
         // automation_on finally gets its master toggle (was an
         // orphan key changeable only via settings import).
         bindToggle(R.id.swAutoMaster, "automation_on", Config.automationOn(this))
@@ -442,10 +424,6 @@ class MainActivity : LocalizedActivity() {
         findViewById<Button>(R.id.btnSmartStudio).setOnClickListener {
             startActivity(Intent(this, AutomationActivity::class.java))
         }
-        // My status: its real home is Appearance & General now; the
-        // Dashboard field remains as a shortcut — both write the
-        // same key and mirror each other's text on save.
-
         // ----- data & statistics (v2.1) -----
 
 
@@ -463,33 +441,6 @@ class MainActivity : LocalizedActivity() {
                 type = "*/*"
             }
             restoreLauncher.launch(intent)
-        }
-
-        // ----- devices, SOS, new commands (v2.1) -----
-        findViewById<Button>(R.id.btnSos).setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.sos_title))
-                .setMessage(getString(R.string.sos_confirm))
-                .setPositiveButton(getString(R.string.btn_send)) { _, _ ->
-                    // AutomationHub: SOS is SMS-only now (no relay).
-                    // v2.11: emergency numbers get a plain SMS with location
-                    val sosNums = Config.sosNumbers(this)
-                    if (sosNums.isNotEmpty() && checkSelfPermission(
-                            android.Manifest.permission.SEND_SMS) ==
-                        android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                        val name = Config.deviceName(this)
-                        LocationHelper.fetchCoords(this, { lat, lng ->
-                            sendSosSms(sosNums,
-                                "🆘 SOS: $name সাহায্য চাইছে। লোকেশন: " +
-                                    "https://maps.google.com/?q=$lat,$lng")
-                        }, {
-                            sendSosSms(sosNums, "🆘 SOS: $name সাহায্য চাইছে।")
-                        })
-                    }
-                    toast(getString(R.string.toast_sos_sent))
-                }
-                .setNegativeButton(getString(R.string.btn_cancel), null)
-                .show()
         }
 
         // ----- v2.11 remote additions -----
@@ -568,63 +519,6 @@ class MainActivity : LocalizedActivity() {
             Config.setAutoUpdate(this, checked)
         }
 
-        // ----- v2.18 (WS4): MQTT broker card -----
-        val swMqtt = findViewById<CompoundButton>(R.id.swMqtt)
-        val etMqttBroker = findViewById<EditText>(R.id.etMqttBroker)
-        val etMqttUser = findViewById<EditText>(R.id.etMqttUser)
-        val etMqttPass = findViewById<EditText>(R.id.etMqttPass)
-        etMqttBroker.setText(Config.mqttBroker(this))
-        etMqttUser.setText(Config.mqttUser(this))
-        etMqttPass.setText(Config.mqttPass(this))
-        swMqtt.isChecked = Config.mqttOn(this)
-        swMqtt.setOnCheckedChangeListener { _, checked ->
-            Config.setMqtt(this, checked, Config.mqttBroker(this),
-                Config.mqttUser(this), Config.mqttPass(this))
-            MqttManager.restart(this)
-            refreshMqttStatus()
-        }
-        findViewById<Button>(R.id.btnMqttSave).setOnClickListener {
-            Config.setMqtt(this, swMqtt.isChecked,
-                etMqttBroker.text.toString(), etMqttUser.text.toString(),
-                etMqttPass.text.toString())
-            MqttManager.restart(this)
-            refreshMqttStatus()
-            toast(getString(R.string.toast_saved))
-        }
-        findViewById<Button>(R.id.btnMqttTest).setOnClickListener {
-            Config.setMqtt(this, swMqtt.isChecked,
-                etMqttBroker.text.toString(), etMqttUser.text.toString(),
-                etMqttPass.text.toString())
-            tvMqttStatus.text = getString(R.string.mqtt_st_connecting)
-            MqttManager.test(this) { ok, detail ->
-                runOnUiThread {
-                    tvMqttStatus.text = if (ok)
-                        getString(R.string.mqtt_test_ok)
-                    else getString(R.string.mqtt_test_fail, detail)
-                }
-            }
-        }
-        // ----- SMTP card (send_email action): its save binding was
-        // dropped with the old Relay-panel trim; restored here with
-        // the Config.setSmtp setter (same file, same panel).
-        val etSmtpHost = findViewById<EditText>(R.id.etSmtpHost)
-        val etSmtpPort = findViewById<EditText>(R.id.etSmtpPort)
-        val etSmtpUser = findViewById<EditText>(R.id.etSmtpUser)
-        val etSmtpPass = findViewById<EditText>(R.id.etSmtpPass)
-        val etSmtpFrom = findViewById<EditText>(R.id.etSmtpFrom)
-        etSmtpHost.setText(Config.smtpHost(this))
-        etSmtpPort.setText(Config.smtpPort(this).toString())
-        etSmtpUser.setText(Config.smtpUser(this))
-        etSmtpPass.setText(Config.smtpPass(this))
-        etSmtpFrom.setText(Config.smtpFrom(this))
-        findViewById<Button>(R.id.btnSaveSmtp).setOnClickListener {
-            Config.setSmtp(this, etSmtpHost.text.toString(),
-                etSmtpPort.text.toString().toIntOrNull() ?: 587,
-                etSmtpUser.text.toString(), etSmtpPass.text.toString(),
-                etSmtpFrom.text.toString())
-            toast(getString(R.string.toast_saved))
-        }
-        refreshMqttStatus()
         findViewById<Button>(R.id.btnPanicPin).setOnClickListener {
             showTextPrompt(getString(R.string.btn_panic_pin), "") { pin ->
                 if (pin.length >= 4) {
@@ -658,7 +552,7 @@ class MainActivity : LocalizedActivity() {
 
         // ----- v2.21 AutoTap dashboard card (bottom of Dashboard):
         // the merged engine, controlled directly — no broadcast,
-        // no separate app. The name is remembered like myStatus;
+        // no separate app. The name is remembered in prefs;
         // Start saves it first.
         btnDashAutoTapStart.setOnClickListener {
             val name = etDashAutoTapScript.text.toString().trim()
@@ -852,13 +746,13 @@ class MainActivity : LocalizedActivity() {
     // Everything that used to pile onto Home/Settings now opens as a
     // full-screen sub-screen (overlay) with its own title and back.
 
-    // v2.17.4: panelGroup abolished — its items live in the Relay
-    // (commanders, peer modes) and Data (backup trio, charts) panels.
+    // v2.17.4: panelGroup abolished — its items live in the Data
+    // (backup trio, charts) panel; the Relay panel is gone.
     // AutomationHub: panelForward (forwarding toggles) and panelFamily
     // (lost-mode / family check-in) were removed with forwarding.
     private val subGroups = listOf(
         R.id.panelGeneral, R.id.panelSmart,
-        R.id.panelSecurity, R.id.panelRelay, R.id.panelData
+        R.id.panelSecurity, R.id.panelData
     )
 
     private fun openSubScreen(groupId: Int, titleRes: Int) {
@@ -899,9 +793,9 @@ class MainActivity : LocalizedActivity() {
         // (btnSettingsBack removed from page_settings.xml) — Settings
         // is a top-level tab; system Back handles navigation.
         // v2.17.2: the settings hub tiles are the only entry points
-        // (tileHubRelay/Perms/Security/Data, cardHubForward and
-        // btnHubKeys are wired in wireV217) -- no legacy menu, no
-        // dashboard shortcut boxes: every panel opens from one place.
+        // (Perms/Security/Data/General/Smart are wired in wireV217)
+        // -- no legacy menu, no dashboard shortcut boxes: every
+        // panel opens from one place.
         findViewById<View>(R.id.tileHubGeneral).setOnClickListener {
             openSubScreen(R.id.panelGeneral, R.string.cat_general) }
         findViewById<View>(R.id.tileHubSmart).setOnClickListener {
@@ -935,14 +829,13 @@ class MainActivity : LocalizedActivity() {
         // Permissions & Access — Security keeps the tvA11yState
         // state line and the btnSecPermsLink link (wired in onCreate).
 
-        // --- former group panel items (now in Relay / Data) ---
+        // --- former group panel items (now in Data) ---
 
 
 
 
         // v2.17.4: the Shizuku connect/test button moved to
-        // Permissions & Access — the Relay diagnostics card keeps
-        // only the tvShizukuRelayState display line (refreshStatus).
+        // Permissions & Access (its state line lives there too).
 
         findViewById<Button>(R.id.btnExportConfig).setOnClickListener {
             cfgExportLauncher.launch(Intent(Intent.ACTION_CREATE_DOCUMENT)
@@ -1071,17 +964,6 @@ class MainActivity : LocalizedActivity() {
             .show()
     }
 
-    private fun sendSosSms(numbers: List<String>, text: String) {
-        try {
-            val sm = android.telephony.SmsManager.getDefault()
-            for (n in numbers) {
-                try { sm.sendTextMessage(n, null, text, null, null) }
-                catch (_: Exception) { }
-            }
-        } catch (_: Exception) { }
-    }
-
-
     /** v2.11 focus guard settings (enforced by A11yService). */
     private fun showFocusDialog() {
         val layout = LinearLayout(this).apply {
@@ -1169,21 +1051,6 @@ class MainActivity : LocalizedActivity() {
     }
 
 
-    /** v2.18 (WS4): broker card status line from MqttManager. */
-    private fun refreshMqttStatus() {
-        if (!::tvMqttStatus.isInitialized) return
-        tvMqttStatus.text = when (MqttManager.state()) {
-            MqttManager.State.OFF -> getString(R.string.mqtt_st_off)
-            MqttManager.State.CONNECTING ->
-                getString(R.string.mqtt_st_connecting)
-            MqttManager.State.CONNECTED ->
-                getString(R.string.mqtt_st_connected)
-            MqttManager.State.ERROR -> getString(R.string.mqtt_st_error,
-                MqttManager.stateDetail())
-        }
-    }
-
-
     private fun refreshStatus() {
         // AutomationHub: no relay — the header pill shows the local
         // automation state (rules/flows counts), the hub subtitles
@@ -1198,7 +1065,6 @@ class MainActivity : LocalizedActivity() {
         }
         tvConnPill.setTextColor(ContextCompat.getColor(this,
             if (autoOn) R.color.status_ok else R.color.status_bad))
-        refreshMqttStatus()
         // Smart-control / data info lines
         tvQuietInfo.text = getString(R.string.quiet_window,
             fmtClock(Config.quietStart(this)), fmtClock(Config.quietEnd(this)))
@@ -1222,9 +1088,6 @@ class MainActivity : LocalizedActivity() {
         tvSmartUsageState.text = getString(R.string.usage_state_fmt,
             getString(if (PermChecks.usageAccess(this)) R.string.status_granted
                 else R.string.status_missing))
-        tvShizukuRelayState.text = getString(
-            if (ShizukuHelper.granted()) R.string.hub_shizuku_on
-            else R.string.hub_shizuku_off)
         tvSmartStudioInfo.text = getString(R.string.studio_info_fmt,
             rules.size,
             getString(if (Config.automationOn(this)) R.string.state_on
@@ -1238,15 +1101,9 @@ class MainActivity : LocalizedActivity() {
 
     // ------------- v2.17 redesign wiring -------------
 
-    /** v2.17 Settings hub: only the surviving tiles (Relay-turned-
-     *  MQTT-&-Email, Perms, Security, Data, General, Smart) get click
-     *  handlers now. */
+    /** v2.17 Settings hub: only the surviving tiles (Perms, Security,
+     *  Data, General, Smart) get click handlers now. */
     private fun wireV217() {
-        // AutomationHub: the Relay tile is now the MQTT & Email tile
-        // and opens panelRelay, which holds only the MQTT broker and
-        // SMTP cards (plus the Shizuku state line).
-        findViewById<View>(R.id.tileHubRelay).setOnClickListener {
-            openSubScreen(R.id.panelRelay, R.string.mqtt_smtp_title) }
         findViewById<View>(R.id.tileHubPerms).setOnClickListener {
             startActivity(Intent(this, PermissionsActivity::class.java)) }
         findViewById<View>(R.id.tileHubSecurity).setOnClickListener {
@@ -1272,9 +1129,6 @@ class MainActivity : LocalizedActivity() {
             val band = ownWifiBand()
             "Wi-Fi \u2022 $ssid" + if (band.isNotEmpty()) " \u2022 $band" else ""
         } else "Wi-Fi \u2022 \u2014"
-        tvDashLoc.text = if (Config.geoIsSet(this)) {
-            getString(R.string.geo_set, Config.geoLat(this), Config.geoLng(this), Config.geoRadius(this))
-        } else getString(R.string.dash_loc_none)
         val recent = Automation.recentLog(this).take(3)
         tvDashRecent.text = if (recent.isEmpty()) getString(R.string.dash_recent_empty)
             else recent.joinToString("\n") { "• $it" }
@@ -1374,9 +1228,6 @@ class MainActivity : LocalizedActivity() {
 
 
     private fun refreshSettingsHub() {
-        tvHubDevice.text = Config.deviceName(this)
-        tvHubDeviceSub.text =
-            "${Build.MANUFACTURER} ${Build.MODEL} • Android ${Build.VERSION.RELEASE}"
         val missing = PermChecks.missingCount(this)
         tvSetPill.text = if (missing == 0) getString(R.string.set_status_ok)
             else getString(R.string.set_status_warn, missing)
@@ -1385,10 +1236,6 @@ class MainActivity : LocalizedActivity() {
         else getString(R.string.perm_summary_missing, missing)
         tvHubSecSub.text = "${tvPinInfo.text} • ${tvAdminInfo.text}"
         tvHubDataSub.text = tvStats.text
-        // AutomationHub: the Relay tile is now MQTT & Email, so its
-        // subtitle mirrors the MQTT status line.
-        if (::tvHubRelaySub.isInitialized && ::tvMqttStatus.isInitialized)
-            tvHubRelaySub.text = tvMqttStatus.text
         val ver = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
         } catch (_: Exception) { "?" }

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Settings hub (v2.17.2, approved preview): status pill, device
-     card, the 2x2 hub tiles, a panic card, the forwarding summary,
-     a More tiles grid and diagnostics. The legacy full menu below
-     the hub is REMOVED — every panel it opened is reachable exactly
+<!-- Settings hub (v2.17.2, approved preview): status pill, the hub
+     tiles, a panic card, More tiles and diagnostics. The "Connected
+     device & account" card (pair-key management) and the MQTT & Email
+     tile were removed 2026-11-06 — no pairing / forwarding in
+     AutomationHub (see the README). The legacy full menu below the
+     hub is REMOVED — every panel it opened is reachable exactly
      once from a tile or card on this page. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -33,69 +35,6 @@
             style="@style/PL.SecTitle"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="10dp"
-            android:text="@string/set_device_card" />
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:background="@drawable/bg_icon_circle">
-
-                    <ImageView
-                        android:layout_width="23dp"
-                        android:layout_height="23dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_phone" />
-                </FrameLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/tvHubDevice"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="15.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvHubDeviceSub"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="3dp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12.5sp" />
-                </LinearLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnHubKeys"
-                    style="@style/PL.BtnGhost"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/set_manage_keys"
-                    app:icon="@drawable/ic_qr" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            style="@style/PL.SecTitle"
-            android:layout_marginTop="20dp"
-            android:layout_marginBottom="10dp"
             android:text="@string/set_hub" />
 
         <LinearLayout
@@ -104,56 +43,9 @@
             android:orientation="horizontal">
 
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/tileHubRelay"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="132dp"
-                    android:orientation="vertical"
-                    android:padding="15dp">
-
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="23dp"
-                            android:layout_height="23dp"
-                            android:layout_gravity="center"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_server" />
-                    </FrameLayout>
-
-                    <TextView
-                        style="@style/PL.TileTitle"
-                        android:layout_marginTop="9dp"
-                        android:text="@string/mqtt_smtp_title"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:id="@+id/tvHubRelaySub"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/tileHubPerms"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
                 android:clickable="true"
                 android:focusable="true">
 

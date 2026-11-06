@@ -267,5 +267,51 @@ cannot delete files, so 67 files from the v1 skeleton remain in the repo:
    push tap, then the next CI run must pass — local checks cannot
    prove compilation.
 2. **Phone test:** first launch, Automation Rules + Flows, Settings/themes,
-   AppLock, MQTT/SMTP panel, backup/restore — all unproven until Tamim
+   AppLock, backup/restore — all unproven until Tamim
    runs them on his phone.
+
+## Peer-UI removal pass (2026-11-06 — Tamim's phone screenshots)
+
+Tamim installed the AutomationHub APK and circled what was still
+forwarding/peer UI. Everything he marked — plus the same feature's
+duplicates elsewhere — was removed from `MainActivity.kt`,
+`page_home.xml`, `page_settings.xml` and `activity_main.xml`:
+
+- **Dashboard:** the four peer tiles (Location / Flashlight / Ringer /
+  Walkie-talkie) and the whole Quick Send card (clipboard send, file
+  send, voice message, walkie-talkie voice, broadcast, voice command,
+  siren, message schedule, templates, contact card, wallpaper set,
+  My status + Save). The SMS-only SOS button lived inside that card
+  and went with it; the Panic / Emergency card in Settings remains
+  the emergency path (note: in the current code the Panic PIN only
+  sets a flag — no code path sends the panic SMS; pre-existing gap,
+  unchanged by this pass). Kept on the Dashboard: device card
+  (battery/Wi-Fi), Recent activity, AutoTap, Redial.
+- **Settings:** the "Connected device & account" card (device +
+  "Manage keys" pair-code button) and the "MQTT & Email" tile with
+  its `panelRelay` sub-screen (MQTT broker/user/pass + SMTP fields).
+- **Also removed (dead, unambiguously peer-only):** the "My status"
+  card in Appearance & General (its Dashboard field was its
+  shortcut), and the Clipboard auto-sync + Walkie-talkie autoplay
+  toggles in the Smart panel — none of the three had any code wiring.
+
+**MQTT consequence:** `Config`'s MQTT/SMTP accessors, `MqttManager`
+and the Flow `mqtt_publish` / `send_email` actions are untouched and
+keep working with the **last-saved** broker/SMTP values — but there
+is now **no UI to change those values**. If the broker or SMTP
+settings ever need changing, the panel has to come back (or the
+values edited via settings import).
+
+**Left in place deliberately:** the Smart panel's other toggles
+(SMS trigger/reply, auto-reply, TTS, routine, geo-fence, daily
+summary) are local automation, not peer forwarding; the Data panel's
+Backup/Restore buttons back up the *full local settings*
+(`SettingsTransfer`), not the removed Inbox. Dead strings/drawables
+from the removed UI were left in `strings.xml` / `drawable/` —
+harmless, listed in the fix report.
+
+Local validation for this pass: all 3 edited layouts parse as XML;
+`MainActivity.kt` braces 214/214, parens 807/807, brackets 7/7;
+every `R.*` reference in `MainActivity.kt` resolves; every manifest
+component resolves to a class (except library providers). CI is
+still the compile judge — not pushed yet.
