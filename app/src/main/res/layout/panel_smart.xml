@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.2.6: moved verbatim out of activity_main.xml so the panel
+     inflates lazily (ViewStub) on first open instead of at cold
+     start. Only the xmlns declarations were added to the root;
+     every id, view and attribute inside is unchanged. -->
+<LinearLayout
+            android:id="@+id/panelSmart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+<!-- ===== More features card ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorSurfaceVariant"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/sec_more" />
+
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/swGeo"
+                    style="@style/PL.SwitchRow"
+                    android:text="@string/geo_label" />
+
+                <TextView
+                    android:id="@+id/tvGeoInfo"
+                    style="@style/PL.BodySmall" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSetGeo"
+                    style="@style/PL.BtnTonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/btn_set_geo"
+                    app:icon="@drawable/ic_loc" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGeoRadius"
+                    style="@style/PL.BtnTonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/btn_geo_radius"
+                    app:icon="@drawable/ic_loc" />
+
+
+                <!-- v2.17.4: Usage Access is GRANTED only in
+                     Permissions & Access now — here just its state
+                     and a link (no second grant button). -->
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSmartPermsLink"
+                    style="@style/PL.BtnGhost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/btn_perms_link"
+                    app:icon="@drawable/ic_shield_check" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+<!-- ===== Focus Guard card (new 2026-11-06): a dedicated setup
+     card, not the old dialog. Header + live summary + app picker
+     + time window + preset chips. The on/off switch moved here
+     from the More card (same ids, same wiring). ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorSurfaceVariant"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_shield_check"
+                        app:tint="?attr/colorPrimary" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/PL.CardTitle"
+                            android:text="@string/focus_guard_label" />
+
+                        <TextView
+                            style="@style/PL.BodySmall"
+                            android:text="@string/focus_guard_sub" />
+                    </LinearLayout>
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/swFocusGuard"
+                        style="@style/PL.SwitchRow"
+                        android:layout_width="wrap_content" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvFocusGuardInfo"
+                    style="@style/PL.BodySmall"
+                    android:layout_marginTop="4dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:background="?attr/colorOutlineVariant" />
+
+                <TextView
+                    style="@style/PL.BodySmall"
+                    android:text="@string/focus_apps_label" />
+
+                <TextView
+                    android:id="@+id/tvFocusAppsInfo"
+                    style="@style/PL.BodySmall"
+                    android:layout_marginTop="2dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFocusApps"
+                    style="@style/PL.BtnTonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/focus_apps_choose"
+                    app:icon="@drawable/ic_grid" />
+
+                <TextView
+                    style="@style/PL.BodySmall"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/focus_time_label" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFocusStart"
+                        style="@style/PL.BtnTonal"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        app:icon="@drawable/ic_clock" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFocusEnd"
+                        style="@style/PL.BtnTonal"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        app:icon="@drawable/ic_clock" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/chipFocusStudy"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:text="@string/focus_preset_study" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/chipFocusNight"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:text="@string/focus_preset_night" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/chipFocusWork"
+                        style="@style/PL.BtnChip"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:text="@string/focus_preset_work" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+<!-- ===== Automation card: engine master switch only
+     (focus guard, mode bundle and Studio link removed
+     2026-11-06 — forwarding/smart extras, not automation) ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorSurfaceVariant"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/PL.CardTitle"
+                    android:text="@string/sec_automation" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/swAutoMaster"
+                    style="@style/PL.SwitchRow"
+                    android:text="@string/auto_master_label" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddQsTile"
+                    style="@style/PL.BtnTonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/tile_add"
+                    app:icon="@drawable/ic_nav_auto" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>

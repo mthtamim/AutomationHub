@@ -1484,6 +1484,84 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.2.6 — cold-start speed: lazy Settings + baseline profile (not pushed yet)
+
+Why: cold start inflated the whole tree — `activity_main.xml`
+(824 lines) included the Settings hub (`page_settings.xml`,
+304 lines) AND all four sub-screen panels (~700 lines, 52 ids)
+inside the subRoot overlay, every one of them `visibility=gone`
+but inflated anyway, before the first frame. The v1.2.3 pass
+deliberately did NOT do this: ~50 call sites in MainActivity
+touch those views (15 lateinit fields + ~30 listeners), and
+refreshStatus() / refreshSettingsHub() / refreshFocusGuard()
+touch them from onResume — moving them behind a lazy inflate
+is a rewrite with real crash risk if any site is missed, and
+the sub-screen tree would still inflate anyway, so the win
+would be partial. This pass does the whole thing, panels
+included, so the win is no longer partial.
+
+What changed (MainActivity.kt, activity_main.xml):
+- The Settings hub is a `ViewStub` (`stubSettings`,
+  `inflatedId=pageSettings`) — `ensureSettings()` inflates it
+  on the first visit to the Settings tab (from `showPage()`),
+  binds the 5 hub fields, wires the 5 hub tiles (verbatim from
+  wireV217 — which is deleted), and ends with
+  `refreshSettingsHub()`.
+- Each panel moved verbatim into its own file
+  (`panel_general.xml`, `panel_smart.xml`, `panel_security.xml`,
+  `panel_data.xml` — only the xmlns declarations were added to
+  each root) and is a `ViewStub` in the subContent tree —
+  `ensurePanel(groupId)` inflates it on its first open (from
+  `openSubScreen()`), runs its `bindPanel*()` (field bindings +
+  listeners verbatim from onCreate / wireV24), and ends with
+  `refreshStatus()`. Panels that never open are never inflated.
+- `pageSettings` is nullable now; `showPage()` null-safes its
+  visibility set, and `onResume()` heals the pill from
+  `settingsOpen` (the same truth showPage maintains) instead of
+  reading `pageSettings.visibility`.
+- `refreshStatus()` touches settings views only behind
+  `hubReady` / `isPanelReady(...)` guards; `refreshFocusGuard()`
+  returns early when the Smart panel is not inflated.
+- `refreshSettingsHub()` no longer reads values back from other
+  settings views (`tvPinInfo.text`, `tvStats.text`) — those live
+  in panels that may not exist yet. It computes the same strings
+  from Config/data instead (`pinState`/`adminState` from
+  Config/AdminReceiver, stats from `buildStatsText(rules, flows,
+  logs)` — the signature gained the `logs` parameter, which
+  refreshStatus already had parsed). `tvGeneralDiag` is guarded
+  by the General panel being ready.
+- Nothing visible changed: same ids, same listeners, same
+  values, same themes/PIN/FocusLock/Shizuku behaviour — only
+  WHEN the views inflate. At cold start, `activity_main.xml`
+  is 165 lines (was 824); only Home + toolbar + bottom bar +
+  the small sub-screen shell inflate.
+
+Baseline profile (scaffolding only — no profile generated yet):
+- Root `build.gradle` gains the `com.android.baselineprofile`
+  plugin (8.5.2, `apply false`); `settings.gradle` includes
+  `:baselineprofile`; the new module holds `StartupBenchmark`
+  (cold launch of MainActivity to first frame, 5 iterations).
+- No `app/src/main/baseline-prof.txt` exists yet, so the
+  release build consumes NO profile today. Generation needs a
+  device the app can install on — the app is arm64-only, so
+  the usual x86_64 managed device cannot install it; the module
+  deliberately declares no managed device and the generation
+  runs on a connected arm64 emulator (slow, under emulation).
+  Full steps + workflow YAML: see BASELINE_PROFILE_CI.md.
+
+Version 1.2.6 (vc9). No new permissions, no MQTT UI, no
+forwarding/relay touched, no behaviour or look change — only
+when views inflate. New dependencies are test-only
+(benchmark-macro in the `:baselineprofile` module; the app APK
+gains nothing). Phone test pending: cold start feels faster
+on first launch; Settings tab opens normally on first tap;
+each of the four panels opens normally on first tap; all
+Settings toggles/buttons still work and still show the saved
+values; Back from a panel still returns to the hub; the app
+still restores to the Settings tab after a recreate; version
+1.2.6. No frame-rate or cold-start numbers were measured —
+none are claimed.
+
 ### Release signing (wired 2026-11-07 — keystore encrypted in repo, passphrase via GitHub Secrets)
 
 - `app/build.gradle` now has `signingConfigs.release`: PKCS12

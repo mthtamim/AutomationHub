@@ -15,6 +15,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.view.View
+import android.view.ViewStub
 import android.widget.Button
 import android.widget.CompoundButton
 import android.widget.EditText
@@ -48,7 +49,18 @@ class MainActivity : LocalizedActivity() {
     private lateinit var tvStats: TextView
 
     private lateinit var pageHome: View
-    private lateinit var pageSettings: View
+    // v1.2.6: the Settings hub and the four sub-screen panels inflate
+    // lazily (ViewStubs) — NOT at cold start. pageSettings is null
+    // until the first visit to the Settings tab; a panel id is absent
+    // from the tree until its first open. hubReady / inflatedPanels
+    // gate every touch of those views, so a refresh before first
+    // visit simply skips them — the values are re-read from Config
+    // when the view finally inflates (ensureSettings / ensurePanel
+    // both end with refreshStatus()).
+    private var pageSettings: View? = null
+    private var hubReady = false
+    private val inflatedPanels = mutableSetOf<Int>()
+    private fun isPanelReady(id: Int) = id in inflatedPanels
     private var settingsOpen = false
 
     // Smoothness (2026-11-06): the app version never changes while
@@ -240,7 +252,8 @@ class MainActivity : LocalizedActivity() {
         setContentView(R.layout.activity_main)
 
         pageHome = findViewById(R.id.pageHome)
-        pageSettings = findViewById(R.id.pageSettings)
+        // v1.2.6: pageSettings is a ViewStub now — inflated on the
+        // first Settings visit by ensureSettings() (from showPage).
         // (pill bottom bar is wired in setupNavBar() below,
         //  in the navigation block; selection is re-painted
         //  in onResume too)
@@ -271,22 +284,9 @@ class MainActivity : LocalizedActivity() {
             findViewById(R.id.btnDashRedialOnanswerStop)
         btnDashRedialOnanswerResume =
             findViewById(R.id.btnDashRedialOnanswerResume)
-        tvSetPill = findViewById(R.id.tvSetPill)
-        tvHubPermsSub = findViewById(R.id.tvHubPermsSub)
-        tvHubSecSub = findViewById(R.id.tvHubSecSub)
-        tvHubDataSub = findViewById(R.id.tvHubDataSub)
-        tvHubDiag = findViewById(R.id.tvHubDiag)
-
-        tvPinInfo = findViewById(R.id.tvPinInfo)
-        tvAdminInfo = findViewById(R.id.tvAdminInfo)
-        tvGeoInfo = findViewById(R.id.tvGeoInfo)
-        tvFocusGuardInfo = findViewById(R.id.tvFocusGuardInfo)
-        tvFocusAppsInfo = findViewById(R.id.tvFocusAppsInfo)
-        btnFocusStart = findViewById(R.id.btnFocusStart)
-        btnFocusEnd = findViewById(R.id.btnFocusEnd)
-        tvStats = findViewById(R.id.tvStats)
-        tvA11yState = findViewById(R.id.tvA11yState)
-        tvGeneralDiag = findViewById(R.id.tvGeneralDiag)
+        // v1.2.6: the settings/hub/panel fields above are bound in
+        // ensureSettings() / ensurePanel() now — the views do not
+        // exist at cold start. (Home fields stay bound here.)
 
 
         // ----- pill bottom bar (v1.2.0): same three destinations
@@ -307,121 +307,37 @@ class MainActivity : LocalizedActivity() {
 
         // ----- permissions entry points -----
 
-        // ----- app lock -----
-        val swAppLock = findViewById<CompoundButton>(R.id.swAppLock)
-        swAppLock.isChecked = Config.appLockOn(this)
-        swAppLock.setOnCheckedChangeListener { _, checked ->
-            if (checked) {
-                if (Config.pinHash(this).isEmpty()) {
-                    showSetPinDialog { ok -> if (!ok) swAppLock.isChecked = false }
-                } else {
-                    Config.setAppLockOn(this, true)
-                }
-            } else {
-                Config.setAppLockOn(this, false)
-            }
-        }
-        findViewById<Button>(R.id.btnChangePin).setOnClickListener {
-            showSetPinDialog { }
-        }
-
-        // ----- v2.18 app locker (managed on its own screen) -----
-        findViewById<Button>(R.id.btnAppLocker).setOnClickListener {
-            startActivity(Intent(this, AppLockerActivity::class.java))
-        }
+        // v1.2.6: app lock / app locker wiring moved to
+        // bindPanelSecurity() — the Security panel inflates lazily.
 
         // ----- more features (v2.1) -----
-        bindToggle(R.id.swGeo, "geo_on", Config.geoOn(this))
+        // v1.2.6: swGeo moved to bindPanelSmart().
 
         // ----- Focus Guard card (new 2026-11-06): the on/off switch
         // lives in the dedicated card now (same ids). It turns a
         // saved schedule off (or back on); with no saved packages
         // it cannot turn on and says so. Setup (apps, window,
         // presets) is wired just below.
-        findViewById<CompoundButton>(R.id.swFocusGuard).apply {
-            isChecked = Config.focusOn(this@MainActivity)
-            setOnCheckedChangeListener { _, checked ->
-                if (focusGuardUpdating) return@setOnCheckedChangeListener
-                if (checked && Config.focusPkgs(this@MainActivity).isEmpty()) {
-                    focusGuardUpdating = true
-                    isChecked = false
-                    focusGuardUpdating = false
-                    toast(getString(R.string.focus_guard_no_schedule))
-                    refreshFocusGuard()
-                    return@setOnCheckedChangeListener
-                }
-                Config.setFocusOn(this@MainActivity, checked)
-                refreshFocusGuard()
-            }
-        }
-        refreshFocusGuard()
+        // v1.2.6: Focus Guard switch moved to bindPanelSmart().
 
         // ----- Focus Guard setup card (new 2026-11-06): app picker,
         // time window and preset chips. Saving applies at once —
         // the picker enables the guard when apps are saved, and
         // refreshFocusGuard() redraws the summary below.
-        findViewById<Button>(R.id.btnFocusApps).setOnClickListener {
-            startActivity(Intent(this, FocusGuardPickerActivity::class.java))
-        }
-        findViewById<Button>(R.id.btnFocusStart).setOnClickListener {
-            showFocusTimePicker(isStart = true)
-        }
-        findViewById<Button>(R.id.btnFocusEnd).setOnClickListener {
-            showFocusTimePicker(isStart = false)
-        }
-        findViewById<Button>(R.id.chipFocusStudy).setOnClickListener {
-            applyFocusPreset(18 * 60, 22 * 60)
-        }
-        findViewById<Button>(R.id.chipFocusNight).setOnClickListener {
-            applyFocusPreset(22 * 60, 6 * 60)
-        }
-        findViewById<Button>(R.id.chipFocusWork).setOnClickListener {
-            applyFocusPreset(9 * 60, 17 * 60)
-        }
+        // v1.2.6: Focus Guard setup wiring moved to bindPanelSmart().
 
         // ----- v2.2 toggles & actions -----
 
 
-        findViewById<Button>(R.id.btnSetGeo).setOnClickListener {
-            toast(getString(R.string.toast_geo_fetching))
-            LocationHelper.fetchCoords(this,
-                { lat, lng ->
-                    Config.setGeoCenter(this, lat, lng)
-                    runOnUiThread { refreshStatus(); toast(getString(R.string.toast_geo_set)) }
-                },
-                { runOnUiThread {
-                    // Tell "location switched off" apart from "no fix
-                    // yet": only the first one gets a settings offer.
-                    if (!LocationHelper.anyProviderEnabled(this)) {
-                        AlertDialog.Builder(this)
-                            .setTitle(getString(R.string.geo_no_provider_title))
-                            .setMessage(getString(R.string.geo_no_provider_msg))
-                            .setPositiveButton(getString(R.string.geo_open_settings)) { _, _ ->
-                                try {
-                                    startActivity(Intent(
-                                        android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                                } catch (_: Exception) { }
-                            }
-                            .setNegativeButton(getString(R.string.btn_cancel), null)
-                            .show()
-                    } else {
-                        toast(getString(R.string.toast_geo_failed))
-                    }
-                } })
-        }
+        // v1.2.6: btnSetGeo moved to bindPanelSmart().
         // ----- v2.17.4 settings reorganization wiring -----
         // Usage Access is granted ONLY in Permissions & Access now;
         // the Smart panel keeps a state line (refreshStatus) + link.
-        findViewById<Button>(R.id.btnSmartPermsLink).setOnClickListener {
-            startActivity(Intent(this, PermissionsActivity::class.java))
-        }
-        // Same for Device Admin / Accessibility from Security.
-        findViewById<Button>(R.id.btnSecPermsLink).setOnClickListener {
-            startActivity(Intent(this, PermissionsActivity::class.java))
-        }
+        // v1.2.6: btnSmartPermsLink moved to bindPanelSmart(),
+        // btnSecPermsLink moved to bindPanelSecurity().
         // automation_on finally gets its master toggle (was an
         // orphan key changeable only via settings import).
-        bindToggle(R.id.swAutoMaster, "automation_on", Config.automationOn(this))
+        // v1.2.6: swAutoMaster moved to bindPanelSmart().
         // Quick Settings tile (new 2026-11-06): Android 13+ can ask
         // the system to add the AutomationHub tile; older versions
         // (and a declined request) fall back to the manual QS Edit
@@ -432,93 +348,26 @@ class MainActivity : LocalizedActivity() {
         // TileService.requestAddTile and no TILE_ADD_REQUEST_OK —
         // success is TILE_ADD_REQUEST_RESULT_TILE_ADDED (2) or
         // TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED (1).
-        findViewById<Button>(R.id.btnAddQsTile).setOnClickListener {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val sbm = getSystemService(StatusBarManager::class.java)
-                if (sbm != null) {
-                    sbm.requestAddTileService(
-                        ComponentName(this, AutomationTileService::class.java),
-                        "AutomationHub",
-                        Icon.createWithResource(this, R.drawable.ic_nav_auto),
-                        mainExecutor,
-                        java.util.function.Consumer<Int> { result ->
-                            toast(getString(if (result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED ||
-                                result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED)
-                                R.string.tile_requested else R.string.tile_add_manually))
-                        }
-                    )
-                } else {
-                    toast(getString(R.string.tile_add_manually))
-                }
-            } else {
-                toast(getString(R.string.tile_add_manually))
-            }
-        }
+        // v1.2.6: btnAddQsTile moved to bindPanelSmart().
         // geo_radius finally gets a UI (was stuck at 200 m).
-        findViewById<Button>(R.id.btnGeoRadius).setOnClickListener {
-            val options = intArrayOf(100, 200, 300, 500, 1000)
-            val labels = options.map { "$it m" }.toTypedArray()
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.btn_geo_radius))
-                .setItems(labels) { _, which ->
-                    Config.setGeoRadius(this, options[which]); refreshStatus()
-                }
-                .show()
-        }
+        // v1.2.6: btnGeoRadius moved to bindPanelSmart().
         // ----- data & statistics (v2.1) -----
 
 
         // ----- v2.11 remote additions -----
 
 
-        findViewById<Button>(R.id.btnAccent).setOnClickListener {
-            val names = arrayOf("emerald", "blue", "purple", "amber", "rose")
-            val labels = arrayOf(
-                getString(R.string.accent_emerald), getString(R.string.accent_blue),
-                getString(R.string.accent_purple), getString(R.string.accent_amber),
-                getString(R.string.accent_rose))
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.btn_accent))
-                .setItems(labels) { _, w ->
-                    Config.setAccent(this, names[w]); recreate()
-                }
-                .show()
-        }
-        // v2.25.0: optional app theme picker. A non-default theme carries
-        // its own accent (see LocalizedActivity); the accent picker above
-        // still applies when Emerald Dark is selected.
-        findViewById<Button>(R.id.btnAppTheme).setOnClickListener {
-            showThemePicker()
-        }
-        findViewById<Button>(R.id.btnCheckUpdate).setOnClickListener {
-            toast(getString(R.string.update_checking))
-            Update.check(this, true) { newer, url ->
-                if (newer != null) {
-                    AlertDialog.Builder(this)
-                        .setTitle(getString(R.string.update_found, newer))
-                        .setMessage(getString(R.string.update_found_msg))
-                        .setPositiveButton(getString(R.string.btn_open)) { _, _ ->
-                            if (!url.isNullOrEmpty()) try {
-                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            } catch (_: Exception) { }
-                        }
-                        .setNegativeButton(getString(R.string.btn_cancel), null)
-                        .show()
-                } else toast(getString(R.string.update_latest))
-            }
-        }
-        val swAutoUpd = findViewById<CompoundButton>(R.id.swAutoUpdate)
-        swAutoUpd.isChecked = Config.autoUpdate(this)
-        swAutoUpd.setOnCheckedChangeListener { _, checked ->
-            Config.setAutoUpdate(this, checked)
-        }
+        // v1.2.6: accent / theme picker / update check / auto-update
+        // wiring moved to bindPanelGeneral() — the General panel
+        // inflates lazily.
 
         // v2.11: once-a-day silent update check
         if (System.currentTimeMillis() - Config.updateLastCheck(this) >
             24 * 3600_000L) Update.check(this, false)
 
         wireV24()
-        wireV217()
+        // v1.2.6: wireV217() is gone — the hub tiles are wired in
+        // ensureSettings() when the hub inflates.
 
         // ----- v2.3 wiring -----
 
@@ -608,50 +457,14 @@ class MainActivity : LocalizedActivity() {
         }
 
 
-        // ----- security card -----
-        bindToggle(R.id.swIntruder, "intruder_on", Config.intruderOn(this))
-        findViewById<Button>(R.id.btnSetPin).setOnClickListener { showSetPinDialog { } }
+        // v1.2.6: swIntruder / btnSetPin moved to bindPanelSecurity().
         // v2.17.4: the Device Admin grant button moved to
         // Permissions & Access — the Security panel keeps the
         // tvAdminInfo state line and the btnSecPermsLink link.
 
         // ----- appearance: language & theme -----
-        val toggleLang = findViewById<MaterialButtonToggleGroup>(R.id.toggleLang)
-        toggleLang.check(if (Config.language(this) == "en") R.id.btnLangEn else R.id.btnLangBn)
-        toggleLang.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            val target = if (checkedId == R.id.btnLangEn) "en" else "bn"
-            if (target != Config.language(this)) {
-                Config.setLanguage(this, target)
-                recreate()
-            }
-        }
-        val toggleTheme = findViewById<MaterialButtonToggleGroup>(R.id.toggleTheme)
-        toggleTheme.check(
-            when (Config.themeMode(this)) {
-                "light" -> R.id.btnThemeLight
-                "dark" -> R.id.btnThemeDark
-                else -> R.id.btnThemeSystem
-            }
-        )
-        toggleTheme.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            val target = when (checkedId) {
-                R.id.btnThemeLight -> "light"
-                R.id.btnThemeDark -> "dark"
-                else -> "system"
-            }
-            if (target != Config.themeMode(this)) {
-                Config.setThemeMode(this, target)
-                AppCompatDelegate.setDefaultNightMode(
-                    when (target) {
-                        "light" -> AppCompatDelegate.MODE_NIGHT_NO
-                        "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                    }
-                )
-            }
-        }
+        // v1.2.6: language / theme toggles moved to
+        // bindPanelGeneral().
 
         refreshStatus()
 
@@ -674,8 +487,9 @@ class MainActivity : LocalizedActivity() {
         // remembered tab — if anything ever desyncs them (a switch
         // interrupted mid-flight, a recreate), resume re-syncs
         // them instead of re-painting a stale selection.
-        selectNavTab(if (pageSettings.visibility == View.VISIBLE)
-            R.id.navSettings else R.id.navHome)
+        // v1.2.6: pageSettings may not exist yet (hub not visited) —
+        // settingsOpen is the same truth showPage() maintains.
+        selectNavTab(if (settingsOpen) R.id.navSettings else R.id.navHome)
         refreshStatus()
         Automation.checkClipboard(this)
         // v2.4 NFC tag trigger (foreground dispatch).
@@ -729,13 +543,19 @@ class MainActivity : LocalizedActivity() {
     )
 
     private fun openSubScreen(groupId: Int, titleRes: Int) {
+        // v1.2.6: the panel inflates on its first open.
+        ensurePanel(groupId)
         findViewById<View>(R.id.subRoot).visibility = View.VISIBLE
         findViewById<View>(R.id.bottomNav).visibility = View.GONE
         findViewById<View>(R.id.toolbar).visibility = View.GONE
         findViewById<TextView>(R.id.tvSubTitle).setText(titleRes)
         for (id in subGroups) {
-            findViewById<View>(id).visibility =
-                if (id == groupId) View.VISIBLE else View.GONE
+            // Panels that never opened are still ViewStubs —
+            // findViewById returns null for them; only the
+            // inflated ones get a visibility.
+            findViewById<View>(id)?.let {
+                it.visibility = if (id == groupId) View.VISIBLE else View.GONE
+            }
         }
         findViewById<View>(R.id.subScroll).scrollTo(0, 0)
     }
@@ -761,53 +581,330 @@ class MainActivity : LocalizedActivity() {
     }
 
 
-    private fun wireV24() {
-        // --- sub-screen navigation (v2.4.1) ---
-        findViewById<View>(R.id.btnSubBack).setOnClickListener { closeSubScreen() }
-        // v2.17.3: no back arrow on the Settings tab page any more
-        // (btnSettingsBack removed from page_settings.xml) — Settings
-        // is a top-level tab; system Back handles navigation.
-        // v2.17.2: the settings hub tiles are the only entry points
-        // (Perms/Security/Data/General/Smart are wired in wireV217)
-        // -- no legacy menu, no dashboard shortcut boxes: every
-        // panel opens from one place.
+    // ------------- v1.2.6 lazy inflation -------------
+    // The Settings hub (page_settings) and the four sub-screen
+    // panels inflate on first use, not at cold start. Each
+    // ensure*() runs once: it inflates the ViewStub, binds the
+    // lateinit fields that live in that subtree, wires its
+    // listeners (verbatim from onCreate / wireV24 / wireV217),
+    // and ends with refreshStatus() so the new views show the
+    // current values at once.
+
+    /** Inflate the Settings hub on first visit to the Settings tab. */
+    private fun ensureSettings() {
+        if (hubReady) return
+        val stub = findViewById<ViewStub>(R.id.stubSettings)
+        pageSettings = stub.inflate()
+        tvSetPill = findViewById(R.id.tvSetPill)
+        tvHubPermsSub = findViewById(R.id.tvHubPermsSub)
+        tvHubSecSub = findViewById(R.id.tvHubSecSub)
+        tvHubDataSub = findViewById(R.id.tvHubDataSub)
+        tvHubDiag = findViewById(R.id.tvHubDiag)
+        // Hub tiles — the only entry points to the panels.
+        findViewById<View>(R.id.tileHubPerms).setOnClickListener {
+            startActivity(Intent(this, PermissionsActivity::class.java)) }
+        findViewById<View>(R.id.tileHubSecurity).setOnClickListener {
+            openSubScreen(R.id.panelSecurity, R.string.cat_security) }
+        findViewById<View>(R.id.tileHubData).setOnClickListener {
+            openSubScreen(R.id.panelData, R.string.cat_data) }
         findViewById<View>(R.id.tileHubGeneral).setOnClickListener {
             openSubScreen(R.id.panelGeneral, R.string.cat_general) }
         findViewById<View>(R.id.tileHubSmart).setOnClickListener {
             openSubScreen(R.id.panelSmart, R.string.cat_smart) }
+        hubReady = true
+        refreshSettingsHub()
+    }
 
-        // v2.17.3 back map (Back never falls out of the app from a
-        // panel or a non-Dashboard tab):
-        //   sub-screen open -> close it (back to the Settings hub
-        //   that opened it); config/pairing page open -> close it
-        //   (Settings hub); any other tab -> Dashboard; Dashboard
-        //   with nothing open -> exit.
-        onBackPressedDispatcher.addCallback(this,
-            object : androidx.activity.OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    if (subScreenOpen()) {
-                        closeSubScreen()
-                    } else if (navSelectedId != R.id.navHome) {
-                        showPage(R.id.navHome)
-                    } else {
-                        isEnabled = false
-                        onBackPressedDispatcher.onBackPressed()
+    /** Inflate one sub-screen panel on its first open. */
+    private fun ensurePanel(groupId: Int) {
+        if (groupId in inflatedPanels) return
+        when (groupId) {
+            R.id.panelGeneral -> {
+                findViewById<ViewStub>(R.id.stubPanelGeneral).inflate()
+                bindPanelGeneral()
+            }
+            R.id.panelSmart -> {
+                findViewById<ViewStub>(R.id.stubPanelSmart).inflate()
+                bindPanelSmart()
+            }
+            R.id.panelSecurity -> {
+                findViewById<ViewStub>(R.id.stubPanelSecurity).inflate()
+                bindPanelSecurity()
+            }
+            R.id.panelData -> {
+                findViewById<ViewStub>(R.id.stubPanelData).inflate()
+                bindPanelData()
+            }
+            else -> return
+        }
+        inflatedPanels.add(groupId)
+        // Fill the new views with the current values at once.
+        refreshStatus()
+    }
+
+    /** General panel: language/theme, accent, theme picker, update. */
+    private fun bindPanelGeneral() {
+        tvGeneralDiag = findViewById(R.id.tvGeneralDiag)
+        // ----- appearance: language & theme -----
+        val toggleLang = findViewById<MaterialButtonToggleGroup>(R.id.toggleLang)
+        toggleLang.check(if (Config.language(this) == "en") R.id.btnLangEn else R.id.btnLangBn)
+        toggleLang.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            val target = if (checkedId == R.id.btnLangEn) "en" else "bn"
+            if (target != Config.language(this)) {
+                Config.setLanguage(this, target)
+                recreate()
+            }
+        }
+        val toggleTheme = findViewById<MaterialButtonToggleGroup>(R.id.toggleTheme)
+        toggleTheme.check(
+            when (Config.themeMode(this)) {
+                "light" -> R.id.btnThemeLight
+                "dark" -> R.id.btnThemeDark
+                else -> R.id.btnThemeSystem
+            }
+        )
+        toggleTheme.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            val target = when (checkedId) {
+                R.id.btnThemeLight -> "light"
+                R.id.btnThemeDark -> "dark"
+                else -> "system"
+            }
+            if (target != Config.themeMode(this)) {
+                Config.setThemeMode(this, target)
+                AppCompatDelegate.setDefaultNightMode(
+                    when (target) {
+                        "light" -> AppCompatDelegate.MODE_NIGHT_NO
+                        "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                     }
+                )
+            }
+        }
+        findViewById<Button>(R.id.btnAccent).setOnClickListener {
+            val names = arrayOf("emerald", "blue", "purple", "amber", "rose")
+            val labels = arrayOf(
+                getString(R.string.accent_emerald), getString(R.string.accent_blue),
+                getString(R.string.accent_purple), getString(R.string.accent_amber),
+                getString(R.string.accent_rose))
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.btn_accent))
+                .setItems(labels) { _, w ->
+                    Config.setAccent(this, names[w]); recreate()
                 }
-            })
+                .show()
+        }
+        // v2.25.0: optional app theme picker. A non-default theme carries
+        // its own accent (see LocalizedActivity); the accent picker above
+        // still applies when Emerald Dark is selected.
+        findViewById<Button>(R.id.btnAppTheme).setOnClickListener {
+            showThemePicker()
+        }
+        findViewById<Button>(R.id.btnCheckUpdate).setOnClickListener {
+            toast(getString(R.string.update_checking))
+            Update.check(this, true) { newer, url ->
+                if (newer != null) {
+                    AlertDialog.Builder(this)
+                        .setTitle(getString(R.string.update_found, newer))
+                        .setMessage(getString(R.string.update_found_msg))
+                        .setPositiveButton(getString(R.string.btn_open)) { _, _ ->
+                            if (!url.isNullOrEmpty()) try {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (_: Exception) { }
+                        }
+                        .setNegativeButton(getString(R.string.btn_cancel), null)
+                        .show()
+                } else toast(getString(R.string.update_latest))
+            }
+        }
+        val swAutoUpd = findViewById<CompoundButton>(R.id.swAutoUpdate)
+        swAutoUpd.isChecked = Config.autoUpdate(this)
+        swAutoUpd.setOnCheckedChangeListener { _, checked ->
+            Config.setAutoUpdate(this, checked)
+        }
+    }
 
+    /** Smart panel: geo, Focus Guard, master toggle, QS tile. */
+    private fun bindPanelSmart() {
+        tvGeoInfo = findViewById(R.id.tvGeoInfo)
+        tvFocusGuardInfo = findViewById(R.id.tvFocusGuardInfo)
+        tvFocusAppsInfo = findViewById(R.id.tvFocusAppsInfo)
+        btnFocusStart = findViewById(R.id.btnFocusStart)
+        btnFocusEnd = findViewById(R.id.btnFocusEnd)
+        // ----- more features (v2.1) -----
+        bindToggle(R.id.swGeo, "geo_on", Config.geoOn(this))
 
-        // --- security panel ---
-        // v2.17.4: the Accessibility grant button moved to
-        // Permissions & Access — Security keeps the tvA11yState
-        // state line and the btnSecPermsLink link (wired in onCreate).
+        // ----- Focus Guard card (new 2026-11-06): the on/off switch
+        // lives in the dedicated card now (same ids). It turns a
+        // saved schedule off (or back on); with no saved packages
+        // it cannot turn on and says so. Setup (apps, window,
+        // presets) is wired just below.
+        findViewById<CompoundButton>(R.id.swFocusGuard).apply {
+            isChecked = Config.focusOn(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                if (focusGuardUpdating) return@setOnCheckedChangeListener
+                if (checked && Config.focusPkgs(this@MainActivity).isEmpty()) {
+                    focusGuardUpdating = true
+                    isChecked = false
+                    focusGuardUpdating = false
+                    toast(getString(R.string.focus_guard_no_schedule))
+                    refreshFocusGuard()
+                    return@setOnCheckedChangeListener
+                }
+                Config.setFocusOn(this@MainActivity, checked)
+                refreshFocusGuard()
+            }
+        }
 
-        // --- former group panel items (now in Data) ---
+        // ----- Focus Guard setup card (new 2026-11-06): app picker,
+        // time window and preset chips. Saving applies at once —
+        // the picker enables the guard when apps are saved, and
+        // refreshFocusGuard() redraws the summary below.
+        findViewById<Button>(R.id.btnFocusApps).setOnClickListener {
+            startActivity(Intent(this, FocusGuardPickerActivity::class.java))
+        }
+        findViewById<Button>(R.id.btnFocusStart).setOnClickListener {
+            showFocusTimePicker(isStart = true)
+        }
+        findViewById<Button>(R.id.btnFocusEnd).setOnClickListener {
+            showFocusTimePicker(isStart = false)
+        }
+        findViewById<Button>(R.id.chipFocusStudy).setOnClickListener {
+            applyFocusPreset(18 * 60, 22 * 60)
+        }
+        findViewById<Button>(R.id.chipFocusNight).setOnClickListener {
+            applyFocusPreset(22 * 60, 6 * 60)
+        }
+        findViewById<Button>(R.id.chipFocusWork).setOnClickListener {
+            applyFocusPreset(9 * 60, 17 * 60)
+        }
 
+        // ----- v2.2 toggles & actions -----
+        findViewById<Button>(R.id.btnSetGeo).setOnClickListener {
+            toast(getString(R.string.toast_geo_fetching))
+            LocationHelper.fetchCoords(this,
+                { lat, lng ->
+                    Config.setGeoCenter(this, lat, lng)
+                    runOnUiThread { refreshStatus(); toast(getString(R.string.toast_geo_set)) }
+                },
+                { runOnUiThread {
+                    // Tell "location switched off" apart from "no fix
+                    // yet": only the first one gets a settings offer.
+                    if (!LocationHelper.anyProviderEnabled(this)) {
+                        AlertDialog.Builder(this)
+                            .setTitle(getString(R.string.geo_no_provider_title))
+                            .setMessage(getString(R.string.geo_no_provider_msg))
+                            .setPositiveButton(getString(R.string.geo_open_settings)) { _, _ ->
+                                try {
+                                    startActivity(Intent(
+                                        android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                } catch (_: Exception) { }
+                            }
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show()
+                    } else {
+                        toast(getString(R.string.toast_geo_failed))
+                    }
+                } })
+        }
+        // ----- v2.17.4 settings reorganization wiring -----
+        // Usage Access is granted ONLY in Permissions & Access now;
+        // the Smart panel keeps a state line (refreshStatus) + link.
+        findViewById<Button>(R.id.btnSmartPermsLink).setOnClickListener {
+            startActivity(Intent(this, PermissionsActivity::class.java))
+        }
+        // automation_on finally gets its master toggle (was an
+        // orphan key changeable only via settings import).
+        bindToggle(R.id.swAutoMaster, "automation_on", Config.automationOn(this))
+        // Quick Settings tile (new 2026-11-06): Android 13+ can ask
+        // the system to add the AutomationHub tile; older versions
+        // (and a declined request) fall back to the manual QS Edit
+        // route, which the toast names.
+        // NOTE: the API lives on StatusBarManager, NOT TileService:
+        // StatusBarManager.requestAddTileService(component, label,
+        // icon, executor, callback). There is no
+        // TileService.requestAddTile and no TILE_ADD_REQUEST_OK —
+        // success is TILE_ADD_REQUEST_RESULT_TILE_ADDED (2) or
+        // TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED (1).
+        findViewById<Button>(R.id.btnAddQsTile).setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val sbm = getSystemService(StatusBarManager::class.java)
+                if (sbm != null) {
+                    sbm.requestAddTileService(
+                        ComponentName(this, AutomationTileService::class.java),
+                        "AutomationHub",
+                        Icon.createWithResource(this, R.drawable.ic_nav_auto),
+                        mainExecutor,
+                        java.util.function.Consumer<Int> { result ->
+                            toast(getString(if (result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED ||
+                                result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED)
+                                R.string.tile_requested else R.string.tile_add_manually))
+                        }
+                    )
+                } else {
+                    toast(getString(R.string.tile_add_manually))
+                }
+            } else {
+                toast(getString(R.string.tile_add_manually))
+            }
+        }
+        // geo_radius finally gets a UI (was stuck at 200 m).
+        findViewById<Button>(R.id.btnGeoRadius).setOnClickListener {
+            val options = intArrayOf(100, 200, 300, 500, 1000)
+            val labels = options.map { "$it m" }.toTypedArray()
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.btn_geo_radius))
+                .setItems(labels) { _, which ->
+                    Config.setGeoRadius(this, options[which]); refreshStatus()
+                }
+                .show()
+        }
+        refreshFocusGuard()
+    }
 
-        // v2.17.4: the Shizuku connect/test button moved to
-        // Permissions & Access (its state line lives there too).
+    /** Security panel: app lock, PIN, intruder, admin state. */
+    private fun bindPanelSecurity() {
+        tvPinInfo = findViewById(R.id.tvPinInfo)
+        tvAdminInfo = findViewById(R.id.tvAdminInfo)
+        tvA11yState = findViewById(R.id.tvA11yState)
+        // ----- app lock -----
+        val swAppLock = findViewById<CompoundButton>(R.id.swAppLock)
+        swAppLock.isChecked = Config.appLockOn(this)
+        swAppLock.setOnCheckedChangeListener { _, checked ->
+            if (checked) {
+                if (Config.pinHash(this).isEmpty()) {
+                    showSetPinDialog { ok -> if (!ok) swAppLock.isChecked = false }
+                } else {
+                    Config.setAppLockOn(this, true)
+                }
+            } else {
+                Config.setAppLockOn(this, false)
+            }
+        }
+        findViewById<Button>(R.id.btnChangePin).setOnClickListener {
+            showSetPinDialog { }
+        }
 
+        // ----- v2.18 app locker (managed on its own screen) -----
+        findViewById<Button>(R.id.btnAppLocker).setOnClickListener {
+            startActivity(Intent(this, AppLockerActivity::class.java))
+        }
+
+        // ----- security card -----
+        bindToggle(R.id.swIntruder, "intruder_on", Config.intruderOn(this))
+        findViewById<Button>(R.id.btnSetPin).setOnClickListener { showSetPinDialog { } }
+        // v2.17.4: the Device Admin grant button moved to
+        // Permissions & Access — the Security panel keeps the
+        // tvAdminInfo state line and the btnSecPermsLink link.
+        findViewById<Button>(R.id.btnSecPermsLink).setOnClickListener {
+            startActivity(Intent(this, PermissionsActivity::class.java))
+        }
+    }
+
+    /** Data panel: stats line, backup / import / config code. */
+    private fun bindPanelData() {
+        tvStats = findViewById(R.id.tvStats)
         findViewById<Button>(R.id.btnExportConfig).setOnClickListener {
             cfgExportLauncher.launch(Intent(Intent.ACTION_CREATE_DOCUMENT)
                 .addCategory(Intent.CATEGORY_OPENABLE)
@@ -847,6 +944,54 @@ class MainActivity : LocalizedActivity() {
                 .setNegativeButton(getString(R.string.btn_cancel), null)
                 .show()
         }
+    }
+
+
+    private fun wireV24() {
+        // --- sub-screen navigation (v2.4.1) ---
+        findViewById<View>(R.id.btnSubBack).setOnClickListener { closeSubScreen() }
+        // v2.17.3: no back arrow on the Settings tab page any more
+        // (btnSettingsBack removed from page_settings.xml) — Settings
+        // is a top-level tab; system Back handles navigation.
+        // v2.17.2: the settings hub tiles are the only entry points
+        // (all five are wired in ensureSettings()) -- no legacy
+        // menu, no dashboard shortcut boxes: every panel opens
+        // from one place.
+
+        // v2.17.3 back map (Back never falls out of the app from a
+        // panel or a non-Dashboard tab):
+        //   sub-screen open -> close it (back to the Settings hub
+        //   that opened it); config/pairing page open -> close it
+        //   (Settings hub); any other tab -> Dashboard; Dashboard
+        //   with nothing open -> exit.
+        onBackPressedDispatcher.addCallback(this,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (subScreenOpen()) {
+                        closeSubScreen()
+                    } else if (navSelectedId != R.id.navHome) {
+                        showPage(R.id.navHome)
+                    } else {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
+                }
+            })
+
+
+        // --- security panel ---
+        // v2.17.4: the Accessibility grant button moved to
+        // Permissions & Access — Security keeps the tvA11yState
+        // state line and the btnSecPermsLink link (wired in
+        // bindPanelSecurity, v1.2.6).
+
+        // --- former group panel items (now in Data) ---
+
+
+        // v2.17.4: the Shizuku connect/test button moved to
+        // Permissions & Access (its state line lives there too).
+
+        // v1.2.6: Data panel buttons moved to bindPanelData().
 
         // --- data panel ---
 
@@ -916,6 +1061,9 @@ class MainActivity : LocalizedActivity() {
     // (including a second tap mid-transition) is a no-op: it only
     // re-asserts the pill, never replays the transition.
     private fun showPage(itemId: Int) {
+        // v1.2.6: the Settings hub inflates on first visit — before
+        // anything below touches pageSettings.
+        if (itemId == R.id.navSettings) ensureSettings()
         if (pageHome.isLaidOut &&
             settingsOpen == (itemId == R.id.navSettings)) {
             selectNavTab(itemId)
@@ -932,7 +1080,9 @@ class MainActivity : LocalizedActivity() {
         val change = {
             settingsOpen = itemId == R.id.navSettings
             pageHome.visibility = if (itemId == R.id.navHome) View.VISIBLE else View.GONE
-            pageSettings.visibility = if (itemId == R.id.navSettings) View.VISIBLE else View.GONE
+            // v1.2.6: pageSettings is null until its first inflate —
+            // a null-safe set keeps the Home switch working.
+            pageSettings?.visibility = if (itemId == R.id.navSettings) View.VISIBLE else View.GONE
             closeSubScreen()
         }
         if (pageHome.isLaidOut) {
@@ -943,8 +1093,11 @@ class MainActivity : LocalizedActivity() {
             // the visible motion must not depend on it. v1.2.4:
             // the same-tab guard at the top of showPage() means
             // this only runs on a real user-initiated switch.
-            PLMotion.slideFadeIn(
-                if (itemId == R.id.navSettings) pageSettings else pageHome,
+            // v1.2.6: pageSettings is non-null here when switching
+            // to Settings (ensureSettings ran above); the fallback
+            // only guards the unreachable null.
+            val target = if (itemId == R.id.navSettings) pageSettings else pageHome
+            if (target != null) PLMotion.slideFadeIn(target,
                 itemId == R.id.navSettings)
         } else {
             change()
@@ -1063,46 +1216,47 @@ class MainActivity : LocalizedActivity() {
         })
         setTextColorIfChanged(tvConnPill, ContextCompat.getColor(this,
             if (autoOn) R.color.status_ok else R.color.status_bad))
-        // Smart-control / data info lines
-        setTextIfChanged(tvGeoInfo, if (Config.geoIsSet(this)) {
-            getString(R.string.geo_set, Config.geoLat(this), Config.geoLng(this), Config.geoRadius(this))
-        } else getString(R.string.geo_not_set))
-        refreshFocusGuard()
-        setTextIfChanged(tvStats, buildStatsText(rules, flows, logs))
-        setTextIfChanged(tvPinInfo, getString(
-            if (Config.pinHash(this).isNotEmpty()) R.string.pin_state_set else R.string.pin_state_unset))
-        setTextIfChanged(tvAdminInfo, getString(
-            if (AdminReceiver.isActive(this)) R.string.admin_state_on else R.string.admin_state_off))
-        // v2.17.4: display-only state lines for the accesses that
-        // are granted in Permissions & Access (no grant path here).
-        setTextIfChanged(tvA11yState, getString(R.string.a11y_state_fmt,
-            getString(if (PermChecks.a11yEnabled(this)) R.string.state_on
-                else R.string.state_off)))
+        // v1.2.6: the settings views below only exist once their
+        // panel has inflated — before that, skip them. The values
+        // come from Config, so nothing is lost: the first
+        // ensureSettings()/ensurePanel() ends with refreshStatus(),
+        // which fills the newly-inflated views then.
+        if (isPanelReady(R.id.panelSmart)) {
+            // Smart-control / data info lines
+            setTextIfChanged(tvGeoInfo, if (Config.geoIsSet(this)) {
+                getString(R.string.geo_set, Config.geoLat(this), Config.geoLng(this), Config.geoRadius(this))
+            } else getString(R.string.geo_not_set))
+            refreshFocusGuard()
+        }
+        if (isPanelReady(R.id.panelData)) {
+            setTextIfChanged(tvStats, buildStatsText(rules, flows, logs))
+        }
+        if (isPanelReady(R.id.panelSecurity)) {
+            setTextIfChanged(tvPinInfo, getString(
+                if (Config.pinHash(this).isNotEmpty()) R.string.pin_state_set else R.string.pin_state_unset))
+            setTextIfChanged(tvAdminInfo, getString(
+                if (AdminReceiver.isActive(this)) R.string.admin_state_on else R.string.admin_state_off))
+            // v2.17.4: display-only state lines for the accesses that
+            // are granted in Permissions & Access (no grant path here).
+            setTextIfChanged(tvA11yState, getString(R.string.a11y_state_fmt,
+                getString(if (PermChecks.a11yEnabled(this)) R.string.state_on
+                    else R.string.state_off)))
+        }
         refreshDashboard()
-        refreshSettingsHub(rules, flows)
+        if (hubReady) refreshSettingsHub(rules, flows, logs)
     }
 
 
     // ------------- v2.17 redesign wiring -------------
 
-    /** v2.17 Settings hub: only the surviving tiles (Perms, Security,
-     *  Data, General, Smart) get click handlers now. */
-    private fun wireV217() {
-        findViewById<View>(R.id.tileHubPerms).setOnClickListener {
-            startActivity(Intent(this, PermissionsActivity::class.java)) }
-        findViewById<View>(R.id.tileHubSecurity).setOnClickListener {
-            openSubScreen(R.id.panelSecurity, R.string.cat_security) }
-        findViewById<View>(R.id.tileHubData).setOnClickListener {
-            openSubScreen(R.id.panelData, R.string.cat_data) }
-        findViewById<View>(R.id.tileHubGeneral).setOnClickListener {
-            openSubScreen(R.id.panelGeneral, R.string.cat_general) }
-        findViewById<View>(R.id.tileHubSmart).setOnClickListener {
-            openSubScreen(R.id.panelSmart, R.string.cat_smart) }
-        refreshSettingsHub()
-    }
+    // v1.2.6: wireV217() is gone — its hub-tile wiring lives in
+    // ensureSettings() now (the hub inflates lazily).
 
 
     private fun refreshFocusGuard() {
+        // v1.2.6: the Focus Guard views live in the Smart panel —
+        // before its first inflate there is nothing to refresh.
+        if (!isPanelReady(R.id.panelSmart)) return
         val on = Config.focusOn(this)
         val pkgs = Config.focusPkgs(this)
         val (fs, fe) = Config.focusWindow(this)
@@ -1420,27 +1574,40 @@ class MainActivity : LocalizedActivity() {
     }
 
 
-    private fun refreshSettingsHub(rules: List<JSONObject>, flows: List<JSONObject>) {
+    // v1.2.6: the hub lines are computed from Config/data now, NOT
+    // read back from other settings views — tvPinInfo / tvStats live
+    // in panels that may not have inflated yet, and reading a
+    // lateinit field of an uninflated panel would crash. The strings
+    // are identical to what refreshStatus() writes into those views
+    // when they exist.
+    private fun refreshSettingsHub(rules: List<JSONObject>, flows: List<JSONObject>, logs: List<String>) {
+        if (!hubReady) return
         val missing = PermChecks.missingCount(this)
         setTextIfChanged(tvSetPill, if (missing == 0) getString(R.string.set_status_ok)
             else getString(R.string.set_status_warn, missing))
         setTextIfChanged(tvHubPermsSub, if (missing == 0)
             getString(R.string.perm_summary_ok)
         else getString(R.string.perm_summary_missing, missing))
-        setTextIfChanged(tvHubSecSub, "${tvPinInfo.text} • ${tvAdminInfo.text}")
-        setTextIfChanged(tvHubDataSub, tvStats.text.toString())
+        val pinState = getString(
+            if (Config.pinHash(this).isNotEmpty()) R.string.pin_state_set else R.string.pin_state_unset)
+        val adminState = getString(
+            if (AdminReceiver.isActive(this)) R.string.admin_state_on else R.string.admin_state_off)
+        setTextIfChanged(tvHubSecSub, "$pinState • $adminState")
+        setTextIfChanged(tvHubDataSub, buildStatsText(rules, flows, logs))
         setTextIfChanged(tvHubDiag, "AutomationHub v$appVersionName • " +
             "${rules.size} rules • " +
             "${flows.size} flows")
         // v2.17.4: the same version line also lives at the bottom
         // of Appearance & General (inventory category 7).
-        setTextIfChanged(tvGeneralDiag, tvHubDiag.text.toString())
+        if (isPanelReady(R.id.panelGeneral)) {
+            setTextIfChanged(tvGeneralDiag, tvHubDiag.text.toString())
+        }
     }
 
     // One-time callers (Settings hub wiring) parse once and
     // delegate; the per-refresh path passes pre-parsed data.
     private fun refreshSettingsHub() {
-        refreshSettingsHub(Automation.rules(this), FlowStore.flows(this))
+        refreshSettingsHub(Automation.rules(this), FlowStore.flows(this), Automation.recentLog(this))
     }
 
 

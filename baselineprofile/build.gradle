@@ -1,0 +1,49 @@
+// Baseline profile generator module (v1.2.6).
+//
+// This is a `com.android.test` module: it builds a test APK that runs
+// a Macrobenchmark cold-start benchmark against :app and collects the
+// generated baseline profile. It is NOT part of the app APK and adds
+// nothing to it — the existing CI task (`:app:assembleDebug` /
+// `:app:assembleRelease`) is unaffected by this module existing.
+//
+// How a profile gets produced (see BASELINE_PROFILE_CI.md):
+//   ./gradlew :baselineprofile:generateBaselineProfile
+// on a device the app can install on (arm64 — see the ABI note in
+// BASELINE_PROFILE_CI.md). The generated baseline-prof.txt is then
+// copied to app/src/main/baseline-prof.txt, where the release build
+// (minify + R8) consumes it automatically. Until that file exists,
+// the release build uses NO profile — nothing here changes what
+// ships today.
+plugins {
+    id 'com.android.test'
+    id 'com.android.baselineprofile'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.mthtamim.phonelinkflows.baselineprofile'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 34
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    // The app under test.
+    targetProjectPath ':app'
+
+    // No managed device is declared on purpose: the app is arm64-only
+    // (ndk abiFilters arm64-v8a + ML Kit native libs), so it cannot
+    // install on the x86_64 emulator a managed device would boot on a
+    // GitHub runner. The generate task therefore runs on a CONNECTED
+    // device — in CI that is the arm64 emulator booted by the
+    // workflow in BASELINE_PROFILE_CI.md. See that file before
+    // changing this.
+}
+
+dependencies {
+    implementation 'androidx.test.ext:junit:1.1.5'
+    implementation 'androidx.test.uiautomator:uiautomator:2.3.0'
+    implementation 'androidx.benchmark:benchmark-macro-junit4:1.2.4'
+}
