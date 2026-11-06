@@ -37,6 +37,9 @@ open class LocalizedActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        // v1.4.0 crash catcher: install before anything else so a
+        // launch crash writes its stack trace to Downloads.
+        CrashHandler.install(this)
         // v2.25.0: optional app theme (Settings > App theme). A non-default
         // theme carries its own accent, so it takes precedence over the
         // v2.11 accent picker; the accent picker still applies exactly
