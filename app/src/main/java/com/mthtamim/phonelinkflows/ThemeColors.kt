@@ -51,6 +51,18 @@ object ThemeColors {
     fun onSurface(ctx: Context): Int =
         resolve(ctx, MaterialR.attr.colorOnSurface, R.color.md_onSurface)
 
+    /** v1.2.2: the card fill (card_bg is a solid colorSurface) —
+     *  the container transform's start colour for a card morph. */
+    fun surface(ctx: Context): Int =
+        resolve(ctx, MaterialR.attr.colorSurface, R.color.md_surface)
+
+    /** v1.2.2: the window background — the container transform's
+     *  end colour for an editor morph. On glass themes the real
+     *  window background is a gradient drawable; this returns the
+     *  flat colorBackground underneath it. */
+    fun background(ctx: Context): Int =
+        resolve(ctx, android.R.attr.colorBackground, R.color.md_background)
+
     fun onBackground(ctx: Context): Int =
         resolve(ctx, MaterialR.attr.colorOnBackground, R.color.md_onBackground)
 

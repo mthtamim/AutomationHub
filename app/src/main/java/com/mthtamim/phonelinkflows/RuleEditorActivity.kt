@@ -2567,6 +2567,13 @@ class RuleEditorActivity : LocalizedActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_rule_editor)
+        // v1.2.2: container transform — if this editor was opened
+        // from a card or the + FAB, the editor container grows out
+        // of it (450 ms, emphasized easing) and back reverses the
+        // morph. The enter transition is postponed until the first
+        // frame is laid out, so the row building above never drops
+        // frames mid-morph.
+        PLMotion.setupEditorTransform(this)
         etName = findViewById(R.id.etRuleName)
         etCat = findViewById(R.id.etRuleCat)
         trigContainer = findViewById(R.id.trigContainer)

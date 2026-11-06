@@ -86,6 +86,11 @@ class FlowEditorActivity : LocalizedActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_flow_editor)
+        // v1.2.2: container transform — same as RuleEditorActivity:
+        // the editor grows out of its card / the + FAB (450 ms,
+        // emphasized easing), back reverses it, and the enter
+        // transition waits for the first laid-out frame.
+        PLMotion.setupEditorTransform(this)
         etFlowName = findViewById(R.id.etFlowName)
         etFlowFolder = findViewById(R.id.etFlowFolder)
         canvas = findViewById(R.id.flowCanvas)

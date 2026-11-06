@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.PhoneLink" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowAnimationStyle">@style/PL.ActivityAnim</item>
+        <!-- v1.2.2: windowAnimationStyle (PL.ActivityAnim, the generic
+             200 ms slide / 150 ms fade) is gone — window transitions
+             are now M3 fade-through, installed in code by
+             PLMotion.applyDefaultWindowTransitions (LocalizedActivity).
+             The PL.ActivityAnim style and anim files stay in res
+             (unreferenced) so nothing else breaks. -->
         <item name="colorPrimary">@color/md_primary</item>
         <item name="colorOnPrimary">@color/md_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_primaryContainer</item>

@@ -15,12 +15,13 @@ import android.app.AppOpsManager
 import android.os.Build
 import android.view.accessibility.AccessibilityManager
 import android.widget.LinearLayout
-import android.widget.Switch
+import com.google.android.material.switchmaterial.SwitchMaterial
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.view.doOnPreDraw
 import org.json.JSONObject
 import kotlin.concurrent.thread
 
@@ -476,40 +477,61 @@ class AutomationActivity : LocalizedActivity() {
      *  status. v2.17.4: a tap no longer opens a second grant path —
      *  every broken row deep-links to Permissions & Access, the one
      *  place all access is granted (inventory move #5/#6). */
+    // v1.2.2: generation guard for the async health check — only
+    // the latest renderHealth call may paint.
+    private var healthGen = 0
+
     private fun renderHealth() {
+        val gen = ++healthGen
         val box = findViewById<LinearLayout>(R.id.healthRows)
-        box.removeAllViews()
-        val toPermissions: () -> Unit = {
-            startActivity(Intent(this, PermissionsActivity::class.java))
-        }
-        val items = mutableListOf<Triple<Int, Boolean, (() -> Unit)?>>()
-        items.add(Triple(R.string.auto_health_a11y, a11yEnabled(), toPermissions))
-        items.add(Triple(R.string.auto_health_notif, PermChecks.notifAccess(this), toPermissions))
-        items.add(Triple(R.string.auto_health_usage, usageAccess(), toPermissions))
-        if (Build.VERSION.SDK_INT >= 31) {
-            val am = getSystemService(ALARM_SERVICE) as AlarmManager
-            items.add(Triple(R.string.auto_health_alarm, am.canScheduleExactAlarms(), toPermissions))
-        }
-        items.add(Triple(R.string.auto_health_shizuku, ShizukuHelper.granted(), toPermissions))
-        // v2.15.0: sms_sent quietly dies without READ_SMS — visible here.
-        items.add(Triple(R.string.auto_health_sms,
-            checkSelfPermission(android.Manifest.permission.READ_SMS) ==
-                android.content.pm.PackageManager.PERMISSION_GRANTED, toPermissions))
-        // v2.14.2: compact — the title line carries the summary, and
-        // only the broken items get a row (the full five-row list ate
-        // too much of the screen).
-        val broken = items.filter { !it.second }
-        findViewById<TextView>(R.id.tvHealthTitle).text =
-            if (broken.isEmpty())
-                getString(R.string.auto_health_all_ok)
-            else
-                getString(R.string.auto_health_broken, broken.size)
-        for ((label, _, action) in broken) {
-            box.addView(TextView(this).apply {
-                text = "• " + getString(label) + getString(R.string.auto_health_fix)
-                setPadding(0, 6, 0, 6)
-                if (action != null) setOnClickListener { action() }
-            })
+        val title = findViewById<TextView>(R.id.tvHealthTitle)
+        // v1.2.2 PERFORMANCE: the health checks are five Binder/IPC
+        // calls (AccessibilityManager, NotificationManager, AppOps,
+        // AlarmManager, and the Shizuku IPC — the slowest of them)
+        // and they used to run synchronously in onResume, i.e. on
+        // the main thread before the first frame. They now run on a
+        // background thread; only the small paint (title + the
+        // broken rows) runs on the main thread, so the first open
+        // is not held up by IPC. The generation guard drops a
+        // stale paint if onResume runs again before the checks
+        // finish, and nothing paints after the activity is gone.
+        thread {
+            val toPermissions: () -> Unit = {
+                startActivity(Intent(this, PermissionsActivity::class.java))
+            }
+            val items = mutableListOf<Triple<Int, Boolean, (() -> Unit)?>>()
+            items.add(Triple(R.string.auto_health_a11y, a11yEnabled(), toPermissions))
+            items.add(Triple(R.string.auto_health_notif, PermChecks.notifAccess(this), toPermissions))
+            items.add(Triple(R.string.auto_health_usage, usageAccess(), toPermissions))
+            if (Build.VERSION.SDK_INT >= 31) {
+                val am = getSystemService(ALARM_SERVICE) as AlarmManager
+                items.add(Triple(R.string.auto_health_alarm, am.canScheduleExactAlarms(), toPermissions))
+            }
+            items.add(Triple(R.string.auto_health_shizuku, ShizukuHelper.granted(), toPermissions))
+            // v2.15.0: sms_sent quietly dies without READ_SMS — visible here.
+            items.add(Triple(R.string.auto_health_sms,
+                checkSelfPermission(android.Manifest.permission.READ_SMS) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED, toPermissions))
+            val broken = items.filter { !it.second }
+            runOnUiThread {
+                if (gen != healthGen || isFinishing || isDestroyed) return@runOnUiThread
+                box.removeAllViews()
+                title.text =
+                    if (broken.isEmpty())
+                        getString(R.string.auto_health_all_ok)
+                    else
+                        getString(R.string.auto_health_broken, broken.size)
+                // v2.14.2: compact — the title line carries the summary, and
+                // only the broken items get a row (the full five-row list ate
+                // too much of the screen).
+                for ((label, _, action) in broken) {
+                    box.addView(TextView(this).apply {
+                        text = "• " + getString(label) + getString(R.string.auto_health_fix)
+                        setPadding(0, 6, 0, 6)
+                        if (action != null) setOnClickListener { action() }
+                    })
+                }
+            }
         }
     }
 
@@ -624,12 +646,37 @@ class AutomationActivity : LocalizedActivity() {
             goMain("settings")
         }
         bar.findViewById<View>(R.id.navAdd).setOnClickListener {
-            if (flowTab) startActivity(
-                Intent(this, FlowEditorActivity::class.java))
-            else startActivity(
-                Intent(this, RuleEditorActivity::class.java))
+            // v1.2.2: the + button morphs into the editor
+            // (container transform, 450 ms, emphasized easing) —
+            // the FAB's fill is colorPrimary, so that is the
+            // morph's start colour.
+            if (flowTab) PLMotion.openWithTransform(this,
+                Intent(this, FlowEditorActivity::class.java),
+                it, "fab_new_flow", ThemeColors.primary(this))
+            else PLMotion.openWithTransform(this,
+                Intent(this, RuleEditorActivity::class.java),
+                it, "fab_new_rule", ThemeColors.primary(this))
         }
         selectNavTab(R.id.navAutomation)
+    }
+
+    /** v1.2.2: open an editor with a container-transform morph
+     *  from its card (450 ms, emphasized easing). The card's
+     *  transition name is unique per item (rule/flow id), so the
+     *  morph reverses to the same card on back. The card fill is
+     *  colorSurface, so that is the morph's start colour. */
+    private fun openRuleEditor(rule: JSONObject, sharedView: View) {
+        PLMotion.openWithTransform(this,
+            Intent(this, RuleEditorActivity::class.java)
+                .putExtra("rule_id", rule.optString("id")),
+            sharedView, "rule_card_" + rule.optString("id"))
+    }
+
+    private fun openFlowEditor(flow: JSONObject, sharedView: View) {
+        PLMotion.openWithTransform(this,
+            Intent(this, FlowEditorActivity::class.java)
+                .putExtra("flow_id", flow.optString("id")),
+            sharedView, "flow_card_" + flow.optString("id"))
     }
 
     /** v1.2.0: paint the pill bar — selected tab gets the dark
@@ -858,6 +905,15 @@ class AutomationActivity : LocalizedActivity() {
 
     private fun switchTab(flows: Boolean) {
         flowTab = flows
+        // v1.2.2: the tab switch is a MaterialSharedAxis (X, 300 ms,
+        // emphasized easing) — the whole list content slides/fades
+        // along the axis in one motion. The scene root is the inner
+        // column (tab row + status/FocusLock cards + list), so the
+        // cards move with the list. The adapter swap + render run
+        // inside the transition; the async diff commit lands before
+        // the next frame's end-state capture on a normal list.
+        PLMotion.beginSharedAxisX(
+            findViewById<View>(R.id.autoList).parent as ViewGroup, flows) {
         // v2.24.1: filled segmented tabs — selected mint fill with
         // dark text, unselected dark fill with light text.
         val fillSelected = android.content.res.ColorStateList.valueOf(themeAccentColor())
@@ -892,6 +948,7 @@ class AutomationActivity : LocalizedActivity() {
         // v1.2.0: the two old FABs are gone — the bar's + button
         // (see setupNavBar) adds a rule or a flow instead.
         if (flows) renderFlows() else render()
+        }
     }
 
     /** Live/stale line for the Flows service row. Used both when
@@ -993,7 +1050,10 @@ class AutomationActivity : LocalizedActivity() {
     private class CardViews(
         val root: LinearLayout,
         val nameView: TextView,
-        val enableSwitch: Switch,
+        // v1.2.2: M3 SwitchMaterial — the platform Switch has a flat
+        // instant toggle; the M3 switch morphs thumb/track (the
+        // expressive switch motion the video shows).
+        val enableSwitch: SwitchMaterial,
         val diySlot: LinearLayout,
         val pillButtons: List<Button>
     )
@@ -1007,13 +1067,22 @@ class AutomationActivity : LocalizedActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT)
                 .apply { setMargins(0, 0, 0, 12) }
             setBackgroundResource(R.drawable.card_bg)
+            // v1.2.2: the card is tappable now (opens its editor with
+            // a container transform), so it needs press feedback —
+            // the theme ripple, drawn over the card.
+            val rippleOut = android.util.TypedValue()
+            if (theme.resolveAttribute(
+                    android.R.attr.selectableItemBackground, rippleOut, true)) {
+                foreground = androidx.core.content.ContextCompat
+                    .getDrawable(this, rippleOut.resourceId)
+            }
         }
         val nameView = TextView(this).apply {
             textSize = 16f
             layoutParams = LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val enableSwitch = Switch(this)
+        val enableSwitch = SwitchMaterial(this)
         val head = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
@@ -1050,7 +1119,7 @@ class AutomationActivity : LocalizedActivity() {
      *  built once per holder and rebound. */
     private class ServiceRow(
         val root: LinearLayout,
-        val enableSwitch: Switch,
+        val enableSwitch: SwitchMaterial,
         val tickView: TextView
     )
 
@@ -1059,7 +1128,7 @@ class AutomationActivity : LocalizedActivity() {
             textSize = 13f
             setPadding(0, 6, 0, 0)
         }
-        val enableSwitch = Switch(this)
+        val enableSwitch = SwitchMaterial(this)
         val svcHead = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
@@ -1206,12 +1275,26 @@ class AutomationActivity : LocalizedActivity() {
             }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            // v1.2.2: a row the entrance animation was animating
+            // (alpha 0, translated) can be rebound or recycled
+            // mid-animation — reset it so a recycled row never
+            // appears invisible or shifted.
+            holder.itemView.animate().cancel()
+            holder.itemView.alpha = 1f
+            holder.itemView.translationY = 0f
             when (val item = getItem(position)) {
                 is RuleItem.Cat -> (holder as CatHolder).bind(item.label)
                 is RuleItem.Card -> (holder as RuleCardHolder).bind(item.rule)
                 is RuleItem.Empty -> (holder as EmptyHolder)
                     .bind(getString(R.string.auto_empty))
             }
+        }
+
+        override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+            holder.itemView.animate().cancel()
+            holder.itemView.alpha = 1f
+            holder.itemView.translationY = 0f
+            super.onViewRecycled(holder)
         }
     }
 
@@ -1220,6 +1303,9 @@ class AutomationActivity : LocalizedActivity() {
         fun bind(rule: JSONObject) {
             shell.nameView.text = rule.optString("name")
                 .ifEmpty { getString(R.string.auto_title) }
+            // v1.2.2: tapping the card body (not a pill or the
+            // switch) opens its editor with a container transform.
+            shell.root.setOnClickListener { openRuleEditor(rule, shell.root) }
             shell.enableSwitch.setOnCheckedChangeListener(null)
             shell.enableSwitch.isChecked = rule.optBoolean("enabled", true)
             shell.enableSwitch.setOnCheckedChangeListener { _, on ->
@@ -1234,8 +1320,7 @@ class AutomationActivity : LocalizedActivity() {
                 Automation.runActions(this@AutomationActivity, rule, data, 0)
             }
             pills[1].setOnClickListener {
-                startActivity(Intent(this@AutomationActivity, RuleEditorActivity::class.java)
-                    .putExtra("rule_id", rule.optString("id")))
+                openRuleEditor(rule, shell.root)
             }
             pills[2].setOnClickListener {
                 // Same duplicate as the flow cards: deep-copy,
@@ -1317,6 +1402,12 @@ class AutomationActivity : LocalizedActivity() {
             }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            // v1.2.2: same entrance-animation reset as RuleAdapter
+            // (a rebound/recycled row must never stay invisible
+            // or shifted).
+            holder.itemView.animate().cancel()
+            holder.itemView.alpha = 1f
+            holder.itemView.translationY = 0f
             when (val item = getItem(position)) {
                 is FlowItem.Service -> {
                     val serviceHolder = holder as ServiceHolder
@@ -1331,6 +1422,9 @@ class AutomationActivity : LocalizedActivity() {
 
         override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
             if (holder is ServiceHolder) serviceTickView = null
+            holder.itemView.animate().cancel()
+            holder.itemView.alpha = 1f
+            holder.itemView.translationY = 0f
             super.onViewRecycled(holder)
         }
     }
@@ -1363,6 +1457,9 @@ class AutomationActivity : LocalizedActivity() {
             val flowId = flow.optString("id")
             shell.nameView.text = flow.optString("name")
                 .ifEmpty { getString(R.string.flow_tab_flows) }
+            // v1.2.2: tapping the card body opens its editor with
+            // a container transform (same as the Edit pill).
+            shell.root.setOnClickListener { openFlowEditor(flow, shell.root) }
             shell.enableSwitch.setOnCheckedChangeListener(null)
             shell.enableSwitch.isChecked = flow.optBoolean("enabled", true)
             shell.enableSwitch.setOnCheckedChangeListener { _, on ->
@@ -1376,8 +1473,7 @@ class AutomationActivity : LocalizedActivity() {
                 if (f != null) FlowEngine.runFlow(this@AutomationActivity, f)
             }
             pills[1].setOnClickListener {
-                startActivity(Intent(this@AutomationActivity, FlowEditorActivity::class.java)
-                    .putExtra("flow_id", flowId))
+                openFlowEditor(flow, shell.root)
             }
             pills[2].setOnClickListener {
                 val copy = JSONObject(flow.toString())
@@ -1425,6 +1521,50 @@ class AutomationActivity : LocalizedActivity() {
      *  Premium feel (v1.2.1): the cards are RecyclerView items
      *  now (FlowAdapter) — only visible rows are bound and
      *  scrolling recycles them. */
+    /** v1.2.2: submit a list with the one-time entrance stagger.
+     *  The stagger plays only for the FIRST list the activity
+     *  shows (the initially visible tab) — the other tab's first
+     *  appearance is a tab switch, which already has its
+     *  shared-axis transition, and the two must not animate the
+     *  same rows at once. The item animator is off for that
+     *  first submit so its own add-fade does not fight the
+     *  stagger; it is restored before the entrance runs (it only
+     *  acts on data changes, never on laid-out rows). The
+     *  entrance waits for the next pre-draw, i.e. after the new
+     *  rows are laid out — a plain post() could run before
+     *  layout and find no children. */
+    private var listEntrancePlayed = false
+
+    private fun <T> submitWithEntrance(
+        adapter: ListAdapter<T, RecyclerView.ViewHolder>,
+        items: List<T>
+    ) {
+        if (listEntrancePlayed) {
+            adapter.submitList(items)
+            return
+        }
+        autoList.itemAnimator = null
+        adapter.submitList(items) {
+            listEntrancePlayed = true
+            autoList.doOnPreDraw {
+                autoList.itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator()
+                val n = autoList.childCount
+                for (i in 0 until n) {
+                    val child = autoList.getChildAt(i) ?: continue
+                    child.alpha = 0f
+                    child.translationY = dp(16).toFloat()
+                    child.animate()
+                        .alpha(1f)
+                        .translationY(0f)
+                        .setStartDelay(i * 30L)
+                        .setDuration(PLMotion.DURATION_MEDIUM)
+                        .setInterpolator(PLMotion.EMPHASIZED)
+                        .start()
+                }
+            }
+        }
+    }
+
     private fun renderFlows() {
         // Skip the full rebuild when no flow file changed —
         // only the live/stale tick line can have moved.
@@ -1439,7 +1579,7 @@ class AutomationActivity : LocalizedActivity() {
         items.add(FlowItem.Service)
         if (flows.isEmpty()) items.add(FlowItem.Empty)
         else for (flow in flows) items.add(FlowItem.Card(flow))
-        flowAdapter.submitList(items)
+        submitWithEntrance(flowAdapter, items)
     }
 
     /** v2.24.0 (Lab merge): Flows tab ⋮ menu — import, .flo
@@ -1516,6 +1656,6 @@ class AutomationActivity : LocalizedActivity() {
                 items.add(RuleItem.Card(rule))
             }
         }
-        ruleAdapter.submitList(items)
+        submitWithEntrance(ruleAdapter, items)
     }
 }

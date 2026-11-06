@@ -1054,3 +1054,130 @@ as `⏴ <name> (exit: <event>)`, so the Log explains them.
 - Not done: release build (needs a release-keystore decision);
   on-phone measurement of the feel (needs Tamim's test); tab
   switches reset the list scroll position (adapter swap).
+
+## v1.2.2 — Material 3 motion + smoothness (not pushed yet)
+
+Motion reference: the real Essentials app (Jetpack Compose +
+Material 3 Expressive) as Tamim showed it in a screen recording
+on 2026-11-06. Correction the same evening: the target is the
+app's PERFORMANCE and SMOOTHNESS — stable frame rate, no dropped
+frames on scroll or screen opens, instant touch response — NOT
+the nav bar. The morphing bottom bar from the earlier reading
+of the video is demoted to nice-to-have and is NOT in this pass:
+it would need a new sub-bar layout, new strings and a "?" dialog,
+which is real risk, not free.
+
+What changed (code-inspection findings; on-phone confirmation
+still needed — no frame-rate numbers were measured, none are
+claimed):
+- Container transform (MaterialContainerTransform, 450 ms,
+  emphasized easing cubic-bezier(0.2, 0, 0, 1)): tapping a rule
+  or flow card morphs into its editor (RuleEditorActivity /
+  FlowEditorActivity) — the card is the shared element, unique
+  transition name per card (rule_card_<id> / flow_card_<id>),
+  the editor container grows out of it, back reverses the morph.
+  The + FAB morphs into the editor the same way (fab_new_rule /
+  fab_new_flow). The editor installs the transform in onCreate
+  (PLMotion.setupEditorTransform, right after setContentView) and
+  postpones the enter transition until the first frame is laid
+  out, so a heavy editor open never drops frames mid-morph.
+  Enter colour: card surface (or FAB primary) -> window
+  background; return: reversed. Caveat: on glass themes the
+  window background is a gradient drawable, so the morph's end
+  colour is the flat colorBackground and the gradient fades in
+  behind it via the fade-through — phone check needed.
+- Shared axis (MaterialSharedAxis X, 300 ms, emphasized easing):
+  Rules <-> Flows tab switch (the inner column — tab row,
+  status/FocusLock cards, list — moves as one), and Home <->
+  Settings in MainActivity (showPage, skipped on the very first
+  call before the first layout).
+- Fade through (MaterialFadeThrough, 300 ms, emphasized easing):
+  the default window transition for EVERY activity, installed in
+  code from LocalizedActivity.onCreate (PLMotion.
+  applyDefaultWindowTransitions). This replaces the generic
+  PL.ActivityAnim 200 ms slide / 150 ms fade: the
+  android:windowAnimationStyle line is removed from
+  Theme.PhoneLink in both values/themes.xml and
+  values-night/themes.xml. The PL.ActivityAnim style and the
+  anim files stay in res, unreferenced. All other activity opens
+  (templates, pickers, AppLock, Permissions, sub-screens opened
+  as activities) get the fade-through — no spatial relationship,
+  no shared axis, nothing hand-rolled.
+- Easing + durations: everything uses the M3 emphasized easing
+  (PathInterpolator 0.2, 0, 0, 1) and the M3 scale — medium
+  300 ms, large 450 ms. One helper owns it all: PLMotion.kt
+  (new file) — fadeThrough(), sharedAxisX(), containerTransform(),
+  openWithTransform(), setupEditorTransform(),
+  beginSharedAxisX(), applyDefaultWindowTransitions().
+- Switches: the two code-built platform Switch widgets
+  (rule/flow card toggle, Flows service row) are SwitchMaterial
+  now — the M3 switch morphs thumb/track instead of flipping
+  instantly. All XML layouts already used SwitchMaterial.
+- List entrance: on the first open, the visible rows fade/slide
+  in with a 30 ms stagger (300 ms, emphasized easing, 16dp rise).
+  It plays once per activity instance, for the first list shown
+  (the initially visible tab); the other tab's first appearance
+  is a tab switch, which already has its shared-axis transition,
+  and the two must not animate the same rows at once. The item
+  animator is off for that first submit (its own add-fade would
+  fight the stagger) and restored before the entrance runs. The
+  entrance waits for the next pre-draw (doOnPreDraw), i.e. after
+  the new rows are laid out. Bind/recycle reset guards
+  (alpha/translationY reset in both adapters' onBindViewHolder
+  and onViewRecycled) make sure a row rebound or recycled
+  mid-entrance never appears invisible or shifted.
+- Ripples / state layers (verified, not changed): bg_action_pill
+  and bg_action_ghost are RippleDrawables with
+  ?attr/colorControlHighlight (no hardcoded colours, theme
+  follows); bg_nav_tab_ripple is a mask-only pill ripple; the
+  tabs, + button, ⋮ menu and status row use
+  selectableItemBackground(Borderless). New: the card body is
+  tappable now, so the card root gets a theme ripple foreground
+  (selectableItemBackground, clipped to the card).
+- Dialogs + bottom sheets (verified, not changed): the 44
+  AlertDialog.Builder sites and the two plain BottomSheetDialog
+  sites (theme picker, palette sheet) rely on the M3 theme's
+  default motion — no custom durations, nothing to align.
+- List animator (kept): the RecyclerView default item animator
+  stays — its durations are inside the M3 scale. It is only
+  switched off for the one first-load submit (see entrance
+  above) and restored immediately after.
+- PERFORMANCE — first-open main-thread audit: the one real
+  blocker found was renderHealth() in AutomationActivity — five
+  Binder/IPC calls (AccessibilityManager, NotificationManager,
+  AppOps, AlarmManager, and the Shizuku IPC, the slowest) ran
+  synchronously in onResume, i.e. on the main thread before the
+  first frame. They now run on a background thread (kotlin
+  thread helper); only the small paint (health title + broken
+  rows) runs on the main thread, with a generation guard so a
+  stale paint is dropped and nothing paints after the activity
+  is gone. Audited and left alone: MainActivity.refreshStatus
+  (rules/flows/log parsed once, small Binder calls —
+  BatteryManager, WifiManager, DevicePolicyManager,
+  AccessibilityManager — a few ms total), renderFocusLock (one
+  getPackageInfo call), TemplatesActivity (recycling adapter,
+  only visible rows bound), the pickers (already load on a
+  background thread), the editors (rule JSON / flow file are a
+  few KB; the container transform postpones the morph until the
+  rows are laid out). The RecyclerView + DiffUtil + caches from
+  v1.2.1 already cover the repeat paths.
+- Version 1.2.2 (vc5). No new dependencies, no new permissions,
+  no minify/R8, no MQTT UI, no forwarding/relay touched, no
+  behaviour change — every button/handler/id still wired (pill
+  bar, DIY cards, exit section, all six pills per card, toggles,
+  ⋮ menus, templates entry, FAB). The card body is now tappable
+  (opens its editor); that is the only new tap target.
+- Not done: the morphing bottom bar (demoted — see above);
+  baseline profiles (needs a release build + a profile
+  generation run, not a debug CI build); a release build with
+  minify/R8 (needs a release-keystore decision); lazy inflation
+  of the MainActivity Settings page (activity_main inflates the
+  whole home + settings + sub-screen tree on cold start — the
+  biggest remaining first-frame cost — but making the Settings
+  page a ViewStub would move ~60 findViewById calls behind a
+  lazy inflate, which is a rewrite with real NPE risk, not a
+  safe one-pass fix); on-phone measurement of the feel (needs
+  Tamim's test). Phone test pending: card -> editor morph and
+  back, FAB morph, tab switch, Home <-> Settings, staggered
+  first-open entrance, switch motion, no dropped frames on
+  scroll/open, version 1.2.2.

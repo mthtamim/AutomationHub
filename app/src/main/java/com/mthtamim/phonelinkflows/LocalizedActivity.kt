@@ -66,6 +66,11 @@ open class LocalizedActivity : AppCompatActivity() {
             }
         } catch (_: Exception) { }
         super.onCreate(savedInstanceState)
+        // v1.2.2: M3 motion — every activity gets the default
+        // fade-through window transitions (300 ms, emphasized
+        // easing) instead of the generic PL.ActivityAnim slide/fade
+        // that windowAnimationStyle used to give Theme.PhoneLink.
+        PLMotion.applyDefaultWindowTransitions(this)
     }
 
     /** v2.25.1: theme-attribute colours for subclasses, all via the

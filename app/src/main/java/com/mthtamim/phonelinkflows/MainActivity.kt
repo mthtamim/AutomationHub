@@ -896,10 +896,23 @@ class MainActivity : LocalizedActivity() {
     }
 
     private fun showPage(itemId: Int) {
-        settingsOpen = itemId == R.id.navSettings
-        pageHome.visibility = if (itemId == R.id.navHome) View.VISIBLE else View.GONE
-        pageSettings.visibility = if (itemId == R.id.navSettings) View.VISIBLE else View.GONE
-        closeSubScreen()
+        // v1.2.2: Home <-> Settings is a MaterialSharedAxis (X,
+        // 300 ms, emphasized easing) — the page slides/fades along
+        // the axis in one motion. Skipped on the very first call
+        // (onCreate, before the first layout) so the first frame
+        // is not animated from an unlaid-out state.
+        val change = {
+            settingsOpen = itemId == R.id.navSettings
+            pageHome.visibility = if (itemId == R.id.navHome) View.VISIBLE else View.GONE
+            pageSettings.visibility = if (itemId == R.id.navSettings) View.VISIBLE else View.GONE
+            closeSubScreen()
+        }
+        if (pageHome.isLaidOut) {
+            PLMotion.beginSharedAxisX(pageHome.parent as android.view.ViewGroup,
+                itemId == R.id.navSettings, change)
+        } else {
+            change()
+        }
     }
 
 
