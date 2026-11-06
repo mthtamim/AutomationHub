@@ -23,7 +23,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONObject
 
@@ -280,7 +280,7 @@ class MainActivity : AppCompatActivity() {
                 hint = "PIN"
                 setTextColor(Ui.TEXT)
             }
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle("AutoTap লক করা")
                 .setMessage("তোমার PIN দাও")
                 .setView(input)
@@ -412,7 +412,7 @@ class MainActivity : AppCompatActivity() {
             setTextColor(Ui.TEXT)
             inputType = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
         }
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setView(input)
             .setPositiveButton("ঠিক আছে") { _, _ -> done(input.text.toString().trim()) }
@@ -421,7 +421,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun confirmDialog(title: String, msg: String, done: () -> Unit) {
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setMessage(msg)
             .setPositiveButton("হ্যাঁ") { _, _ -> done() }
@@ -449,7 +449,7 @@ class MainActivity : AppCompatActivity() {
     /** Region chooser used when adding / editing search steps. */
     private fun chooseRegion(done: (Int) -> Unit) {
         val names = arrayOf("পুরো স্ক্রিন", "উপরের অর্ধেক", "নিচের অর্ধেক", "মাঝের অংশ")
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("কোন অংশে খুঁজবে?")
             .setItems(names) { _, which -> done(which) }
             .show()
@@ -505,7 +505,7 @@ class MainActivity : AppCompatActivity() {
         val apps = installedApps()
         val labels = mutableListOf("বন্ধ", "চার্জে লাগালে")
         labels.addAll(apps.map { it.first })
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("কখন নিজে চালু হবে?")
             .setItems(labels.toTypedArray()) { _, which ->
                 script.triggerPackage = when (which) {
@@ -684,7 +684,7 @@ class MainActivity : AppCompatActivity() {
             }
             hero.addView(Ui.secondaryButton(this, "অন্য script বাছো") {
                 val all = Store.getScripts(this)
-                AlertDialog.Builder(this)
+                MaterialAlertDialogBuilder(this)
                     .setTitle("কোন script?")
                     .setItems(all.map { it.name }.toTypedArray()) { _, which ->
                         Store.setSelectedId(this, all[which].id)
@@ -736,7 +736,7 @@ class MainActivity : AppCompatActivity() {
                             val iv = android.widget.ImageView(this)
                             iv.setImageBitmap(bmp)
                             iv.adjustViewBounds = true
-                            AlertDialog.Builder(this).setView(iv)
+                            MaterialAlertDialogBuilder(this).setView(iv)
                                 .setPositiveButton("বন্ধ", null).show()
                         } else toast("ছবিটা আর নেই")
                     } catch (e: Exception) { toast("ছবি খোলা যায়নি") }
@@ -919,7 +919,7 @@ class MainActivity : AppCompatActivity() {
             "হিসাব রিসেট",
             "মুছো"
         )
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(script.name)
             .setItems(items) { _, which ->
                 when (which) {
@@ -961,7 +961,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                                     iv.setImageBitmap(bmp)
                                     iv.setPadding(Ui.dp(this, 24), Ui.dp(this, 24), Ui.dp(this, 24), Ui.dp(this, 24))
                                     iv.setBackgroundColor(android.graphics.Color.WHITE)
-                                    AlertDialog.Builder(this)
+                                    MaterialAlertDialogBuilder(this)
                                         .setTitle("QR - ${script.name}")
                                         .setView(iv)
                                         .setPositiveButton("বন্ধ", null)
@@ -979,7 +979,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                         rebuild()
                     }
                     8 -> {
-                        AlertDialog.Builder(this)
+                        MaterialAlertDialogBuilder(this)
                             .setTitle("মুছে ফেলবে?")
                             .setMessage("'${script.name}' চিরতরে মুছে যাবে।")
                             .setPositiveButton("মুছো") { _, _ ->
@@ -1286,7 +1286,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                             script.scheduleMinute = (mv.toIntOrNull() ?: 0).coerceIn(0, 59)
                             val dayNames = arrayOf("রবি", "সোম", "মঙ্গল", "বুধ", "বৃহস্পতি", "শুক্র", "শনি")
                             val checkedDays = BooleanArray(7) { i -> script.scheduleDays and (1 shl i) != 0 }
-                            AlertDialog.Builder(this)
+                            MaterialAlertDialogBuilder(this)
                                 .setTitle("কোন কোন দিন চলবে?")
                                 .setMultiChoiceItems(dayNames, checkedDays) { _, which, isChecked ->
                                     checkedDays[which] = isChecked
@@ -1345,7 +1345,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                         java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.getDefault())
                             .format(java.util.Date(it.first))
                     }.toTypedArray()
-                    AlertDialog.Builder(this)
+                    MaterialAlertDialogBuilder(this)
                         .setTitle("কোন সংস্করণ ফিরিয়ে আনবে?")
                         .setItems(labels) { _, which ->
                             try {
@@ -1369,7 +1369,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                 if (others.isEmpty()) {
                     toast("কপি করার মতো অন্য script নেই")
                 } else {
-                    AlertDialog.Builder(this)
+                    MaterialAlertDialogBuilder(this)
                         .setTitle("কোন script-এর পয়েন্ট setup নেবে?")
                         .setItems(others.map { it.name }.toTypedArray()) { _, which ->
                             confirmDialog("Setup বদলে যাবে", "এই script-এর Tap/Swipe/Dual stepগুলো '${others[which].name}'-এর setup দিয়ে বদলে যাবে (বাকি ধাপ থাকবে)।") {
@@ -1852,7 +1852,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
         card.addView(btnRow(
             smallBtn("+ System বাটন") {
                 val names = arrayOf("Back", "Home", "Recents")
-                AlertDialog.Builder(this)
+                MaterialAlertDialogBuilder(this)
                     .setTitle("কোন বাটন?")
                     .setItems(names) { _, which ->
                         script.steps.add(Step(StepType.SYSTEM, x = which))
@@ -1876,7 +1876,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                 if (others.isEmpty()) {
                     toast("আর কোনো script নেই")
                 } else {
-                    AlertDialog.Builder(this)
+                    MaterialAlertDialogBuilder(this)
                         .setTitle("কোন script চালাবে?")
                         .setItems(others.map { it.name }.toTypedArray()) { _, which ->
                             script.steps.add(Step(StepType.RUN_SCRIPT, text = others[which].id))
@@ -1890,7 +1890,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
         card.addView(btnRow(
             smallBtn("+ Key") {
                 val names = arrayOf("ভলিউম +", "ভলিউম -", "Media play/pause", "Media next", "Media previous")
-                AlertDialog.Builder(this)
+                MaterialAlertDialogBuilder(this)
                     .setTitle("কোন key?")
                     .setItems(names) { _, which ->
                         script.steps.add(Step(StepType.KEY_EVENT, x = which + 1))
@@ -1961,7 +1961,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                 rebuild()
             },
             smallBtn("শেয়ার") {
-                AlertDialog.Builder(this)
+                MaterialAlertDialogBuilder(this)
                     .setTitle("শেয়ার")
                     .setItems(arrayOf("Export (JSON ফাইল)", "QR ছবি", "Heatmap দেখো")) { _, which ->
                         when (which) {
@@ -1982,7 +1982,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                                     iv.setImageBitmap(bmp)
                                     iv.setPadding(Ui.dp(this, 24), Ui.dp(this, 24), Ui.dp(this, 24), Ui.dp(this, 24))
                                     iv.setBackgroundColor(android.graphics.Color.WHITE)
-                                    AlertDialog.Builder(this)
+                                    MaterialAlertDialogBuilder(this)
                                         .setTitle("QR - ${script.name}")
                                         .setView(iv)
                                         .setPositiveButton("বন্ধ", null)
@@ -1997,7 +1997,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                     .show()
             },
             smallBtn("মুছো") {
-                AlertDialog.Builder(this)
+                MaterialAlertDialogBuilder(this)
                     .setTitle("মুছে ফেলবে?")
                     .setMessage("'${script.name}' চিরতরে মুছে যাবে।")
                     .setPositiveButton("মুছো") { _, _ ->
@@ -2044,7 +2044,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
             "স্ক্রিন অন হলে: ${if (script.triggerScreenOn) "চালু" else "বন্ধ"}",
             "Notification: ${script.triggerNotifPkg.ifEmpty { "বন্ধ" }}"
         )
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("আরও ট্রিগার")
             .setItems(items) { _, which ->
                 when (which) {
@@ -2060,7 +2060,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                             script.triggerBatteryLevel = -1
                             Store.upsert(this, script); rebuild()
                         } else {
-                            AlertDialog.Builder(this)
+                            MaterialAlertDialogBuilder(this)
                                 .setTitle("কখন চলবে?")
                                 .setItems(arrayOf("এই % -এর নিচে নামলে", "এই % -এ উঠলে")) { _, dir ->
                                     script.triggerBatteryLevel = lvl.coerceIn(1, 100)
@@ -2086,7 +2086,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
                     }
                     4 -> {
                         val apps = installedApps()
-                        AlertDialog.Builder(this)
+                        MaterialAlertDialogBuilder(this)
                             .setTitle("কোন অ্যাপের notification এলে চলবে?")
                             .setItems((listOf("বন্ধ") + apps.map { it.first }).toTypedArray()) { _, sel ->
                                 if (sel == 0) {
@@ -2364,7 +2364,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
             val apps = installedApps()
             val blocked = Store.blockedPackages(this).toMutableSet()
             val checked = BooleanArray(apps.size) { blocked.contains(apps[it].second) }
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle("যে অ্যাপে script চলবে না")
                 .setMultiChoiceItems(apps.map { it.first }.toTypedArray(), checked) { _, which, isChecked ->
                     if (isChecked) blocked.add(apps[which].second) else blocked.remove(apps[which].second)

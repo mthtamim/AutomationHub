@@ -12,7 +12,7 @@ import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.core.content.ContextCompat
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -213,7 +213,7 @@ class RuleEditorActivity : LocalizedActivity() {
         }
         val adapter = PickAdapter(build(""))
         list.adapter = adapter
-        val dialog = AlertDialog.Builder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(getString(titleRes))
             .setView(box)
             .setNegativeButton(getString(R.string.btn_cancel), null)
@@ -427,7 +427,7 @@ class RuleEditorActivity : LocalizedActivity() {
             val apps = AppLocker.launchableApps(this@RuleEditorActivity)
             if (apps.isEmpty()) return
             val labels = apps.map { it.label + "\n" + it.pkg }.toTypedArray()
-            AlertDialog.Builder(this@RuleEditorActivity)
+            MaterialAlertDialogBuilder(this@RuleEditorActivity)
                 .setTitle(AutoCatalog.label(this@RuleEditorActivity, kind, type))
                 .setItems(labels) { _, which ->
                     etParam.setText(apps[which].pkg)
@@ -1055,7 +1055,7 @@ class RuleEditorActivity : LocalizedActivity() {
             val apps = AppLocker.launchableApps(this@RuleEditorActivity)
             val labels = (listOf(getString(R.string.fl_app_trigger)) +
                 apps.map { it.label + "\n" + it.pkg }).toTypedArray()
-            AlertDialog.Builder(this@RuleEditorActivity)
+            MaterialAlertDialogBuilder(this@RuleEditorActivity)
                 .setTitle(getString(R.string.fl_app_label))
                 .setItems(labels) { _, which ->
                     appPkg = if (which == 0)
@@ -2143,7 +2143,7 @@ class RuleEditorActivity : LocalizedActivity() {
                 it.name + " — " + getString(
                     R.string.sg_apps_count, it.pkgs.size)
             } + listOf(getString(R.string.sg_new_list))).toTypedArray()
-            AlertDialog.Builder(act)
+            MaterialAlertDialogBuilder(act)
                 .setTitle(getString(R.string.sg_list_label))
                 .setItems(labels) { _, which ->
                     if (which < lists.size) {
@@ -2166,7 +2166,7 @@ class RuleEditorActivity : LocalizedActivity() {
             if (apps.isEmpty()) return
             val labels = apps.map { it.label + "\n" + it.pkg }
                 .toTypedArray()
-            AlertDialog.Builder(act)
+            MaterialAlertDialogBuilder(act)
                 .setTitle(getString(R.string.fl_app_label))
                 .setItems(labels) { _, which ->
                     appPkg = apps[which].pkg
@@ -2869,7 +2869,7 @@ class RuleEditorActivity : LocalizedActivity() {
             val lines = Automation.traceRule(this, rule)
             runOnUiThread {
                 if (isFinishing) return@runOnUiThread
-                AlertDialog.Builder(this)
+                MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.trace_title))
                     .setMessage(lines.joinToString("\n"))
                     .setPositiveButton(getString(android.R.string.ok), null)
@@ -2892,10 +2892,10 @@ class RuleEditorActivity : LocalizedActivity() {
             java.util.Locale.getDefault())
         val labels = hist.map {
             fmt.format(java.util.Date(it.first)) }.toTypedArray()
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.history_title))
             .setItems(labels) { _, which ->
-                AlertDialog.Builder(this)
+                MaterialAlertDialogBuilder(this)
                     .setMessage(getString(
                         R.string.history_confirm, labels[which]))
                     .setPositiveButton(

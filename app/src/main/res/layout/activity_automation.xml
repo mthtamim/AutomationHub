@@ -33,35 +33,35 @@
                 android:layout_weight="1"
                 android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/tabRules"
+                <!-- v1.3.0: M3 segmented control — the two tabs are
+                     MaterialButtons in a single-selection toggle
+                     group; the checked fill is still painted from
+                     code (AutomationActivity.switchTab), ids kept. -->
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/tabGroup"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_tab_fill"
-                    android:backgroundTint="?attr/colorPrimary"
-                    android:foreground="?attr/selectableItemBackground"
-                    android:gravity="center"
-                    android:padding="10dp"
-                    android:text="@string/flow_tab_rules"
-                    android:textColor="@color/tab_text_dark"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
+                    app:checkedButton="@id/tabRules"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
 
-                <TextView
-                    android:id="@+id/tabFlows"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_tab_fill"
-                    android:backgroundTint="@color/btn_fill_night"
-                    android:foreground="?attr/selectableItemBackground"
-                    android:gravity="center"
-                    android:padding="10dp"
-                    android:text="@string/flow_tab_flows"
-                    android:textColor="@color/tab_text_light"
-                    android:textSize="15sp" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/tabRules"
+                        style="@style/PL.BtnSegmented"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/flow_tab_rules" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/tabFlows"
+                        style="@style/PL.BtnSegmented"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/flow_tab_flows" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
             </LinearLayout>
 
             <ImageButton

@@ -28,7 +28,10 @@
             android:textColor="#EAF4EE"
             android:textSize="15sp" />
 
-        <Button
+        <!-- v1.3.0: MaterialButton (was the last plain framework
+             Button in the app) — theme default style, so the look
+             is unchanged (filled primary). -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnScanCancel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

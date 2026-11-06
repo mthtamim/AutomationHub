@@ -270,17 +270,18 @@
                 android:text="+" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
+        <!-- v1.3.0: real M3 FAB (was a round MaterialButton with a
+             "+" label) — same 48dp footprint, same id and listener. -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/btnAddNode"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_margin="12dp"
-            app:cornerRadius="24dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:text="+"
-            android:textSize="24sp" />
+            android:contentDescription="@string/palette_sheet_title"
+            app:fabCustomSize="48dp"
+            app:srcCompat="@drawable/ic_plus"
+            app:tint="?attr/colorOnPrimaryContainer" />
     </FrameLayout>
 
 </LinearLayout>

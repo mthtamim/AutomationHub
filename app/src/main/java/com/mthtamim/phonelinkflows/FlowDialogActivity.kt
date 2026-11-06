@@ -1,7 +1,8 @@
 package com.mthtamim.phonelinkflows
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
+import com.google.android.material.datepicker.MaterialDatePicker
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -10,6 +11,7 @@ import android.speech.RecognizerIntent
 import android.widget.EditText
 import android.widget.ProgressBar
 import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import java.util.Calendar
 import java.util.Locale
@@ -71,7 +73,7 @@ class FlowDialogActivity : LocalizedActivity() {
         try {
             val edit = EditText(this)
             edit.setText(def)
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(title)
                 .setView(edit)
                 .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -89,7 +91,7 @@ class FlowDialogActivity : LocalizedActivity() {
 
     private fun showMessage(title: String, text: String) {
         try {
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(title)
                 .setMessage(text)
                 .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -105,7 +107,7 @@ class FlowDialogActivity : LocalizedActivity() {
     private fun showProgress(title: String, seconds: Int) {
         try {
             val bar = ProgressBar(this)
-            val dialog = AlertDialog.Builder(this)
+            val dialog = MaterialAlertDialogBuilder(this)
                 .setTitle(title)
                 .setView(bar)
                 .setCancelable(true)
@@ -127,41 +129,51 @@ class FlowDialogActivity : LocalizedActivity() {
         }
     }
 
+    /** v1.3.0: M3 MaterialDatePicker (was the framework
+     *  DatePickerDialog) — same yyyy-MM-dd result, same cancel
+     *  path. The picker works in UTC; the selection is read back
+     *  in UTC so the date never shifts a day. */
     private fun showDate(title: String) {
         try {
-            val now = Calendar.getInstance()
-            val dialog = DatePickerDialog(
-                this,
-                { _, year, month, day ->
-                    finishResult(String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, day), "ok")
-                },
-                now.get(Calendar.YEAR),
-                now.get(Calendar.MONTH),
-                now.get(Calendar.DAY_OF_MONTH)
-            )
-            dialog.setTitle(title)
-            dialog.setOnCancelListener { finishResult(null) }
-            dialog.show()
+            val picker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText(title)
+                .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
+                .build()
+            picker.addOnPositiveButtonClickListener { selection ->
+                val cal = Calendar.getInstance(
+                    java.util.TimeZone.getTimeZone("UTC"))
+                cal.timeInMillis = selection
+                finishResult(String.format(Locale.US, "%04d-%02d-%02d",
+                    cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1,
+                    cal.get(Calendar.DAY_OF_MONTH)), "ok")
+            }
+            picker.addOnNegativeButtonClickListener { finishResult(null) }
+            picker.addOnCancelListener { finishResult(null) }
+            picker.show(supportFragmentManager, "flow_date")
         } catch (_: Exception) {
             finishResult(null)
         }
     }
 
+    /** v1.3.0: M3 MaterialTimePicker (was the framework
+     *  TimePickerDialog) — same 24-hour clock, same HH:mm
+     *  result, same cancel path. */
     private fun showTime(title: String) {
         try {
             val now = Calendar.getInstance()
-            val dialog = TimePickerDialog(
-                this,
-                { _, hour, minute ->
-                    finishResult(String.format(Locale.US, "%02d:%02d", hour, minute), "ok")
-                },
-                now.get(Calendar.HOUR_OF_DAY),
-                now.get(Calendar.MINUTE),
-                true
-            )
-            dialog.setTitle(title)
-            dialog.setOnCancelListener { finishResult(null) }
-            dialog.show()
+            val picker = MaterialTimePicker.Builder()
+                .setTimeFormat(TimeFormat.CLOCK_24H)
+                .setHour(now.get(Calendar.HOUR_OF_DAY))
+                .setMinute(now.get(Calendar.MINUTE))
+                .setTitleText(title)
+                .build()
+            picker.addOnPositiveButtonClickListener {
+                finishResult(String.format(Locale.US, "%02d:%02d",
+                    picker.hour, picker.minute), "ok")
+            }
+            picker.addOnNegativeButtonClickListener { finishResult(null) }
+            picker.addOnCancelListener { finishResult(null) }
+            picker.show(supportFragmentManager, "flow_time")
         } catch (_: Exception) {
             finishResult(null)
         }

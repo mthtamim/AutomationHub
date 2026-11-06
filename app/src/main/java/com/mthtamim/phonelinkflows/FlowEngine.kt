@@ -14,6 +14,7 @@ import android.os.Looper
 import android.widget.Toast
 import org.json.JSONObject
 import java.util.Calendar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Flow engine for PhoneLink v2.24.0 (the Lab merge).
@@ -3793,7 +3794,7 @@ object FlowEngine {
         val latch = java.util.concurrent.CountDownLatch(1)
         Handler(Looper.getMainLooper()).post {
             try {
-                androidx.appcompat.app.AlertDialog.Builder(activity)
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
                     .setTitle(parts[0])
                     .setItems(options.toTypedArray()) { _, which ->
                         FlowStore.setVar(ctx, "dialog_choice", options[which])

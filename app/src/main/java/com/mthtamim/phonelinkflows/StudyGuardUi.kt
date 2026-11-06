@@ -3,7 +3,7 @@ package com.mthtamim.phonelinkflows
 import android.app.Activity
 import android.widget.EditText
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * v2.20: the ONE Study Guard list manager (zero-duplicate
@@ -24,7 +24,7 @@ object StudyGuardUi {
      *  Cancel/back leaves. */
     fun showManager(activity: Activity, onChanged: () -> Unit) {
         val lists = Config.studyLists(activity)
-        val b = AlertDialog.Builder(activity)
+        val b = MaterialAlertDialogBuilder(activity)
             .setTitle(R.string.sg_manager_title)
         if (lists.isEmpty()) {
             b.setMessage(R.string.sg_manager_empty)
@@ -64,7 +64,7 @@ object StudyGuardUi {
             activity.getString(R.string.sg_action_edit_apps),
             activity.getString(R.string.sg_action_rename),
             activity.getString(R.string.sg_action_delete))
-        AlertDialog.Builder(activity)
+        MaterialAlertDialogBuilder(activity)
             .setTitle(list.name)
             .setItems(items) { _, which ->
                 when (which) {
@@ -76,7 +76,7 @@ object StudyGuardUi {
                         onChanged()
                         showManager(activity, onChanged)
                     }
-                    else -> AlertDialog.Builder(activity)
+                    else -> MaterialAlertDialogBuilder(activity)
                         .setTitle(R.string.sg_delete_title)
                         .setMessage(activity.getString(
                             R.string.sg_delete_confirm, list.name))
@@ -108,7 +108,7 @@ object StudyGuardUi {
                 setSelection(text.length)
             }
         }
-        AlertDialog.Builder(activity)
+        MaterialAlertDialogBuilder(activity)
             .setTitle(if (existing == null) R.string.sg_new_list
                 else R.string.sg_action_rename)
             .setView(et)
@@ -150,7 +150,7 @@ object StudyGuardUi {
         val checked = BooleanArray(apps.size) {
             apps[it].pkg in list.pkgs
         }
-        AlertDialog.Builder(activity)
+        MaterialAlertDialogBuilder(activity)
             .setTitle(activity.getString(
                 R.string.sg_pick_apps_title, list.name))
             .setMultiChoiceItems(labels, checked) { _, which, on ->

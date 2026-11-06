@@ -10,7 +10,7 @@ import android.widget.BaseAdapter
 import android.widget.EditText
 import android.widget.ListView
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Shared catalog picker, mirroring PhoneLink's picker exactly
@@ -298,7 +298,7 @@ object FlowPicker {
         lv.layoutParams = params
         val adapter = PickAdapter(activity, pickItems(activity, kind, ""))
         lv.adapter = adapter
-        val dialog = AlertDialog.Builder(activity)
+        val dialog = MaterialAlertDialogBuilder(activity)
             .setTitle(
                 when (kind) {
                     "t" -> R.string.pick_trigger

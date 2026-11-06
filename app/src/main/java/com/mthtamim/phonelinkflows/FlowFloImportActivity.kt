@@ -3,7 +3,7 @@ package com.mthtamim.phonelinkflows
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 
 /**
@@ -52,7 +52,7 @@ class FlowFloImportActivity : LocalizedActivity() {
             }
             msg.append("\n\n")
             msg.append(getString(R.string.flow_flo_caveat))
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.flow_flo_report_title)
                 .setMessage(msg.toString())
                 .setPositiveButton(android.R.string.ok) { _, _ -> finish() }

@@ -1484,7 +1484,87 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
-## v1.2.6 — cold-start speed: lazy Settings + baseline profile (not pushed yet)
+## v1.3.0 — full Material Design 3 (not pushed yet)
+
+Why: the app's M3 adoption was partial — AppCompat dialogs,
+framework date/time pickers, a round MaterialButton posing as a
+FAB, plain inset text fields, a hand-rolled tab paint, and a theme
+with only half the M3 colour roles (no surfaceContainerLowest /
+Low / Highest, no tertiary, no inverse, no outlineVariant /
+scrim). This pass finishes the M3 system, visual-only: no
+behaviour, no ids, no wiring changed — one exception: the
+Rules | Flows tabs are now a real MaterialButtonToggleGroup
+(same ids, same paint, same motion).
+
+What changed, screen by screen:
+- Themes (all 8, light + night): full M3 roles — surfaceContainer
+  Lowest / Low / Highest, surfaceDim / Bright, tertiary family,
+  inverse family, outlineVariant, scrim. Glass themes derive
+  theirs from their own palettes (tertiary = primary family,
+  inverse = onBackground / background). Cards now use
+  surfaceContainerLow.
+- Dialogs: all 68 AlertDialog.Builder sites (Main, Automation,
+  both editors, AppLocker, Flow* activities, StudyGuard, AutoTap)
+  are MaterialAlertDialogBuilder — same buttons, same callbacks.
+- Pickers: Focus Guard time, flow date and flow time are
+  MaterialTimePicker / MaterialDatePicker (24-hour clock kept;
+  the flow date is read back in UTC so it never shifts a day).
+- Automation tabs: Rules | Flows is a MaterialButtonToggleGroup
+  (segmented control, singleSelection + selectionRequired, pill
+  ends per the preview); the mint / dark fill paint and the
+  shared-axis motion are unchanged.
+- Flow editor: the "+" is a real FloatingActionButton (48dp,
+  ic_plus icon, primaryContainer fill).
+- Fields: rule name / category and the app-picker manual package
+  field are M3 FilledBox (PL.Field — the preview's Filled text
+  field; hint stays inline because the label above already names
+  the field). PL.Field's 14dp bottom corners are the app's house
+  style; the preview draws 14 top / 0 bottom.
+- Permissions gauge: M3 CircularProgressIndicator (96dp ring, 8dp
+  track) — same id, same setProgress.
+- Bottom sheets (theme picker, flow palette): M3 drag handle.
+- Panels: the 10 Settings-panel cards drop their inline attrs and
+  take the PL.CardView theme style (identical values); the
+  stroke-override cards (rule editor WHEN / THEN DO / EXIT, Home
+  hero) keep their strokes.
+- AutoTap screens: Theme.AutoTap is now a Material3 parent (same
+  colours), so its dialogs are M3 too.
+
+Deliberately NOT changed: the pill bottom bar (the app's
+signature, fixed sage tokens, same in all 8 themes); the battery
+ring and the gauge's centred text; the flow-editor title fields
+(etFlowName / etFlowFolder — title text, not form fields); the
+dashboard FilledBox fields (already M3); switches (already
+SwitchMaterial); PLMotion (already M3 emphasized easing); the
+44 Toasts (no Snackbar — toasts also fire from background paths
+with no anchor view); no speed claim — a redesign alone makes
+nothing faster, and nothing was measured. No MQTT UI restored;
+FlowService notification id 101 untouched.
+
+Version 1.3.0 (vc10). No new dependencies, no new permissions,
+no behaviour change. Phone test pending: all 8 themes on every
+screen; Settings first-open + each of the 4 panels; Rules / Flows
+tab switch both ways; flow-editor FAB opens the palette; rule
+name / category save; app-picker manual package add; Focus Guard
+time picker; flow date / time dialogs; permission gauge value;
+theme picker sheet; every dialog (PIN set, accent, update,
+geo radius, import) still opens and still acts; version 1.3.0.
+
+Preview deltas (from the inspection of
+automationhub-material-3-preview, 2026-11-07 — NOT yet built,
+need Tamim's word): the preview lists 9 screens, not 6 —
+Templates and a dedicated Log screen do not exist in the app;
+its 8 theme palettes use different hex values from the app's
+current themes (no seed hex is stored — the palettes would have
+to be copied verbatim, including the theme-picker preview cards
+and the glass gradient drawables); it shows a 4-item
+NavigationBar + FAB where the app keeps its signature pill bar;
+a Home SearchBar; Snackbars instead of Toasts; motion at
+340 ms (tabs) / 320 ms (shared-axis) vs PLMotion's 300 ms;
+segmented selected = SecondaryContainer where the app keeps its
+approved mint fill. None of these were changed in this pass.
+
+## v1.2.6 — cold-start speed: lazy Settings + baseline profile (shipped 2026-11-07)
 
 Why: cold start inflated the whole tree — `activity_main.xml`
 (824 lines) included the Settings hub (`page_settings.xml`,

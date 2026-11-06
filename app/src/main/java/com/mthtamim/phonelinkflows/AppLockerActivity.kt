@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
@@ -144,7 +145,7 @@ class AppLockerActivity : LocalizedActivity() {
         val labels = secs.map { graceLabel(it) }.toTypedArray()
         val current = secs.indexOf(AppLocker.graceSec(this))
             .let { if (it < 0) 1 else it }
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.alk_grace_label))
             .setSingleChoiceItems(labels, current) { dialog, which ->
                 AppLocker.setGraceSec(this, secs[which])
@@ -175,7 +176,7 @@ class AppLockerActivity : LocalizedActivity() {
         etCurrent?.let { box.addView(it) }
         box.addView(etNew)
         box.addView(etConfirm)
-        val dialog = AlertDialog.Builder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(getString(if (hasPin) R.string.alk_pin_change_title
                 else R.string.alk_pin_new_title))
             .setView(box)

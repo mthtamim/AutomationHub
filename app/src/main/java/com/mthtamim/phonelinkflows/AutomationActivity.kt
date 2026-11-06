@@ -8,13 +8,15 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AlarmManager
 import android.app.AppOpsManager
 import android.os.Build
 import android.view.accessibility.AccessibilityManager
 import android.widget.LinearLayout
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.switchmaterial.SwitchMaterial
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
@@ -234,7 +236,7 @@ class AutomationActivity : LocalizedActivity() {
             textSize = 13f
         }
         val scroll = android.widget.ScrollView(this).apply { addView(tv) }
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.auto_log))
             .setView(scroll)
             .setNeutralButton(getString(R.string.auto_log_clear)) { _, _ ->
@@ -252,14 +254,14 @@ class AutomationActivity : LocalizedActivity() {
             return
         }
         val labels = names.map { "$it = ${Automation.getVar(this, it)}" }.toTypedArray()
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.auto_vars))
             .setItems(labels) { _, which ->
                 val name = names[which]
                 val input = android.widget.EditText(this).apply {
                     setText(Automation.getVar(this@AutomationActivity, name))
                 }
-                androidx.appcompat.app.AlertDialog.Builder(this)
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                     .setTitle(name)
                     .setView(input)
                     .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -290,7 +292,7 @@ class AutomationActivity : LocalizedActivity() {
                 catch (e: Exception) { 0 }
             fmt.format(java.util.Date(t)) + " — " + n + " rules"
         }.toTypedArray()
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.auto_backup_title))
             .setItems(labels) { _, which ->
                 if (Automation.restoreBackup(this, backs[which].second)) {
@@ -349,7 +351,7 @@ class AutomationActivity : LocalizedActivity() {
             inputType = android.text.InputType.TYPE_CLASS_TEXT or
                 android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
         }
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.auto_import))
             .setView(input)
             .setNeutralButton(getString(R.string.auto_import_file)) { _, _ ->
@@ -383,8 +385,8 @@ class AutomationActivity : LocalizedActivity() {
         // v2.24.1: filled Rules | Flows segmented control on top.
         // The ⋮ menu (right end of the tab row) branches with the
         // tab; the Flows FAB opens a new flow editor.
-        findViewById<TextView>(R.id.tabRules).setOnClickListener { switchTab(false) }
-        findViewById<TextView>(R.id.tabFlows).setOnClickListener { switchTab(true) }
+        findViewById<MaterialButton>(R.id.tabRules).setOnClickListener { switchTab(false) }
+        findViewById<MaterialButton>(R.id.tabFlows).setOnClickListener { switchTab(true) }
         findViewById<android.widget.ImageButton>(R.id.btnAutoMenu).setOnClickListener {
             if (flowTab) showFlowMenu(it) else showAutoMenu(it)
         }
@@ -417,7 +419,7 @@ class AutomationActivity : LocalizedActivity() {
                 setSelection(text.length)
                 hint = getString(R.string.auto_rest_hint)
             }
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.auto_rest_title))
                 .setView(et)
                 .setPositiveButton(getString(R.string.btn_save)) { _, _ ->
@@ -472,7 +474,7 @@ class AutomationActivity : LocalizedActivity() {
             inputType = android.text.InputType.TYPE_CLASS_TEXT or
                 android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.fl_token_dialog_title))
             .setMessage(getString(R.string.fl_token_dialog_msg))
             .setView(input)
@@ -952,8 +954,12 @@ class AutomationActivity : LocalizedActivity() {
         }
         val textDark = androidx.core.content.ContextCompat.getColor(this, R.color.tab_text_dark)
         val textLight = androidx.core.content.ContextCompat.getColor(this, R.color.tab_text_light)
-        val tabRules = findViewById<TextView>(R.id.tabRules)
-        val tabFlows = findViewById<TextView>(R.id.tabFlows)
+        // v1.3.0: the tabs are MaterialButtons in a
+        // MaterialButtonToggleGroup now (same ids) — the fill /
+        // text / weight paint below is unchanged, and the group's
+        // checked state is synced with the painted tab.
+        val tabRules = findViewById<MaterialButton>(R.id.tabRules)
+        val tabFlows = findViewById<MaterialButton>(R.id.tabFlows)
         tabRules.backgroundTintList = if (flows) fillUnselected else fillSelected
         tabRules.setTextColor(if (flows) textLight else textDark)
         tabRules.setTypeface(tabRules.typeface,
@@ -962,6 +968,8 @@ class AutomationActivity : LocalizedActivity() {
         tabFlows.setTextColor(if (flows) textDark else textLight)
         tabFlows.setTypeface(tabFlows.typeface,
             if (flows) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+        findViewById<MaterialButtonToggleGroup>(R.id.tabGroup)
+            .check(if (flows) R.id.tabFlows else R.id.tabRules)
         findViewById<View>(R.id.statusCard).visibility =
             if (flows) View.GONE else View.VISIBLE
         findViewById<View>(R.id.flCard).visibility =
@@ -1381,7 +1389,7 @@ class AutomationActivity : LocalizedActivity() {
                 val lines = if (name.isEmpty()) emptyList()
                 else Automation.recentLog(this@AutomationActivity)
                     .filter { it.contains(name) }
-                AlertDialog.Builder(this@AutomationActivity)
+                MaterialAlertDialogBuilder(this@AutomationActivity)
                     .setTitle(rule.optString("name"))
                     .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
                         else lines.joinToString("\n"))
@@ -1523,7 +1531,7 @@ class AutomationActivity : LocalizedActivity() {
             }
             pills[4].setOnClickListener {
                 val lines = FlowStore.flowLog(this@AutomationActivity, flowId)
-                AlertDialog.Builder(this@AutomationActivity)
+                MaterialAlertDialogBuilder(this@AutomationActivity)
                     .setTitle(flow.optString("name"))
                     .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
                         else lines.joinToString("\n"))
@@ -1531,7 +1539,7 @@ class AutomationActivity : LocalizedActivity() {
                     .show()
             }
             pills[5].setOnClickListener {
-                AlertDialog.Builder(this@AutomationActivity)
+                MaterialAlertDialogBuilder(this@AutomationActivity)
                     .setTitle(flow.optString("name"))
                     .setMessage(getString(R.string.flow_delete_confirm, flow.optString("name")))
                     .setPositiveButton(R.string.btn_delete) { _, _ ->
@@ -1650,7 +1658,7 @@ class AutomationActivity : LocalizedActivity() {
                     Intent(this, FlowRestoreActivity::class.java))
                 MENU_FLOW_LOG -> {
                     val lines = FlowStore.recentLog(this)
-                    AlertDialog.Builder(this)
+                    MaterialAlertDialogBuilder(this)
                         .setTitle(getString(R.string.flow_menu_log))
                         .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
                             else lines.joinToString("\n"))

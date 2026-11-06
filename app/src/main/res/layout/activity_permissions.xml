@@ -93,13 +93,20 @@
                         android:layout_height="104dp"
                         android:layout_marginEnd="2dp">
 
-                        <ProgressBar
+                        <!-- v1.3.0: M3 circular indicator (was a
+                             horizontal ProgressBar with a custom ring
+                             drawable) — same 104dp box, same id, same
+                             setProgress API; the ring is 96dp with an
+                             8dp track, as the old drawable drew it. -->
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
                             android:id="@+id/pbPermGauge"
-                            style="?android:attr/progressBarStyleHorizontal"
                             android:layout_width="104dp"
                             android:layout_height="104dp"
                             android:max="100"
-                            android:progressDrawable="@drawable/bg_gauge_ring" />
+                            app:indicatorSize="96dp"
+                            app:trackThickness="8dp"
+                            app:indicatorColor="?attr/colorPrimary"
+                            app:trackColor="?attr/colorSurfaceVariant" />
 
                         <LinearLayout
                             android:layout_width="match_parent"

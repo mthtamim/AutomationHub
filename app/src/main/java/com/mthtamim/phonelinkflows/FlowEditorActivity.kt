@@ -11,7 +11,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
@@ -162,7 +162,7 @@ class FlowEditorActivity : LocalizedActivity() {
             storeEdge(fromId, toId, branch)
         }
         canvas.onEdgeSelected = { edge ->
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.flow_connection_title)
                 .setPositiveButton(R.string.btn_delete) { _, _ ->
                     pushUndo()
@@ -369,7 +369,7 @@ class FlowEditorActivity : LocalizedActivity() {
         val items = ArrayList<String>()
         items.addAll(folders)
         items.add(getString(R.string.flow_folder_new))
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.flow_folder_title)
             .setItems(items.toTypedArray()) { _, which ->
                 if (which == folders.size) {
@@ -387,7 +387,7 @@ class FlowEditorActivity : LocalizedActivity() {
         val input = EditText(this)
         input.hint = getString(R.string.flow_folder_name_hint)
         input.setText(etFlowFolder.text.toString())
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.flow_folder_new)
             .setView(input)
             .setPositiveButton(R.string.btn_save) { _, _ ->
@@ -772,7 +772,7 @@ class FlowEditorActivity : LocalizedActivity() {
             }
         }
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(FlowFlow.title(this, node))
             .setView(root)
             .setPositiveButton(R.string.btn_save) { _, _ ->

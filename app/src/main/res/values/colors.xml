@@ -17,6 +17,24 @@
     <color name="md_onSurfaceVariant">#55705F</color>
     <color name="md_surfaceContainer">#EAF3EE</color>
     <color name="md_surfaceContainerHigh">#DCEAE2</color>
+    <!-- v1.3.0: full M3 colour roles — the filled-card / sheet /
+         dialog surfaces and the tertiary + inverse families, so
+         M3 components resolve real tokens instead of the M3
+         baseline defaults in every theme. -->
+    <color name="md_surfaceContainerLowest">#FFFFFF</color>
+    <color name="md_surfaceContainerLow">#F5FAF7</color>
+    <color name="md_surfaceContainerHighest">#D2E0D6</color>
+    <color name="md_surfaceDim">#DCE8DF</color>
+    <color name="md_surfaceBright">#FFFFFF</color>
+    <color name="md_tertiary">#6B5CA5</color>
+    <color name="md_onTertiary">#FFFFFF</color>
+    <color name="md_tertiaryContainer">#E7DEF8</color>
+    <color name="md_onTertiaryContainer">#241A4D</color>
+    <color name="md_inverseSurface">#12241B</color>
+    <color name="md_inverseOnSurface">#EAF4EE</color>
+    <color name="md_inversePrimary">#6EE7B7</color>
+    <color name="md_outlineVariant">#CBDCD2</color>
+    <color name="md_scrim">#000000</color>
     <color name="md_outline">#B9CFC2</color>
     <color name="md_error">#BA1A1A</color>
     <color name="md_onError">#FFFFFF</color>

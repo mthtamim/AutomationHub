@@ -2,13 +2,18 @@
 <resources>
     <!-- ===== Modern design system (v2.5) ===== -->
 
-    <!-- White rounded card, soft border, no heavy shadow -->
+    <!-- White rounded card, soft border, no heavy shadow.
+         v1.3.0: M3 filled card — container colour is
+         colorSurfaceContainerLow (one step above the window
+         background); the 1dp outline stays: it is the app's
+         card language on dark and glass themes, where a bare
+         fill would melt into the background. -->
     <style name="PL.CardView" parent="Widget.Material3.CardView.Filled">
         <item name="cardCornerRadius">28dp</item>
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">1dp</item>
         <item name="strokeColor">?attr/colorSurfaceVariant</item>
-        <item name="cardBackgroundColor">?attr/colorSurface</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainerLow</item>
     </style>
 
     <!-- Premium feel (v1.2.1): one short slide/fade pair for every
@@ -389,6 +394,23 @@
         <item name="iconGravity">top</item>
         <item name="iconSize">40dp</item>
         <item name="iconPadding">4dp</item>
+    </style>
+
+    <!-- Segmented control button (v1.3.0): the Rules | Flows tabs
+         in AutomationActivity. Lives inside a
+         MaterialButtonToggleGroup (singleSelection), which rounds
+         the outer ends; 22dp = half the 44dp height, so the ends
+         read as a pill (the preview's radius-999 segmented
+         control). The checked fill is painted from code
+         (themeAccentColor / btn_fill_night) exactly as before. -->
+    <style name="PL.BtnSegmented" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">22dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
     </style>
 
     <!-- Plain inset text field on the new dark field background -->

@@ -67,13 +67,24 @@
                     style="@style/PL.BodySmall"
                     android:text="@string/ed_name_label" />
 
-                <EditText
-                    android:id="@+id/etRuleName"
-                    style="@style/PL.FieldPlain"
+                <!-- v1.3.0: M3 FilledBox (was PL.FieldPlain) —
+                     id stays on the inner field, so the code reads
+                     it exactly as before; hint stays inline
+                     (hintEnabled=false) because the label above
+                     already names the field. -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/PL.Field"
                     android:layout_marginTop="6dp"
-                    android:hint="@string/auto_rule_name_hint"
-                    android:inputType="text"
-                    android:maxLines="1" />
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etRuleName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/auto_rule_name_hint"
+                        android:inputType="text"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
                     style="@style/PL.BodySmall"
@@ -87,13 +98,19 @@
                     android:layout_marginTop="6dp"
                     app:singleSelection="true" />
 
-                <EditText
-                    android:id="@+id/etRuleCat"
-                    style="@style/PL.FieldPlain"
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/PL.Field"
                     android:layout_marginTop="8dp"
-                    android:hint="@string/auto_cat_hint"
-                    android:inputType="text"
-                    android:maxLines="1" />
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etRuleCat"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/auto_cat_hint"
+                        android:inputType="text"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

@@ -11,6 +11,7 @@ import android.widget.SeekBar
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Design system - EXACTLY FocusLock's system, as specified by Tamim.
@@ -60,7 +61,7 @@ object Ui {
         val s = dp(ctx, 22)
         layoutParams = LinearLayout.LayoutParams(s, s)
         setOnClickListener {
-            android.app.AlertDialog.Builder(ctx)
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
                 .setMessage(text)
                 .setPositiveButton("ঠিক আছে", null)
                 .show()

@@ -64,14 +64,25 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <EditText
-                android:id="@+id/etManualPkg"
-                style="@style/PL.FieldPlain"
+            <!-- v1.3.0: M3 FilledBox (was PL.FieldPlain) — id
+                 stays on the inner field; the row keeps its weight
+                 on the layout, marginTop 0 so it stays level with
+                 the Add button beside it. -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/PL.Field"
                 android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="0dp"
                 android:layout_weight="1"
-                android:hint="@string/alk_manual_hint"
-                android:inputType="textNoSuggestions"
-                android:padding="13dp" />
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etManualPkg"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/alk_manual_hint"
+                    android:inputType="textNoSuggestions" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnManualAdd"

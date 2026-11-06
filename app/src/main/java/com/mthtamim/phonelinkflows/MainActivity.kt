@@ -1,7 +1,8 @@
 package com.mthtamim.phonelinkflows
 
 import android.app.StatusBarManager
-import android.app.TimePickerDialog
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
@@ -25,7 +26,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import com.autotap.app.RunnerService
@@ -688,7 +689,7 @@ class MainActivity : LocalizedActivity() {
                 getString(R.string.accent_emerald), getString(R.string.accent_blue),
                 getString(R.string.accent_purple), getString(R.string.accent_amber),
                 getString(R.string.accent_rose))
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.btn_accent))
                 .setItems(labels) { _, w ->
                     Config.setAccent(this, names[w]); recreate()
@@ -705,7 +706,7 @@ class MainActivity : LocalizedActivity() {
             toast(getString(R.string.update_checking))
             Update.check(this, true) { newer, url ->
                 if (newer != null) {
-                    AlertDialog.Builder(this)
+                    MaterialAlertDialogBuilder(this)
                         .setTitle(getString(R.string.update_found, newer))
                         .setMessage(getString(R.string.update_found_msg))
                         .setPositiveButton(getString(R.string.btn_open)) { _, _ ->
@@ -792,7 +793,7 @@ class MainActivity : LocalizedActivity() {
                     // Tell "location switched off" apart from "no fix
                     // yet": only the first one gets a settings offer.
                     if (!LocationHelper.anyProviderEnabled(this)) {
-                        AlertDialog.Builder(this)
+                        MaterialAlertDialogBuilder(this)
                             .setTitle(getString(R.string.geo_no_provider_title))
                             .setMessage(getString(R.string.geo_no_provider_msg))
                             .setPositiveButton(getString(R.string.geo_open_settings)) { _, _ ->
@@ -853,7 +854,7 @@ class MainActivity : LocalizedActivity() {
         findViewById<Button>(R.id.btnGeoRadius).setOnClickListener {
             val options = intArrayOf(100, 200, 300, 500, 1000)
             val labels = options.map { "$it m" }.toTypedArray()
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.btn_geo_radius))
                 .setItems(labels) { _, which ->
                     Config.setGeoRadius(this, options[which]); refreshStatus()
@@ -915,7 +916,7 @@ class MainActivity : LocalizedActivity() {
             cfgImportLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
         }
         findViewById<Button>(R.id.btnImportPhonelink).setOnClickListener {
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.import_phonelink_title))
                 .setMessage(getString(R.string.import_phonelink_msg))
                 .setPositiveButton(getString(R.string.import_phonelink_pick)) { _, _ ->
@@ -930,7 +931,7 @@ class MainActivity : LocalizedActivity() {
                 setText(SettingsTransfer.export(this@MainActivity))
                 setSelection(0)
             }
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.btn_config_code))
                 .setView(input)
                 .setPositiveButton(getString(R.string.menu_copy)) { _, _ ->
@@ -1148,7 +1149,7 @@ class MainActivity : LocalizedActivity() {
             setPadding(48, 16, 48, 0)
             addView(pin1); addView(pin2)
         }
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.lock_set_title))
             .setView(box)
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -1279,18 +1280,26 @@ class MainActivity : LocalizedActivity() {
     }
 
     /** Focus Guard card: start/end time picker (24-hour). Saving the
-     *  window applies at once via refreshFocusGuard(). */
+     *  window applies at once via refreshFocusGuard().
+     *  v1.3.0: M3 MaterialTimePicker (was the framework
+     *  TimePickerDialog) — same 24-hour clock, same save. */
     private fun showFocusTimePicker(isStart: Boolean) {
         val (fs, fe) = Config.focusWindow(this)
         val cur = if (isStart) fs else fe
         try {
-            TimePickerDialog(this, { _, h, m ->
-                val v = h * 60 + m
+            val picker = MaterialTimePicker.Builder()
+                .setTimeFormat(TimeFormat.CLOCK_24H)
+                .setHour(cur / 60)
+                .setMinute(cur % 60)
+                .build()
+            picker.addOnPositiveButtonClickListener {
+                val v = picker.hour * 60 + picker.minute
                 val (s, e) = Config.focusWindow(this)
                 if (isStart) Config.setFocusWindow(this, v, e)
                 else Config.setFocusWindow(this, s, v)
                 refreshFocusGuard()
-            }, cur / 60, cur % 60, true).show()
+            }
+            picker.show(supportFragmentManager, "focus_time")
         } catch (_: Exception) { }
     }
 
