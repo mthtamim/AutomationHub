@@ -1055,7 +1055,7 @@ as `⏴ <name> (exit: <event>)`, so the Log explains them.
   on-phone measurement of the feel (needs Tamim's test); tab
   switches reset the list scroll position (adapter swap).
 
-## v1.2.2 — Material 3 motion + smoothness (not pushed yet)
+## v1.2.2 — Material 3 motion + smoothness (SHIPPED 22:24, CI #17 Success)
 
 **CI fix (run #16 failed, 9 compile errors):** window transitions
 require framework `android.transition.Transition` — the Material
@@ -1193,3 +1193,76 @@ claimed):
   back, FAB morph, tab switch, Home <-> Settings, staggered
   first-open entrance, switch motion, no dropped frames on
   scroll/open, version 1.2.2.
+
+## v1.2.3 — visible motion (not pushed yet)
+
+Why: Tamim confirmed 1.2.2 installed (version shows 1.2.2) but
+reported NO visible changes vs 1.2.1 and performance still like
+before. Two causes were proven from the code; the morph cause
+was not.
+
+Proven cause 1 — the tab switch could not animate as built:
+switchTab() ran a MaterialSharedAxis scene transition around a
+DiffUtil list rebind. The same ViewHolders are rebound in place
+— no views appear or disappear — so the transition has nothing
+to move. The tab fills just changed colour instantly. Fix:
+PLMotion.slideFadeIn() — a direct view animation on the list
+itself (48dp slide in from the tab direction + fade, 300 ms,
+emphasized easing) that runs regardless of what the diff does.
+Same for MainActivity Home <-> Settings (showPage). The
+beginSharedAxisX call is kept (it may still animate the
+status/FocusLock card visibility change), but the visible motion
+no longer depends on it. The animation only runs on a real
+switch (switchTab gates on a changed tab; showPage keeps its
+isLaidOut + same-tab guards), so re-tapping a selected tab and
+onResume never replay it.
+
+Proven cause 2 — activity opens got LESS visible, not more:
+v1.2.2 replaced the 200 ms slide (PL.ActivityAnim) with a
+300 ms framework Fade as the default window transition. On a
+dark UI a fade is barely noticeable. Fix: the default window
+transition is now a framework Slide from the bottom (M3 medium
+duration, emphasized easing) for enter / reenter / return;
+Fade is kept only for the outgoing (exit) transition, where a
+slide-down would read as "back" while navigating forward.
+
+Morph (unproven cause, made robust by construction): the
+card -> editor morph wiring is placed correctly on both sides
+(unique transition names, editors call setupEditorTransform
+right after setContentView, all activities extend
+LocalizedActivity so FEATURE_ACTIVITY_TRANSITIONS is requested)
+yet nothing shows on Tamim's phone — no cause could be proven
+from code alone, so none is claimed. Two guarantees instead:
+(1) if the shared-element match fails, the Slide enter
+transition from above plays for the non-shared content, so the
+editor open always shows visible motion; (2) a postponed enter
+transition can no longer hang the open — setupEditorTransform
+now posts a 600 ms delayed startPostponedEnterTransition() as
+a safety net (calling start twice is a no-op).
+
+Not done — Settings page lazy inflation (ViewStub): investigated
+and NOT done in this pass. MainActivity.onCreate eagerly binds
+~15 lateinit settings fields (tvSetPill, tvHubPermsSub,
+tvHubSecSub, tvHubDataSub, tvHubDiag, tvPinInfo, tvAdminInfo,
+tvGeoInfo, tvFocusGuardInfo, tvFocusAppsInfo, btnFocusStart,
+btnFocusEnd, tvStats, tvA11yState, tvGeneralDiag) and wires
+~30 more settings listeners, and refreshStatus() /
+refreshSettingsHub() / refreshFocusGuard() touch those fields
+from onResume and the 60 s tick — moving all ~50 sites behind
+a lazy inflate is a rewrite with real crash risk if any site is
+missed, and the sub-screen tree inside activity_main (~764
+lines, 52 ids) would still inflate at cold start anyway, so
+the win would be partial. No smaller safe first-frame win was
+found that moves the needle: the remaining onResume work
+already parses once and costs a few ms. Baseline profiles and
+a release build with minify/R8 still need a release-keystore
+decision. No frame-rate numbers were measured, none are claimed.
+
+Version 1.2.3 (vc6). No new dependencies, no new permissions,
+no minify/R8, no MQTT UI, no forwarding/relay touched, no
+behaviour change — every button/handler/id still wired. The
+only new visible behaviour is motion: tab/page switches slide
++ fade, activity opens slide up. Phone test pending: tab switch
+animation (Rules <-> Flows), Home <-> Settings animation,
+editor open — morph or slide fallback — and back, every other
+activity open slides up, cold-start feel, version 1.2.3.

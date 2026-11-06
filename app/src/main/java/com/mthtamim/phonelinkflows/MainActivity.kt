@@ -910,6 +910,15 @@ class MainActivity : LocalizedActivity() {
         if (pageHome.isLaidOut) {
             PLMotion.beginSharedAxisX(pageHome.parent as android.view.ViewGroup,
                 itemId == R.id.navSettings, change)
+            // v1.2.3: the incoming page slides+fades in directly —
+            // the scene transition alone did not show on 1.2.2, so
+            // the visible motion must not depend on it. The
+            // isLaidOut guard (first call, before the first layout)
+            // and the setupNavBar same-tab guard mean this only
+            // runs on a real user-initiated switch.
+            PLMotion.slideFadeIn(
+                if (itemId == R.id.navSettings) pageSettings else pageHome,
+                itemId == R.id.navSettings)
         } else {
             change()
         }

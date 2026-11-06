@@ -21,6 +21,20 @@ import com.google.android.material.transition.MaterialSharedAxis
  * Fade / ChangeBounds with the same M3 timing instead (CI run #16
  * proved the Material classes cannot be assigned to a window).
  *
+ * v1.2.3: two proven 1.2.2 failures fixed. (1) A scene transition
+ * cannot animate a DiffUtil rebind — the same holders are rebound
+ * in place, so the tab switch showed nothing on Tamim's phone.
+ * Tab/page switches now also run a direct view animation
+ * (slideFadeIn) that does not depend on the scene transition.
+ * (2) The default window transition was a subtle 300 ms Fade on
+ * a dark UI — less visible than the 200 ms slide it replaced.
+ * Activity opens now slide up (framework Slide, M3 timing);
+ * Fade is kept only for the outgoing (exit) transition. The
+ * editor morph itself is unchanged; if its shared-element match
+ * fails, the Slide enter transition is the visible fallback, and
+ * a postponed enter transition can no longer hang the open
+ * (600 ms safety net in setupEditorTransform).
+ *
  * Duration scale (M3): small 50–100 ms, medium 200–300 ms,
  * large 400–500 ms. Easing: emphasized cubic-bezier(0.2, 0, 0, 1).
  *
@@ -56,6 +70,44 @@ object PLMotion {
             interpolator = EMPHASIZED
         }
 
+    /** Framework slide-up for window transitions (M3 medium
+     *  duration, emphasized easing). v1.2.3: the 300 ms Fade that
+     *  v1.2.2 used as the default window transition is barely
+     *  visible on a dark UI — less visible than the 200 ms slide
+     *  it replaced. A Slide from the bottom reads clearly on any
+     *  background, so enter / reenter / return slide up; only
+     *  the outgoing (exit) transition stays a Fade — a slide-down
+     *  on exit would read as "back" while navigating forward. */
+    private fun frameworkSlide(): android.transition.Slide =
+        android.transition.Slide(android.view.Gravity.BOTTOM).apply {
+            duration = DURATION_MEDIUM
+            interpolator = EMPHASIZED
+        }
+
+    /** Direct view animation for tab / page switches (v1.2.3).
+     *  A scene transition cannot animate a DiffUtil rebind — the
+     *  same ViewHolders are rebound in place, so the shared-axis
+     *  transition has nothing to move (proven on 1.2.2: the tab
+     *  switch showed no motion at all). The visible motion comes
+     *  from this instead: the incoming content slides in from the
+     *  tab direction (48dp) and fades in, 300 ms, emphasized
+     *  easing. It runs on the view itself, so it shows regardless
+     *  of what the list diff does underneath. view.animate()
+     *  cancels any in-flight animation on the same view, and the
+     *  alpha / translationX reset before start makes a rapid
+     *  re-tap restart cleanly instead of sticking mid-flight. */
+    fun slideFadeIn(view: View, forward: Boolean) {
+        val offset = 48f * view.resources.displayMetrics.density
+        view.alpha = 0f
+        view.translationX = if (forward) offset else -offset
+        view.animate()
+            .alpha(1f)
+            .translationX(0f)
+            .setDuration(DURATION_MEDIUM)
+            .setInterpolator(EMPHASIZED)
+            .start()
+    }
+
     /** Framework bounds-morph for the editor shared element
      *  (ChangeBounds + Fade, M3 large duration, emphasized
      *  easing). Same reason as frameworkFade: window transitions
@@ -85,17 +137,19 @@ object PLMotion {
 
     /** Default window transitions for every activity (called from
      *  LocalizedActivity.onCreate, after super.onCreate and before
-     *  setContentView): fade-through in/out, M3 medium duration,
-     *  emphasized easing. This replaces the generic 200 ms slide /
-     *  150 ms fade that windowAnimationStyle (PL.ActivityAnim) gave
-     *  Theme.PhoneLink in v1.2.1. */
+     *  setContentView): v1.2.3 — the entering / returning screen
+     *  slides up from the bottom (M3 medium duration, emphasized
+     *  easing), clearly visible on a dark UI; the outgoing screen
+     *  fades (exit). This replaces the v1.2.2 all-Fade default
+     *  and restores the visible open animation the 200 ms slide
+     *  (PL.ActivityAnim, v1.2.1) used to give. */
     fun applyDefaultWindowTransitions(activity: Activity) {
         try {
             activity.window.requestFeature(Window.FEATURE_ACTIVITY_TRANSITIONS)
-            activity.window.enterTransition = frameworkFade()
+            activity.window.enterTransition = frameworkSlide()
             activity.window.exitTransition = frameworkFade()
-            activity.window.reenterTransition = frameworkFade()
-            activity.window.returnTransition = frameworkFade()
+            activity.window.reenterTransition = frameworkSlide()
+            activity.window.returnTransition = frameworkSlide()
         } catch (_: Exception) { }
     }
 
@@ -129,17 +183,28 @@ object PLMotion {
      *  open from dropping frames mid-morph. The morph is a
      *  framework ChangeBounds + Fade (bounds morph + content
      *  fade); the Material colour morph does not apply to window
-     *  transitions, so EXTRA_START_COLOR is carried but unused. */
+     *  transitions, so EXTRA_START_COLOR is carried but unused.
+     *  v1.2.3: if the shared-element match fails on the phone
+     *  (the 1.2.2 morph never showed, cause unproven from code),
+     *  the open still shows visible motion — the Slide enter
+     *  transition from applyDefaultWindowTransitions plays for
+     *  the non-shared content. And a postponed enter transition
+     *  can no longer hang the open: a 600 ms delayed start is
+     *  posted as a safety net (calling start twice is a no-op). */
     fun setupEditorTransform(activity: Activity) {
         val name = activity.intent.getStringExtra(EXTRA_SHARED_ELEMENT_NAME) ?: return
         try {
             activity.window.sharedElementEnterTransition = frameworkMorph()
             activity.window.sharedElementReturnTransition = frameworkMorph()
-            activity.findViewById<View>(android.R.id.content).transitionName = name
+            val content = activity.findViewById<View>(android.R.id.content)
+            content.transitionName = name
             activity.postponeEnterTransition()
-            activity.findViewById<View>(android.R.id.content).doOnPreDraw {
+            content.doOnPreDraw {
                 activity.startPostponedEnterTransition()
             }
+            content.postDelayed({
+                activity.startPostponedEnterTransition()
+            }, 600)
         } catch (_: Exception) { }
     }
 

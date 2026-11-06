@@ -904,6 +904,14 @@ class AutomationActivity : LocalizedActivity() {
     }
 
     private fun switchTab(flows: Boolean) {
+        // v1.2.3: the visible tab motion is a direct view animation
+        // (slideFadeIn below), NOT the scene transition — a shared-
+        // axis transition cannot animate a DiffUtil rebind (the same
+        // holders are rebound in place), which is why 1.2.2 showed
+        // no motion at all on Tamim's phone. The scene transition
+        // is kept for the status/FocusLock card visibility change,
+        // but the list slide is what the eye actually sees.
+        val changed = flows != flowTab
         flowTab = flows
         // v1.2.2: the tab switch is a MaterialSharedAxis (X, 300 ms,
         // emphasized easing) — the whole list content slides/fades
@@ -949,6 +957,11 @@ class AutomationActivity : LocalizedActivity() {
         // (see setupNavBar) adds a rule or a flow instead.
         if (flows) renderFlows() else render()
         }
+        // v1.2.3: the list itself slides+fades in from the tab
+        // direction — this is the motion that actually shows.
+        // Only on a real tab change; re-tapping the selected tab
+        // must not replay it.
+        if (changed) PLMotion.slideFadeIn(autoList, flows)
     }
 
     /** Live/stale line for the Flows service row. Used both when
