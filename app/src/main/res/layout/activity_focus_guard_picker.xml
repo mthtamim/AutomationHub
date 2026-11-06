@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Focus Guard app picker (new 2026-11-06): multi-select list of
+     installed apps for the Focus Guard card. Mirrors the App Locker
+     picker layout, but the checkboxes feed a local set that is only
+     written to Config.focusPkgs when Save is tapped — nothing is
+     applied while browsing. Hard safety exclusions (self, Settings)
+     are filtered out in code, like the locker picker. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <ImageButton
+            android:id="@+id/btnFocusPickerBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_back_chip"
+            android:contentDescription="@string/btn_back"
+            android:padding="10dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="?attr/colorOnSurface" />
+
+        <TextView
+            style="@style/PL.H1"
+            android:layout_width="0dp"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:text="@string/focus_picker_title" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <EditText
+            android:id="@+id/etFocusPickerSearch"
+            style="@style/PL.SearchBox"
+            android:hint="@string/picker_search_hint"
+            android:inputType="text"
+            app:drawableStartCompat="@drawable/ic_search" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/swFocusShowSystem"
+            style="@style/PL.SwitchRow"
+            android:text="@string/alk_show_system" />
+
+        <ListView
+            android:id="@+id/lvFocusApps"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null" />
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnFocusSave"
+        style="@style/PL.BtnTonal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
+        android:text="@string/btn_save" />
+</LinearLayout>

@@ -174,6 +174,7 @@ class AutomationActivity : LocalizedActivity() {
         private const val MENU_FLOW_BACKUP = 14
         private const val MENU_FLOW_RESTORE = 15
         private const val MENU_FLOW_LOG = 16
+        private const val MENU_TEMPLATES = 20
     }
 
     private val scanLauncher = registerForActivityResult(
@@ -554,6 +555,7 @@ class AutomationActivity : LocalizedActivity() {
         popup.menu.add(0, MENU_VARS, 4, getString(R.string.auto_vars))
         popup.menu.add(0, MENU_EXPORT, 5, getString(R.string.auto_export))
         popup.menu.add(0, MENU_IMPORT, 6, getString(R.string.auto_import))
+        popup.menu.add(0, MENU_TEMPLATES, 7, getString(R.string.templates_menu))
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 MENU_SG -> StudyGuardUi.showManager(this) { }
@@ -567,6 +569,8 @@ class AutomationActivity : LocalizedActivity() {
                     startActivity(Intent.createChooser(send, getString(R.string.auto_export)))
                 }
                 MENU_IMPORT -> showImport()
+                MENU_TEMPLATES -> startActivity(
+                    Intent(this, TemplatesActivity::class.java))
             }
             true
         }
@@ -760,6 +764,17 @@ class AutomationActivity : LocalizedActivity() {
                     renderFlows()
                 }
             })
+            buttons.addView(pillButton(R.string.flow_card_share, false).apply {
+                setOnClickListener {
+                    // Single-flow share: the stored flow JSON is already
+                    // the exact single-flow format the PhoneLink import
+                    // detects (nodes + non-empty name), so the receiver
+                    // can import it with "PhoneLink থেকে আনো".
+                    val send = Intent(Intent.ACTION_SEND).setType("application/json")
+                        .putExtra(Intent.EXTRA_TEXT, flow.toString())
+                    startActivity(Intent.createChooser(send, flow.optString("name")))
+                }
+            })
             buttons.addView(pillButton(R.string.flow_card_log, false).apply {
                 setOnClickListener {
                     val lines = FlowStore.flowLog(this@AutomationActivity, flowId)
@@ -801,6 +816,7 @@ class AutomationActivity : LocalizedActivity() {
         popup.menu.add(0, MENU_FLOW_BACKUP, 3, getString(R.string.flow_menu_backup))
         popup.menu.add(0, MENU_FLOW_RESTORE, 4, getString(R.string.flow_menu_restore))
         popup.menu.add(0, MENU_FLOW_LOG, 5, getString(R.string.flow_menu_log))
+        popup.menu.add(0, MENU_TEMPLATES, 6, getString(R.string.templates_menu))
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 MENU_FLOW_IMPORT -> startActivity(
@@ -834,6 +850,8 @@ class AutomationActivity : LocalizedActivity() {
                         .setPositiveButton(android.R.string.ok, null)
                         .show()
                 }
+                MENU_TEMPLATES -> startActivity(
+                    Intent(this, TemplatesActivity::class.java))
             }
             true
         }

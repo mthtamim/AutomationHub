@@ -1287,6 +1287,23 @@
     <string name="focus_guard_info_on">On — %1$s–%2$s, %3$d app(s) blocked</string>
     <string name="focus_guard_info_off">Off</string>
     <string name="focus_guard_no_schedule">No Focus Guard schedule saved</string>
+    <string name="focus_guard_sub">Blocks chosen apps on a schedule</string>
+    <string name="focus_apps_label">Apps to block</string>
+    <string name="focus_apps_none">No apps chosen yet</string>
+    <string name="focus_apps_chosen">%1$d app(s) chosen</string>
+    <string name="focus_apps_choose">Choose apps</string>
+    <string name="focus_time_label">Blocked hours</string>
+    <string name="focus_time_start">Start %1$s</string>
+    <string name="focus_time_end">End %1$s</string>
+    <string name="focus_preset_study">Study time</string>
+    <string name="focus_preset_night">Night</string>
+    <string name="focus_preset_work">Work hours</string>
+    <string name="focus_picker_title">Apps to block</string>
+    <string name="focus_saved_count">%1$d app(s) saved</string>
+    <string name="focus_cleared">All apps removed — Focus Guard off</string>
+    <string name="geo_no_provider_title">Location is turned off</string>
+    <string name="geo_no_provider_msg">Turn on location (GPS) to set the geofence centre.</string>
+    <string name="geo_open_settings">Open location settings</string>
     <string name="btn_import_phonelink">Import from PhoneLink</string>
     <string name="import_phonelink_title">Import from PhoneLink</string>
     <string name="import_phonelink_msg">1. In PhoneLink: Settings → Full backup — everything (file). That file brings your Rules.
@@ -1295,4 +1312,21 @@
     <string name="import_phonelink_pick">Pick files</string>
     <string name="import_phonelink_done">%1$d rule(s) and %2$d flow(s) imported (%3$d file(s) skipped)</string>
     <string name="theme_picker_title">Choose a theme</string>
+
+    <!-- ===== Templates gallery + single-flow share + QS tile (2026-11-06) ===== -->
+    <string name="templates_title">Templates</string>
+    <string name="templates_menu">Templates</string>
+    <string name="templates_search_hint">Search templates…</string>
+    <string name="templates_section_rules">Rules</string>
+    <string name="templates_section_flows">Flows</string>
+    <string name="templates_add">Add</string>
+    <string name="templates_added">Added ✓</string>
+    <string name="template_added">%1$s added</string>
+    <string name="template_geo_needed">Set your geofence location first (Settings → Geofence)</string>
+    <string name="flow_card_share">Share</string>
+    <string name="tile_add">Add Quick Settings tile</string>
+    <string name="tile_requested">Tile add requested — confirm in the panel</string>
+    <string name="tile_add_manually">Add it yourself: QS panel → Edit</string>
+    <string name="tile_state_on">On</string>
+    <string name="tile_state_off">Off</string>
 </resources>

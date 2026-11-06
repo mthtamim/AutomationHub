@@ -3,15 +3,18 @@ package com.mthtamim.phonelinkflows
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 object RingHelper {
     private var ringtone: Ringtone? = null
@@ -280,8 +283,16 @@ object Otp {
 object LocationHelper {
     /**
      * Fetches one location fix for local use (SOS SMS, geo rules).
-     * Uses the best last-known fix immediately if a fresh one is not
-     * available within ~15 seconds — a slightly old fix beats silence.
+     * Fast path first: the best last-known fix wins immediately.
+     * But a last-known fix only exists if some app asked for
+     * location recently — after a reboot, or with location rarely
+     * used, every provider returns null and the old code just
+     * failed ("Location not available" even with permission
+     * granted). So when nothing is cached, ask for ONE fresh fix
+     * from GPS and/or Network and take whichever arrives first,
+     * with a ~20 s timeout that falls back to onFail. Safe for the
+     * Automation latch callers: they wait at most 6 s, and a late
+     * fix just counts down an already-released latch.
      */
 
     /** Raw coordinates for the geofence: best last-known fix, or null. */
@@ -303,8 +314,72 @@ object LocationHelper {
                 } catch (_: Exception) { }
             }
             val b = best
-            if (b != null) cb(b.latitude, b.longitude) else onFail()
+            if (b != null) {
+                cb(b.latitude, b.longitude)
+            } else {
+                requestFreshFix(appCtx, lm, cb, onFail)
+            }
         } catch (_: Exception) { onFail() }
+    }
+
+    /** One fresh fix from the first enabled provider that answers.
+     *  No provider enabled at all -> onFail immediately. */
+    private fun requestFreshFix(appCtx: Context, lm: LocationManager,
+                                cb: (Double, Double) -> Unit, onFail: () -> Unit) {
+        val providers = listOf(LocationManager.GPS_PROVIDER,
+            LocationManager.NETWORK_PROVIDER).filter { p ->
+            try { lm.isProviderEnabled(p) } catch (_: Exception) { false }
+        }
+        if (providers.isEmpty()) { onFail(); return }
+        val done = AtomicBoolean(false)
+        val handler = Handler(Looper.getMainLooper())
+        lateinit var listener: LocationListener
+        val timeout = Runnable {
+            if (done.compareAndSet(false, true)) {
+                try { lm.removeUpdates(listener) } catch (_: Exception) { }
+                onFail()
+            }
+        }
+        listener = object : LocationListener {
+            override fun onLocationChanged(loc: Location) {
+                if (done.compareAndSet(false, true)) {
+                    try { lm.removeUpdates(this) } catch (_: Exception) { }
+                    handler.removeCallbacks(timeout)
+                    cb(loc.latitude, loc.longitude)
+                }
+            }
+            @Suppress("DEPRECATION")
+            override fun onStatusChanged(provider: String?, status: Int,
+                                         extras: Bundle?) { }
+            override fun onProviderEnabled(provider: String) { }
+            override fun onProviderDisabled(provider: String) { }
+        }
+        handler.postDelayed(timeout, 20_000L)
+        var requested = false
+        for (p in providers) {
+            try {
+                lm.requestSingleUpdate(p, listener, Looper.getMainLooper())
+                requested = true
+            } catch (_: Exception) { }
+        }
+        if (!requested) {
+            handler.removeCallbacks(timeout)
+            onFail()
+        }
+    }
+
+    /** True when GPS or Network location is switched on at all
+     *  (independent of any cached fix). Used by the geofence
+     *  centre button to tell "location off" apart from "no fix". */
+    fun anyProviderEnabled(ctx: Context): Boolean {
+        return try {
+            val lm = ctx.applicationContext
+                .getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            listOf(LocationManager.GPS_PROVIDER,
+                LocationManager.NETWORK_PROVIDER).any { p ->
+                try { lm.isProviderEnabled(p) } catch (_: Exception) { false }
+            }
+        } catch (_: Exception) { false }
     }
 }
 

@@ -528,3 +528,187 @@ stay absent); the kept items are still present (App Locker +
 PIN, intruder selfie, device admin/accessibility states,
 automation master toggle, geofence). CI is still the compile
 judge — not pushed yet.
+
+## Focus Guard setup card + geofence fix (2026-11-06)
+
+### 1. Focus Guard setup — NEW card, not the old dialog
+The old FocusGuard setup dialog was removed in the unnecessary-items
+pass, leaving only an on/off switch that could never turn on (no
+saved packages -> toast + revert). This pass brings setup back as a
+dedicated card in the Smart panel, with a fresh layout:
+
+- `activity_main.xml`: new Focus Guard card in `panelSmart` (header
+  row with shield icon + title + subtitle + the moved `swFocusGuard`
+  switch, live summary `tvFocusGuardInfo`, app section, time window,
+  preset chips). The switch was MOVED out of the More card (same ids,
+  same wiring — exactly one `swFocusGuard` / `tvFocusGuardInfo` in
+  the layout). OFF still only disables (packages are kept, so ON
+  restores the same setup — the switch never cleared `focus_pkgs`).
+- `FocusGuardPickerActivity.kt` (new, 184 lines) +
+  `activity_focus_guard_picker.xml` (new): searchable multi-select
+  list (icon + name + checkbox, system apps behind a toggle) reusing
+  `AppLocker.allInstalled` / `appIcon` / `pickerExcluded` — the
+  AppLocker picker itself was NOT reused (it writes the lock set
+  directly). Checkboxes edit a local set only; Save writes
+  `Config.setFocusPkgs`, turns the guard on when the list is
+  non-empty, off when cleared. Manifest: `.FocusGuardPickerActivity`
+  added (exported=false).
+- Time window: start/end buttons open a 24-hour TimePickerDialog;
+  presets — পড়ার সময় 18:00–22:00, রাত 22:00–06:00 (overnight
+  windows work, as the enforcer already handled fs > fe), দিনের
+  কাজ 09:00–17:00 — all via `Config.setFocusWindow`. Saving applies
+  immediately: the card summary and the switch refresh on return
+  (`refreshStatus()` -> `refreshFocusGuard()` in `onResume`).
+- A11yService enforcement is UNTOUCHED (same bounce-to-home +
+  throttled local notify). FocusLock token path untouched. No new
+  permissions. New strings (EN+BN): `focus_guard_sub`,
+  `focus_apps_label/none/chosen/choose`, `focus_time_label/start/end`,
+  `focus_preset_study/night/work`, `focus_picker_title`,
+  `focus_saved_count`, `focus_cleared`.
+
+### 2. Geofence "location পাওয়া যায় না" — root cause + fix
+Root cause (verified in `Helpers.kt`): `LocationHelper.fetchCoords`
+ONLY read `getLastKnownLocation` from GPS/NETWORK/PASSIVE and called
+`onFail()` when all were null — it never requested a fresh fix,
+despite its own doc comment promising one. A last-known fix only
+exists if some app asked for location recently; after a reboot, or
+with location rarely used, every provider returns null — so
+btnSetGeo failed even with location permission granted. The
+proximity-alert registration itself (`FlowTriggers.geofenceSync`,
+`addProximityAlert`) was checked and has no blocker (only a
+SecurityException log on missing permission).
+Fix (`Helpers.kt`, signature unchanged — all 5 callers intact):
+keep the fast last-known path; when nothing is cached, request ONE
+fresh fix via `requestSingleUpdate` on GPS and/or Network (main
+looper, first fix wins, ~20 s timeout -> onFail, single-callback
+guard via AtomicBoolean, listener removed on first fix/timeout).
+No new permissions. The Automation latch callers (`location_in`,
+weather, sunrise/sunset) still wait at most 6 s — a late fix just
+counts down an already-released latch, so they cannot hang.
+`btnSetGeo` failure now distinguishes the two cases
+(`LocationHelper.anyProviderEnabled`): location switched off ->
+dialog offering to open Location settings; providers on but no fix
+in 20 s -> the old "Location not available" toast. New strings
+(EN+BN): `geo_no_provider_title/msg`, `geo_open_settings`.
+How to test: GPS on, open Settings -> Smart -> "Set current place
+as centre" (or after a fresh install / reboot, when no cached fix
+exists) — it should now take up to ~20 s and then set the centre
+instead of failing at once; with location switched off it should
+offer the settings dialog.
+
+### Validation (both trees)
+Every layout + values file parses as XML; `MainActivity.kt`,
+`Helpers.kt`, `FocusGuardPickerActivity.kt`, `Config.kt`,
+`A11yService.kt` are brace/paren balanced per a proper Kotlin
+scanner; all new ids/strings resolve in both locales; the two
+`R.id.navHome/navSettings` refs resolve in `res/menu/bottom_nav.xml`;
+`FocusGuardPickerActivity` is in the manifest; crash-fix files
+untouched; no MQTT UI restored; kept items present (App Locker +
+PIN, intruder selfie, device admin/accessibility, automation master
+toggle, geofence). CI is still the compile judge — not pushed yet.
+
+## Templates gallery + single-flow share + Quick Settings tile (2026-11-06)
+
+Tamim's picks from the feature list: Automation log already exists
+(so it was NOT built), NFC was dropped; these three were built.
+
+### 1. Templates gallery — 49 templates (25 Rules + 24 Flows)
+- Entry: the ⋮ menu on BOTH Automation tabs (Rules tab and Flows
+  tab) gained a "Templates" item (`MENU_TEMPLATES`), opening a NEW
+  window — `TemplatesActivity` (+ `activity_templates.xml`,
+  manifest-declared). One searchable list, two sections (Rules, then
+  Flows); each row shows the template name, a one-line Bangla
+  description, and a trigger → actions summary built from
+  AutoCatalog/FlowCatalog labels (so it follows the current locale).
+  Tapping "যোগ করো" adds it at once — no editing needed — and the
+  row becomes "যোগ হয়েছে ✓" so the same tap cannot double-add.
+  Returning to Automation shows the new item immediately
+  (AutomationActivity re-renders in onResume).
+- Adding: Rules go through `Automation.importJson` (collision-safe
+  re-id; `saveAll` refreshes watchers and time alarms). Flows go
+  through `FlowStore.saveFlow` (the Activity re-ids on collision).
+  Rule templates are grouped under cat "টেমপ্লেট" in the list.
+  Flow templates are linear trigger → action chains built with
+  `FlowFlow.newNode/newEdge`; two use a condition node
+  (`battery_below`, `time_range`) with a "yes" edge — a "no" result
+  ends the walk cleanly (`followEdges` returns null).
+- Data: `Templates.kt` — templates are data, not code paths, so
+  adding one means adding one `Template(...)` entry. Names and
+  descriptions are Bangla in code (the app's default language);
+  trigger/action labels come from the catalogs.
+- Geofence flow templates ("বাড়ি ফিরলে", "বাড়ি ছাড়লে") read the
+  saved geo centre at add time (`Config.geoIsSet/Lat/Lng/Radius`)
+  and refuse with a toast when no location is set yet, instead of
+  saving a broken flow. They are flows only: proximity alerts are
+  registered from FLOW nodes (`FlowTriggers.geofenceSync` reads
+  `flowTriggerNodes`), so a rule with a geofence trigger would
+  never fire.
+
+### 2. Why each template is real — verified against the engines
+Every trigger/action type in `Templates.kt` was checked against the
+actual dispatch and param parsing in `Automation.kt` (rules) and
+`FlowEngine.kt` (flows) before authoring — nothing was invented:
+- Rules and flows do NOT share one event bus. `call_incoming`,
+  `call_missed`, `sms_received`, `headphone_in/out`, `screen_on/off`
+  are dispatched to `FlowEngine.onEvent` only, and geofence alerts
+  are registered from flow nodes only — so none of those appear in
+  rule templates. `sunrise`/`sunset` are in FlowEngine's
+  TICK_IGNORED set with no event source — rules-only (sunset is a
+  rule template). `wifi_connected/disconnected` reach rules via the
+  tick poll.
+- Param formats differ between engines and the templates follow
+  each: rules use `volume_set` "music:80" (percent) and
+  `brightness_set` 0–100, `dnd_set` "none"/"off", `screen_timeout_set`
+  seconds, `set_alarm` "HH:MM|message"; flows use `volume_set`
+  "music=10" (raw), `brightness_set` 0–255 (76 ≈ 30%), `dnd_set`
+  "on"/"off", `screen_timeout_set` milliseconds, `set_alarm` "HH:MM"
+  only, `set_timer` seconds only. `wait` does not exist in
+  FlowEngine and `ringer`/`mode_set` are not flow actions — unused.
+  `time_at_days` is "time=HH:MM|days=sun,mon,tue,wed,thu" in both.
+- Excluded on purpose: NFC (Tamim), MQTT, relay/peer actions,
+  FocusLock/AutoTap/redial picker steps, `send_sms`/`call_number`/
+  WhatsApp/Telegram (they need a real number the template cannot
+  know), `rule_enable/disable` (target-by-name is fragile).
+
+### 3. Single-flow share
+- Each flow card in the Flows tab gained a Share pill (next to
+  Dup/Log/Delete). It shares the stored flow JSON with the Android
+  share sheet — that JSON is already the exact single-flow format
+  the "PhoneLink থেকে আনো" import detects (`nodes` + non-empty
+  `name`), so the receiver can import it directly. The import side
+  was not changed.
+
+### 4. Quick Settings tile — Automation on/off
+- New `AutomationTileService` (manifest: `BIND_QUICK_SETTINGS_TILE`
+  + `QS_TILE` filter, icon `ic_nav_auto`, label "AutomationHub").
+  Tapping the tile flips the Automation master switch — it writes
+  exactly the same preference the Settings toggle writes
+  (`Config.setToggle(..., "automation_on", ...)`, which the engines
+  read on every event), and the tile state mirrors it
+  (ACTIVE = on, subtitle "চালু আছে"/"বন্ধ আছে"). No new
+  permissions; the tile never adds itself.
+- Settings → Automation card gained an "Add Quick Settings tile"
+  button (`btnAddQsTile`). On Android 13+ it calls
+  `TileService.requestAddTile` (user confirms in the system panel);
+  on older Android, or if the request is declined, the toast says
+  to add it manually from the QS panel's Edit screen.
+
+### Validation (both trees)
+49 templates parsed (25 rules + 24 flows); every template trigger,
+action, constraint and condition verified against
+`AutoCatalog`/`FlowCatalog` (rule T111/C41/A169, flow T181/C41/A182)
+with zero forbidden types; every layout + values file parses as
+XML; `Templates.kt`, `TemplatesActivity.kt`,
+`AutomationTileService.kt`, `AutomationActivity.kt`,
+`MainActivity.kt` are brace/paren balanced per a proper Kotlin
+scanner; all new/edited `R.*` refs resolve (strings in both
+locales, ids incl. `res/menu/bottom_nav.xml`, drawables, layouts);
+manifest components resolve (new activity + tile service);
+crash-fix files untouched; no MQTT UI restored; kept items present
+(App Locker + PIN, intruder selfie, device admin/accessibility,
+automation master toggle, geofence, Focus Guard card + switch);
+first-pass files intact (FocusGuardPickerActivity,
+`requestSingleUpdate` in `Helpers.kt`). CI is still the compile
+judge — not pushed yet. Phone test pending: open Templates from
+both ⋮ menus, add a Rule and a Flow template, share one flow, add
+the QS tile and toggle it.

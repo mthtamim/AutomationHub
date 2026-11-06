@@ -118,6 +118,14 @@
             android:exported="false" />
 
         <activity
+            android:name=".FocusGuardPickerActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".TemplatesActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".AppLockActivity"
             android:excludeFromRecents="true"
             android:exported="false"
@@ -325,6 +333,17 @@
             android:exported="true"
             android:icon="@drawable/ic_autotap"
             android:label="AutoTap"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".AutomationTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_nav_auto"
+            android:label="AutomationHub"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

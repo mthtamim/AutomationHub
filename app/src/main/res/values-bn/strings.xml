@@ -1277,6 +1277,23 @@
     <string name="focus_guard_info_on">চালু আছে — %1$s–%2$s, %3$dটি অ্যাপ আটকে থাকবে</string>
     <string name="focus_guard_info_off">বন্ধ আছে</string>
     <string name="focus_guard_no_schedule">Focus Guard-এর কোনো শিডিউল সেভ করা নেই</string>
+    <string name="focus_guard_sub">সময় ধরে বাছা অ্যাপ আটকে রাখে</string>
+    <string name="focus_apps_label">কোন অ্যাপ আটকাবে</string>
+    <string name="focus_apps_none">এখনো কোনো অ্যাপ বাছাই করা হয়নি</string>
+    <string name="focus_apps_chosen">%1$dটি অ্যাপ বাছাই করা</string>
+    <string name="focus_apps_choose">অ্যাপ বাছাই করো</string>
+    <string name="focus_time_label">আটকে রাখার সময়</string>
+    <string name="focus_time_start">শুরু %1$s</string>
+    <string name="focus_time_end">শেষ %1$s</string>
+    <string name="focus_preset_study">পড়ার সময়</string>
+    <string name="focus_preset_night">রাত</string>
+    <string name="focus_preset_work">দিনের কাজ</string>
+    <string name="focus_picker_title">কোন অ্যাপ আটকাবে</string>
+    <string name="focus_saved_count">%1$dটি অ্যাপ সেভ হয়েছে</string>
+    <string name="focus_cleared">সব অ্যাপ সরানো হয়েছে — Focus Guard বন্ধ</string>
+    <string name="geo_no_provider_title">লোকেশন বন্ধ আছে</string>
+    <string name="geo_no_provider_msg">জিওফেন্স কেন্দ্র দিতে লোকেশন (GPS) চালু করো।</string>
+    <string name="geo_open_settings">লোকেশন সেটিংস খুলুন</string>
     <string name="btn_import_phonelink">PhoneLink থেকে আনো</string>
     <string name="import_phonelink_title">PhoneLink থেকে আনো</string>
     <string name="import_phonelink_msg">১. PhoneLink-এ: Settings → সবকিছুর ব্যাকআপ (ফাইল) — এই ফাইলে Rules আসবে।
@@ -1285,4 +1302,21 @@
     <string name="import_phonelink_pick">ফাইল বাছাই করো</string>
     <string name="import_phonelink_done">%1$dটি নিয়ম ও %2$dটি ফ্লো আনা হয়েছে (%3$dটি ফাইল বাদ গেছে)</string>
     <string name="theme_picker_title">থিম বেছে নাও</string>
+
+    <!-- ===== Templates gallery + single-flow share + QS tile (2026-11-06) ===== -->
+    <string name="templates_title">টেমপ্লেট</string>
+    <string name="templates_menu">টেমপ্লেট</string>
+    <string name="templates_search_hint">টেমপ্লেট খুঁজুন…</string>
+    <string name="templates_section_rules">রুলস</string>
+    <string name="templates_section_flows">ফ্লোস</string>
+    <string name="templates_add">যোগ করো</string>
+    <string name="templates_added">যোগ হয়েছে ✓</string>
+    <string name="template_added">%1$s যোগ হয়েছে</string>
+    <string name="template_geo_needed">আগে জিও-ফেন্সের লোকেশন ঠিক করো (Settings → জিও-ফেন্স)</string>
+    <string name="flow_card_share">শেয়ার</string>
+    <string name="tile_add">Quick Settings টাইল যোগ করো</string>
+    <string name="tile_requested">টাইল যোগ করার অনুরোধ গেছে — প্যানেলে নিশ্চিত করো</string>
+    <string name="tile_add_manually">নিজে যোগ করো: QS প্যানেল → Edit</string>
+    <string name="tile_state_on">চালু আছে</string>
+    <string name="tile_state_off">বন্ধ আছে</string>
 </resources>

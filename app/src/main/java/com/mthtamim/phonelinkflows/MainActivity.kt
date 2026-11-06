@@ -1,7 +1,9 @@
 package com.mthtamim.phonelinkflows
 
+import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -9,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.service.quicksettings.TileService
 import android.text.InputType
 import android.view.View
 import android.widget.Button
@@ -36,6 +39,9 @@ class MainActivity : LocalizedActivity() {
     private lateinit var tvAdminInfo: TextView
     private lateinit var tvGeoInfo: TextView
     private lateinit var tvFocusGuardInfo: TextView
+    private lateinit var tvFocusAppsInfo: TextView
+    private lateinit var btnFocusStart: Button
+    private lateinit var btnFocusEnd: Button
     private var focusGuardUpdating = false
     private lateinit var tvStats: TextView
 
@@ -258,6 +264,9 @@ class MainActivity : LocalizedActivity() {
         tvAdminInfo = findViewById(R.id.tvAdminInfo)
         tvGeoInfo = findViewById(R.id.tvGeoInfo)
         tvFocusGuardInfo = findViewById(R.id.tvFocusGuardInfo)
+        tvFocusAppsInfo = findViewById(R.id.tvFocusAppsInfo)
+        btnFocusStart = findViewById(R.id.btnFocusStart)
+        btnFocusEnd = findViewById(R.id.btnFocusEnd)
         tvStats = findViewById(R.id.tvStats)
         tvA11yState = findViewById(R.id.tvA11yState)
         tvGeneralDiag = findViewById(R.id.tvGeneralDiag)
@@ -312,10 +321,11 @@ class MainActivity : LocalizedActivity() {
         // ----- more features (v2.1) -----
         bindToggle(R.id.swGeo, "geo_on", Config.geoOn(this))
 
-        // ----- Focus Guard off-switch: the setup dialog is gone, but
-        // A11yService still enforces a saved schedule. This switch
-        // turns it off (or back on if packages are saved); with no
-        // saved packages it cannot turn on and says so.
+        // ----- Focus Guard card (new 2026-11-06): the on/off switch
+        // lives in the dedicated card now (same ids). It turns a
+        // saved schedule off (or back on); with no saved packages
+        // it cannot turn on and says so. Setup (apps, window,
+        // presets) is wired just below.
         findViewById<CompoundButton>(R.id.swFocusGuard).apply {
             isChecked = Config.focusOn(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->
@@ -334,6 +344,29 @@ class MainActivity : LocalizedActivity() {
         }
         refreshFocusGuard()
 
+        // ----- Focus Guard setup card (new 2026-11-06): app picker,
+        // time window and preset chips. Saving applies at once —
+        // the picker enables the guard when apps are saved, and
+        // refreshFocusGuard() redraws the summary below.
+        findViewById<Button>(R.id.btnFocusApps).setOnClickListener {
+            startActivity(Intent(this, FocusGuardPickerActivity::class.java))
+        }
+        findViewById<Button>(R.id.btnFocusStart).setOnClickListener {
+            showFocusTimePicker(isStart = true)
+        }
+        findViewById<Button>(R.id.btnFocusEnd).setOnClickListener {
+            showFocusTimePicker(isStart = false)
+        }
+        findViewById<Button>(R.id.chipFocusStudy).setOnClickListener {
+            applyFocusPreset(18 * 60, 22 * 60)
+        }
+        findViewById<Button>(R.id.chipFocusNight).setOnClickListener {
+            applyFocusPreset(22 * 60, 6 * 60)
+        }
+        findViewById<Button>(R.id.chipFocusWork).setOnClickListener {
+            applyFocusPreset(9 * 60, 17 * 60)
+        }
+
         // ----- v2.2 toggles & actions -----
 
 
@@ -344,7 +377,25 @@ class MainActivity : LocalizedActivity() {
                     Config.setGeoCenter(this, lat, lng)
                     runOnUiThread { refreshStatus(); toast(getString(R.string.toast_geo_set)) }
                 },
-                { runOnUiThread { toast(getString(R.string.toast_geo_failed)) } })
+                { runOnUiThread {
+                    // Tell "location switched off" apart from "no fix
+                    // yet": only the first one gets a settings offer.
+                    if (!LocationHelper.anyProviderEnabled(this)) {
+                        AlertDialog.Builder(this)
+                            .setTitle(getString(R.string.geo_no_provider_title))
+                            .setMessage(getString(R.string.geo_no_provider_msg))
+                            .setPositiveButton(getString(R.string.geo_open_settings)) { _, _ ->
+                                try {
+                                    startActivity(Intent(
+                                        android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                } catch (_: Exception) { }
+                            }
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show()
+                    } else {
+                        toast(getString(R.string.toast_geo_failed))
+                    }
+                } })
         }
         // ----- v2.17.4 settings reorganization wiring -----
         // Usage Access is granted ONLY in Permissions & Access now;
@@ -359,6 +410,24 @@ class MainActivity : LocalizedActivity() {
         // automation_on finally gets its master toggle (was an
         // orphan key changeable only via settings import).
         bindToggle(R.id.swAutoMaster, "automation_on", Config.automationOn(this))
+        // Quick Settings tile (new 2026-11-06): Android 13+ can ask
+        // the system to add the AutomationHub tile; older versions
+        // (and a declined request) fall back to the manual QS Edit
+        // route, which the toast names.
+        findViewById<Button>(R.id.btnAddQsTile).setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                TileService.requestAddTile(
+                    ComponentName(this, AutomationTileService::class.java),
+                    null,
+                    mainExecutor
+                ) { result ->
+                    toast(getString(if (result == TileService.TILE_ADD_REQUEST_OK)
+                        R.string.tile_requested else R.string.tile_add_manually))
+                }
+            } else {
+                toast(getString(R.string.tile_add_manually))
+            }
+        }
         // geo_radius finally gets a UI (was stuck at 200 m).
         findViewById<Button>(R.id.btnGeoRadius).setOnClickListener {
             val options = intArrayOf(100, 200, 300, 500, 1000)
@@ -879,16 +948,45 @@ class MainActivity : LocalizedActivity() {
     private fun refreshFocusGuard() {
         val on = Config.focusOn(this)
         val pkgs = Config.focusPkgs(this)
+        val (fs, fe) = Config.focusWindow(this)
+        val fmt = { m: Int -> "%02d:%02d".format(m / 60, m % 60) }
         focusGuardUpdating = true
         findViewById<CompoundButton>(R.id.swFocusGuard).isChecked = on
         focusGuardUpdating = false
         tvFocusGuardInfo.text = if (!on) {
             getString(R.string.focus_guard_info_off)
         } else {
-            val (fs, fe) = Config.focusWindow(this)
-            val fmt = { m: Int -> "%02d:%02d".format(m / 60, m % 60) }
             getString(R.string.focus_guard_info_on, fmt(fs), fmt(fe), pkgs.size)
         }
+        tvFocusAppsInfo.text = if (pkgs.isEmpty()) {
+            getString(R.string.focus_apps_none)
+        } else {
+            getString(R.string.focus_apps_chosen, pkgs.size)
+        }
+        btnFocusStart.text = getString(R.string.focus_time_start, fmt(fs))
+        btnFocusEnd.text = getString(R.string.focus_time_end, fmt(fe))
+    }
+
+    /** Focus Guard card: start/end time picker (24-hour). Saving the
+     *  window applies at once via refreshFocusGuard(). */
+    private fun showFocusTimePicker(isStart: Boolean) {
+        val (fs, fe) = Config.focusWindow(this)
+        val cur = if (isStart) fs else fe
+        try {
+            TimePickerDialog(this, { _, h, m ->
+                val v = h * 60 + m
+                val (s, e) = Config.focusWindow(this)
+                if (isStart) Config.setFocusWindow(this, v, e)
+                else Config.setFocusWindow(this, s, v)
+                refreshFocusGuard()
+            }, cur / 60, cur % 60, true).show()
+        } catch (_: Exception) { }
+    }
+
+    /** Focus Guard card: preset windows (minutes since midnight). */
+    private fun applyFocusPreset(start: Int, end: Int) {
+        Config.setFocusWindow(this, start, end)
+        refreshFocusGuard()
     }
 
 
