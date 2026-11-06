@@ -1483,3 +1483,36 @@ Home scrolls smooth after resume/reopen, Rules editor opens
 fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
+
+### Release signing (wired 2026-11-07 — keystore via GitHub Secrets, never in the repo)
+
+- `app/build.gradle` now has `signingConfigs.release`: PKCS12
+  keystore, alias `automationhub`, cert SHA-256 fingerprint
+  `A6:D7:8B:FF:A5:93:3D:62:93:DF:CA:6B:2D:3D:27:AB:BC:F7:45:CD:06:C7:33:82:92:7D:82:74:FA:C2:C0:5D`
+  (fingerprint only — no password, no keystore content, lives
+  anywhere in the repo).
+- The release keystore itself is NEVER committed to this public
+  repo. It reaches CI only as GitHub Secrets:
+  `RELEASE_KEYSTORE_B64` (base64 of the keystore),
+  `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
+  `RELEASE_KEY_PASSWORD`. The workflow decodes the secret into
+  `app/release.keystore` and runs `assembleRelease` with
+  `RELEASE_KEYSTORE_PATH=app/release.keystore` (+ the other three
+  env vars). The build resolves that path against the repo root
+  first (a bare `file()` in the app module would look for
+  `app/app/release.keystore`); with no env, it falls back to a
+  `release.keystore` next to `build.gradle` for local builds.
+- The release buildType signs ONLY when the keystore file exists
+  AND `RELEASE_KEYSTORE_PASSWORD` is set; otherwise the release
+  stays unsigned exactly as before — debug CI and local builds
+  without the env keep working. `minifyEnabled true` +
+  `shrinkResources true` + proguardFiles are unchanged.
+- First release install needs ONE uninstall of the debug-key
+  build: the release signature differs from the fixed debug key,
+  so Android will refuse to install over it — export rules/flows
+  first, uninstall, install the release APK, import back. After
+  that, release builds update over each other.
+- The workflow still builds debug only — it needs the
+  `assembleRelease` step (browser edit, GitHub App cannot touch
+  workflows). The first release build must be phone-tested before
+  it ships.

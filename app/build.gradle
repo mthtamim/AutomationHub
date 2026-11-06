@@ -33,6 +33,23 @@ android {
         }
     }
 
+    // v1.2.5: release keystore path. The env value is repo-root
+    // relative (CI decodes the RELEASE_KEYSTORE_B64 secret into
+    // app/release.keystore and passes
+    // RELEASE_KEYSTORE_PATH=app/release.keystore) — but file() here
+    // resolves against the app/ module dir, so a bare file() would
+    // look for app/app/release.keystore and never find it, and the
+    // guard below would silently leave every CI release unsigned.
+    // Resolve the env path against the root first, then the module;
+    // with no env, use release.keystore next to this file (local
+    // builds). The file itself is never in the repo.
+    def releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+    def releaseKeystoreFile = releaseKeystorePath != null
+        ? (rootProject.file(releaseKeystorePath).exists()
+            ? rootProject.file(releaseKeystorePath)
+            : file(releaseKeystorePath))
+        : file("release.keystore")
+
     signingConfigs {
         // v1.2.1: ONE fixed debug key for every build. Before this,
         // assembleDebug signed with a fresh keystore generated on
@@ -48,6 +65,19 @@ android {
             keyPassword "android"
             storeType "PKCS12"
         }
+        // v1.2.5: release signing, keyed ONLY by env vars — the
+        // release keystore is never in the repo (public). CI decodes
+        // the RELEASE_KEYSTORE_B64 secret into release.keystore and
+        // passes RELEASE_KEYSTORE_PATH/PASSWORD/ALIAS/KEY_PASSWORD.
+        // A local build without the env keeps working: the release
+        // buildType stays unsigned (see the guard below).
+        release {
+            storeFile releaseKeystoreFile
+            storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD")
+            keyAlias System.getenv("RELEASE_KEY_ALIAS") ?: "automationhub"
+            keyPassword System.getenv("RELEASE_KEY_PASSWORD")
+            storeType "PKCS12"
+        }
     }
 
     buildTypes {
@@ -58,6 +88,14 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // v1.2.5: sign the release ONLY when the keystore file
+            // exists AND the password env var is set; otherwise the
+            // release stays unsigned exactly as before (debug CI and
+            // local builds without the env keep working).
+            if (releaseKeystoreFile.exists() &&
+                System.getenv("RELEASE_KEYSTORE_PASSWORD") != null) {
+                signingConfig signingConfigs.release
+            }
         }
         debug {
             signingConfig signingConfigs.debug
