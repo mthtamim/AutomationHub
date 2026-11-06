@@ -32,7 +32,15 @@ object NavBarHelper {
      *  pages in place, the others start activities). */
     fun setupBar(activity: Activity, barId: Int, selectedId: Int,
                  onSelect: (Int) -> Unit) {
-        val bar = activity.findViewById<NavigationBarView>(barId) ?: return
+        // barId is the <include> id (bottomNav / autoBottomNav) — its
+        // root is the FrameLayout in nav_m3_bar.xml, NOT the
+        // NavigationBarView. A blind findViewById<NavigationBarView>
+        // (barId) throws ClassCastException and the app never opens
+        // (v1.4.0 launch crash). Resolve the real bar (R.id.navBar)
+        // inside the include; a direct NavigationBarView id works too.
+        val root = activity.findViewById<View>(barId) ?: return
+        val bar = (root as? NavigationBarView)
+            ?: root.findViewById<NavigationBarView>(R.id.navBar) ?: return
         bar.selectedItemId = selectedId
         bar.setOnItemSelectedListener { item ->
             if (item.itemId == selectedId) return@setOnItemSelectedListener true

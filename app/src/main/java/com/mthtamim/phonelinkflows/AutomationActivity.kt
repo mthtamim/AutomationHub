@@ -685,7 +685,7 @@ class AutomationActivity : LocalizedActivity() {
             R.id.navSettings -> R.id.nav_settings
             else -> R.id.nav_home
         }
-        findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.autoBottomNav)
+        findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.navBar)
             ?.let { if (it.selectedItemId != menuId) it.selectedItemId = menuId }
     }
 

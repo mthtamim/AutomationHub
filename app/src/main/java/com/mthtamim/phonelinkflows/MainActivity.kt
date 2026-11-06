@@ -1036,12 +1036,12 @@ class MainActivity : LocalizedActivity() {
                 R.id.nav_home -> showPage(R.id.navHome)
                 R.id.nav_diy -> {
                     startActivity(Intent(this, AutomationActivity::class.java))
-                    findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.bottomNav)
+                    findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.navBar)
                         ?.let { it.selectedItemId = currentMenuId() }
                 }
                 R.id.nav_templates -> {
                     startActivity(Intent(this, TemplatesActivity::class.java))
-                    findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.bottomNav)
+                    findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.navBar)
                         ?.let { it.selectedItemId = currentMenuId() }
                 }
                 R.id.nav_settings -> showPage(R.id.navSettings)
@@ -1058,7 +1058,7 @@ class MainActivity : LocalizedActivity() {
         navSelectedId = id
         val menuId = if (id == R.id.navSettings) R.id.nav_settings
             else R.id.nav_home
-        findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.bottomNav)
+        findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.navBar)
             ?.let { if (it.selectedItemId != menuId) it.selectedItemId = menuId }
     }
 
