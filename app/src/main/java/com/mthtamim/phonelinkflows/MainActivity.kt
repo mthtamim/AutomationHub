@@ -1,17 +1,18 @@
 package com.mthtamim.phonelinkflows
 
+import android.app.StatusBarManager
 import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.service.quicksettings.TileService
 import android.text.InputType
 import android.view.View
 import android.widget.Button
@@ -414,22 +415,30 @@ class MainActivity : LocalizedActivity() {
         // the system to add the AutomationHub tile; older versions
         // (and a declined request) fall back to the manual QS Edit
         // route, which the toast names.
+        // NOTE: the API lives on StatusBarManager, NOT TileService:
+        // StatusBarManager.requestAddTileService(component, label,
+        // icon, executor, callback). There is no
+        // TileService.requestAddTile and no TILE_ADD_REQUEST_OK —
+        // success is TILE_ADD_REQUEST_RESULT_TILE_ADDED (2) or
+        // TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED (1).
         findViewById<Button>(R.id.btnAddQsTile).setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // requestAddTile takes 5 args: component, icon, label,
-                // executor, callback. (The first version missed the
-                // label, so the call did not match any overload and
-                // CI failed with "Unresolved reference: requestAddTile".)
-                TileService.requestAddTile(
-                    ComponentName(this, AutomationTileService::class.java),
-                    null,
-                    "AutomationHub",
-                    mainExecutor,
-                    java.util.function.Consumer<Int> { result ->
-                        toast(getString(if (result == TileService.TILE_ADD_REQUEST_OK)
-                            R.string.tile_requested else R.string.tile_add_manually))
-                    }
-                )
+                val sbm = getSystemService(StatusBarManager::class.java)
+                if (sbm != null) {
+                    sbm.requestAddTileService(
+                        ComponentName(this, AutomationTileService::class.java),
+                        "AutomationHub",
+                        Icon.createWithResource(this, R.drawable.ic_nav_auto),
+                        mainExecutor,
+                        java.util.function.Consumer<Int> { result ->
+                            toast(getString(if (result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED ||
+                                result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED)
+                                R.string.tile_requested else R.string.tile_add_manually))
+                        }
+                    )
+                } else {
+                    toast(getString(R.string.tile_add_manually))
+                }
             } else {
                 toast(getString(R.string.tile_add_manually))
             }

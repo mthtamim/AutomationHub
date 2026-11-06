@@ -689,7 +689,7 @@ actual dispatch and param parsing in `Automation.kt` (rules) and
   permissions; the tile never adds itself.
 - Settings → Automation card gained an "Add Quick Settings tile"
   button (`btnAddQsTile`). On Android 13+ it calls
-  `TileService.requestAddTile` (user confirms in the system panel);
+  `StatusBarManager.requestAddTileService` (user confirms in the system panel);
   on older Android, or if the request is declined, the toast says
   to add it manually from the QS panel's Edit screen.
 

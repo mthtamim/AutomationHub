@@ -12,7 +12,7 @@ import android.service.quicksettings.TileService
  * preference the Settings master toggle writes (Config.setToggle),
  * so the engine picks it up the same way — no service restart,
  * no extra behaviour. The tile never adds itself: on Android 13+
- * MainActivity offers TileService.requestAddTile, otherwise the
+ * MainActivity offers StatusBarManager.requestAddTileService, otherwise the
  * user adds it from the QS panel's Edit screen (see README).
  */
 class AutomationTileService : TileService() {
