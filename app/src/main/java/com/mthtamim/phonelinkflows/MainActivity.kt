@@ -27,6 +27,7 @@ import com.autotap.app.TapAccessibilityService
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButtonToggleGroup
 import kotlin.concurrent.thread
+import org.json.JSONObject
 
 class MainActivity : LocalizedActivity() {
 
@@ -34,6 +35,8 @@ class MainActivity : LocalizedActivity() {
     private lateinit var tvPinInfo: TextView
     private lateinit var tvAdminInfo: TextView
     private lateinit var tvGeoInfo: TextView
+    private lateinit var tvFocusGuardInfo: TextView
+    private var focusGuardUpdating = false
     private lateinit var tvStats: TextView
 
     private lateinit var pageHome: View
@@ -86,10 +89,6 @@ class MainActivity : LocalizedActivity() {
     // v2.11 voice commands (system speech recognizer)
 
 
-
-
-
-
     // ------------- v2.4 launchers -------------
     private val cfgExportLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()) { result ->
@@ -132,106 +131,73 @@ class MainActivity : LocalizedActivity() {
     }
 
 
-
-
-    private var pendingBackupUri: Uri? = null
-
-    private val backupLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()) { result ->
-        val uri = result.data?.data
-        if (result.resultCode == RESULT_OK && uri != null) {
-            pendingBackupUri = uri
-            val input = EditText(this).apply {
-                hint = getString(R.string.hint_backup_password)
-                inputType = InputType.TYPE_CLASS_TEXT or
-                    InputType.TYPE_TEXT_VARIATION_PASSWORD
-            }
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.backup_password_title))
-                .setView(input)
-                .setPositiveButton(android.R.string.ok) { _, _ ->
-                    writeBackup(input.text.toString())
-                }
-                .setNegativeButton(getString(R.string.btn_cancel), null)
-                .show()
-        }
-    }
-
-    private fun writeBackup(password: String) {
-        val uri = pendingBackupUri ?: return
-        pendingBackupUri = null
-        thread {
-            var ok = false
+    // ----- PhoneLink import (E): one entry for Rules + Flows from
+    // PhoneLink. Picks one or more JSON files and detects each:
+    // full backup (Rules, merged), flows backup (Flows, merged by
+    // id), a single flow JSON, or a bare rules array. Hub settings
+    // are deliberately NOT overwritten with PhoneLink's cfg.
+    private val phonelinkImportLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) return@registerForActivityResult
+        var rulesAdded = 0
+        var flowsAdded = 0
+        var skipped = 0
+        for (uri in uris) {
             try {
-                var text = SettingsTransfer.export(applicationContext)
-                if (password.isNotEmpty()) text = BackupCrypto.encrypt(text, password)
-                contentResolver.openOutputStream(uri)?.use {
-                    it.write(text.toByteArray(Charsets.UTF_8))
-                }
-                ok = true
-            } catch (_: Exception) { }
-            Handler(Looper.getMainLooper()).post {
-                toast(getString(if (ok) R.string.toast_backup_done else R.string.toast_backup_failed))
-            }
+                val text = contentResolver.openInputStream(uri)
+                    ?.bufferedReader()?.readText().orEmpty()
+                val r = importPhonelinkText(text)
+                if (r == null) skipped++
+                else { rulesAdded += r.first; flowsAdded += r.second }
+            } catch (_: Exception) { skipped++ }
         }
+        toast(getString(R.string.import_phonelink_done,
+            rulesAdded, flowsAdded, skipped))
+        refreshStatus()
     }
 
-    private val restoreLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()) { result ->
-        val uri = result.data?.data
-        if (result.resultCode == RESULT_OK && uri != null) {
-            thread {
-                var text = ""
-                try {
-                    text = contentResolver.openInputStream(uri)?.bufferedReader()
-                        ?.readText().orEmpty()
-                } catch (_: Exception) { }
-                Handler(Looper.getMainLooper()).post {
-                    when {
-                        text.isEmpty() -> toast(getString(R.string.toast_backup_failed))
-                        BackupCrypto.isEncrypted(text) -> {
-                            val input = EditText(this).apply {
-                                hint = getString(R.string.hint_backup_password)
-                                inputType = InputType.TYPE_CLASS_TEXT or
-                                    InputType.TYPE_TEXT_VARIATION_PASSWORD
-                            }
-                            AlertDialog.Builder(this)
-                                .setTitle(getString(R.string.backup_password_title))
-                                .setView(input)
-                                .setPositiveButton(android.R.string.ok) { _, _ ->
-                                    val plain = BackupCrypto.decrypt(
-                                        text, input.text.toString())
-                                    if (plain == null) {
-                                        toast(getString(R.string.toast_wrong_password))
-                                    } else {
-                                        finishRestore(plain)
-                                    }
-                                }
-                                .setNegativeButton(getString(R.string.btn_cancel), null)
-                                .show()
-                        }
-                        else -> finishRestore(text)
+    private fun importPhonelinkText(text: String): Pair<Int, Int>? {
+        val t = text.trim()
+        if (t.isEmpty()) return null
+        if (t.startsWith("[")) {
+            val n = Automation.importJson(this, t)
+            return if (n < 0) null else Pair(n, 0)
+        }
+        return try {
+            val root = JSONObject(t)
+            when {
+                root.optString("kind") == "full-backup" -> {
+                    val rulesStr = root.optJSONObject("auto")
+                        ?.optString("rules", "") ?: ""
+                    if (rulesStr.isEmpty()) return null
+                    val n = Automation.importJson(this, rulesStr)
+                    if (n < 0) null else Pair(n, 0)
+                }
+                root.optInt("formatVersion", -1) == 1 && root.has("flows") -> {
+                    val arr = root.optJSONArray("flows") ?: return null
+                    var added = 0
+                    for (i in 0 until arr.length()) {
+                        val f = arr.optJSONObject(i) ?: continue
+                        if (f.optString("id").isEmpty()
+                            || f.optString("name").isEmpty()) continue
+                        FlowStore.saveFlow(this, f)
+                        added++
                     }
+                    if (added == 0) null else Pair(0, added)
                 }
-            }
-        }
-    }
-
-    private fun finishRestore(text: String) {
-        thread {
-            val ok = try { SettingsTransfer.import(applicationContext, text); true }
-                catch (_: Exception) { false }
-            Handler(Looper.getMainLooper()).post {
-                if (ok) {
-                    refreshStatus()
-                    toast(getString(R.string.toast_restore_done))
-                } else {
-                    toast(getString(R.string.toast_backup_failed))
+                root.has("nodes") && root.optString("name").isNotEmpty() -> {
+                    var id = root.optString("id")
+                    if (id.isEmpty() || FlowStore.loadFlow(this, id) != null) {
+                        id = "f" + System.currentTimeMillis().toString()
+                        root.put("id", id)
+                    }
+                    FlowStore.saveFlow(this, root)
+                    Pair(0, 1)
                 }
+                else -> null
             }
-        }
+        } catch (_: Exception) { null }
     }
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -291,10 +257,10 @@ class MainActivity : LocalizedActivity() {
         tvPinInfo = findViewById(R.id.tvPinInfo)
         tvAdminInfo = findViewById(R.id.tvAdminInfo)
         tvGeoInfo = findViewById(R.id.tvGeoInfo)
+        tvFocusGuardInfo = findViewById(R.id.tvFocusGuardInfo)
         tvStats = findViewById(R.id.tvStats)
         tvA11yState = findViewById(R.id.tvA11yState)
         tvGeneralDiag = findViewById(R.id.tvGeneralDiag)
-
 
 
         // ----- bottom navigation (v2.17: five tabs) -----
@@ -346,9 +312,29 @@ class MainActivity : LocalizedActivity() {
         // ----- more features (v2.1) -----
         bindToggle(R.id.swGeo, "geo_on", Config.geoOn(this))
 
+        // ----- Focus Guard off-switch: the setup dialog is gone, but
+        // A11yService still enforces a saved schedule. This switch
+        // turns it off (or back on if packages are saved); with no
+        // saved packages it cannot turn on and says so.
+        findViewById<CompoundButton>(R.id.swFocusGuard).apply {
+            isChecked = Config.focusOn(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                if (focusGuardUpdating) return@setOnCheckedChangeListener
+                if (checked && Config.focusPkgs(this@MainActivity).isEmpty()) {
+                    focusGuardUpdating = true
+                    isChecked = false
+                    focusGuardUpdating = false
+                    toast(getString(R.string.focus_guard_no_schedule))
+                    refreshFocusGuard()
+                    return@setOnCheckedChangeListener
+                }
+                Config.setFocusOn(this@MainActivity, checked)
+                refreshFocusGuard()
+            }
+        }
+        refreshFocusGuard()
+
         // ----- v2.2 toggles & actions -----
-
-
 
 
         findViewById<Button>(R.id.btnSetGeo).setOnClickListener {
@@ -387,32 +373,7 @@ class MainActivity : LocalizedActivity() {
         // ----- data & statistics (v2.1) -----
 
 
-        findViewById<Button>(R.id.btnBackupInbox).setOnClickListener {
-            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "application/json"
-                putExtra(Intent.EXTRA_TITLE, "automationhub-backup.json")
-            }
-            backupLauncher.launch(intent)
-        }
-        findViewById<Button>(R.id.btnRestoreInbox).setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "*/*"
-            }
-            restoreLauncher.launch(intent)
-        }
-
         // ----- v2.11 remote additions -----
-
-
-
-
-
-
-
-
-
 
 
         findViewById<Button>(R.id.btnAccent).setOnClickListener {
@@ -432,24 +393,7 @@ class MainActivity : LocalizedActivity() {
         // its own accent (see LocalizedActivity); the accent picker above
         // still applies when Emerald Dark is selected.
         findViewById<Button>(R.id.btnAppTheme).setOnClickListener {
-            val keys = arrayOf("emerald_dark", "aurora", "ocean_deep",
-                "midnight_sapphire", "sunset_ember", "rose_quartz",
-                "forest_mist", "graphite_mono")
-            val labels = arrayOf(
-                getString(R.string.theme_name_emerald_dark),
-                getString(R.string.theme_name_aurora),
-                getString(R.string.theme_name_ocean_deep),
-                getString(R.string.theme_name_midnight_sapphire),
-                getString(R.string.theme_name_sunset_ember),
-                getString(R.string.theme_name_rose_quartz),
-                getString(R.string.theme_name_forest_mist),
-                getString(R.string.theme_name_graphite_mono))
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.btn_app_theme))
-                .setSingleChoiceItems(labels, keys.indexOf(Config.appTheme(this))) { dialog, w ->
-                    Config.setAppTheme(this, keys[w]); dialog.dismiss(); recreate()
-                }
-                .show()
+            showThemePicker()
         }
         findViewById<Button>(R.id.btnCheckUpdate).setOnClickListener {
             toast(getString(R.string.update_checking))
@@ -484,9 +428,6 @@ class MainActivity : LocalizedActivity() {
         // ----- v2.3 wiring -----
 
         // ----- v2.17 dashboard tiles -----
-
-
-
 
 
         // ----- v2.21 AutoTap dashboard card (bottom of Dashboard):
@@ -562,18 +503,6 @@ class MainActivity : LocalizedActivity() {
             toast(getString(R.string.dash_redial_stopped))
             refreshRedialCard()
         }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
         // ----- security card -----
@@ -767,8 +696,6 @@ class MainActivity : LocalizedActivity() {
         // --- former group panel items (now in Data) ---
 
 
-
-
         // v2.17.4: the Shizuku connect/test button moved to
         // Permissions & Access (its state line lives there too).
 
@@ -780,6 +707,17 @@ class MainActivity : LocalizedActivity() {
         }
         findViewById<Button>(R.id.btnImportConfig).setOnClickListener {
             cfgImportLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+        }
+        findViewById<Button>(R.id.btnImportPhonelink).setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.import_phonelink_title))
+                .setMessage(getString(R.string.import_phonelink_msg))
+                .setPositiveButton(getString(R.string.import_phonelink_pick)) { _, _ ->
+                    phonelinkImportLauncher.launch(
+                        arrayOf("application/json", "text/plain"))
+                }
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .show()
         }
         findViewById<Button>(R.id.btnConfigCode).setOnClickListener {
             val input = EditText(this).apply {
@@ -807,7 +745,6 @@ class MainActivity : LocalizedActivity() {
         // --- home additions ---
 
 
-
     }
 
     private fun showPage(itemId: Int) {
@@ -816,7 +753,6 @@ class MainActivity : LocalizedActivity() {
         pageSettings.visibility = if (itemId == R.id.navSettings) View.VISIBLE else View.GONE
         closeSubScreen()
     }
-
 
 
     /** AutomationHub: only home/settings tabs exist now. */
@@ -841,28 +777,7 @@ class MainActivity : LocalizedActivity() {
     }
 
 
-
-
-
-
-
-
-
     // ---------------- v2.3 dialogs ----------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     private fun showSetPinDialog(onDone: (Boolean) -> Unit) {
@@ -926,6 +841,7 @@ class MainActivity : LocalizedActivity() {
         tvGeoInfo.text = if (Config.geoIsSet(this)) {
             getString(R.string.geo_set, Config.geoLat(this), Config.geoLng(this), Config.geoRadius(this))
         } else getString(R.string.geo_not_set)
+        refreshFocusGuard()
         tvStats.text = buildStatsText()
         tvPinInfo.text = getString(
             if (Config.pinHash(this).isNotEmpty()) R.string.pin_state_set else R.string.pin_state_unset)
@@ -939,7 +855,6 @@ class MainActivity : LocalizedActivity() {
         refreshDashboard()
         refreshSettingsHub()
     }
-
 
 
     // ------------- v2.17 redesign wiring -------------
@@ -960,6 +875,190 @@ class MainActivity : LocalizedActivity() {
         refreshSettingsHub()
     }
 
+
+    private fun refreshFocusGuard() {
+        val on = Config.focusOn(this)
+        val pkgs = Config.focusPkgs(this)
+        focusGuardUpdating = true
+        findViewById<CompoundButton>(R.id.swFocusGuard).isChecked = on
+        focusGuardUpdating = false
+        tvFocusGuardInfo.text = if (!on) {
+            getString(R.string.focus_guard_info_off)
+        } else {
+            val (fs, fe) = Config.focusWindow(this)
+            val fmt = { m: Int -> "%02d:%02d".format(m / 60, m % 60) }
+            getString(R.string.focus_guard_info_on, fmt(fs), fmt(fe), pkgs.size)
+        }
+    }
+
+
+    // ----- professional theme picker (F): all 8 themes as live
+    // preview cards with their REAL palette colours (taken from
+    // values[-night]/themes.xml — the glass palettes are static,
+    // identical in light and dark mode; Emerald Dark follows the
+    // light/dark palettes, so its card shows the dark look).
+    // Tapping a card saves the choice and recreates the activity,
+    // so the whole app follows instantly. The light/dark/system
+    // toggle in General settings is untouched and independent.
+    private data class ThemePreview(
+        val key: String, val nameRes: Int,
+        val primary: String, val background: String, val surface: String,
+        val onSurface: String, val onSurfaceVariant: String, val outline: String
+    )
+
+    private fun themePreviews() = listOf(
+        ThemePreview("emerald_dark", R.string.theme_name_emerald_dark,
+            "#10B981", "#101415", "#171D1F", "#EAF4EE", "#8FA79B", "#2A3336"),
+        ThemePreview("aurora", R.string.theme_name_aurora,
+            "#E879C6", "#160B36", "#2EFFFFFF", "#FDF2FA", "#D8B4D4", "#33FFFFFF"),
+        ThemePreview("ocean_deep", R.string.theme_name_ocean_deep,
+            "#38BDF8", "#04222F", "#2EFFFFFF", "#EFF9FF", "#9CC8D8", "#33FFFFFF"),
+        ThemePreview("midnight_sapphire", R.string.theme_name_midnight_sapphire,
+            "#8EA2FF", "#0A1130", "#2EFFFFFF", "#EEF2FF", "#A8B4D8", "#33FFFFFF"),
+        ThemePreview("sunset_ember", R.string.theme_name_sunset_ember,
+            "#FB923C", "#2A1008", "#2EFFFFFF", "#FFF7ED", "#E8C4A8", "#33FFFFFF"),
+        ThemePreview("rose_quartz", R.string.theme_name_rose_quartz,
+            "#F9A8D4", "#2B0A1E", "#2EFFFFFF", "#FFF1F2", "#E3B8C8", "#33FFFFFF"),
+        ThemePreview("forest_mist", R.string.theme_name_forest_mist,
+            "#6EE7B7", "#071A12", "#2EFFFFFF", "#F0FDF4", "#A8C8B4", "#33FFFFFF"),
+        ThemePreview("graphite_mono", R.string.theme_name_graphite_mono,
+            "#E5E7EB", "#17171A", "#2EFFFFFF", "#FAFAFA", "#A1A1AA", "#33FFFFFF")
+    )
+
+    private fun compositeOver(fg: Int, bg: Int): Int {
+        val a = android.graphics.Color.alpha(fg) / 255f
+        val r = (android.graphics.Color.red(fg) * a
+            + android.graphics.Color.red(bg) * (1 - a)).toInt()
+        val g = (android.graphics.Color.green(fg) * a
+            + android.graphics.Color.green(bg) * (1 - a)).toInt()
+        val b = (android.graphics.Color.blue(fg) * a
+            + android.graphics.Color.blue(bg) * (1 - a)).toInt()
+        return android.graphics.Color.rgb(r, g, b)
+    }
+
+    private fun buildThemeCard(
+        t: ThemePreview, selected: Boolean, dp: (Int) -> Int
+    ): com.google.android.material.card.MaterialCardView {
+        val bg = android.graphics.Color.parseColor(t.background)
+        val primary = android.graphics.Color.parseColor(t.primary)
+        val surface = compositeOver(
+            android.graphics.Color.parseColor(t.surface), bg)
+        val onSurface = android.graphics.Color.parseColor(t.onSurface)
+        val onSurfaceVariant =
+            android.graphics.Color.parseColor(t.onSurfaceVariant)
+        val outline = android.graphics.Color.parseColor(t.outline)
+        val card = com.google.android.material.card.MaterialCardView(this).apply {
+            radius = dp(16).toFloat()
+            cardElevation = 0f
+            setCardBackgroundColor(bg)
+            strokeWidth = dp(if (selected) 2 else 1)
+            strokeColor = if (selected) primary else outline
+            useCompatPadding = true
+        }
+        val inner = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+        }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        val dot = View(this).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(primary)
+            }
+            layoutParams = LinearLayout.LayoutParams(dp(12), dp(12))
+        }
+        header.addView(dot)
+        val name = TextView(this).apply {
+            text = getString(t.nameRes)
+            setTextColor(onSurface)
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+            ).apply { marginStart = dp(8) }
+        }
+        header.addView(name)
+        if (selected) {
+            val check = TextView(this).apply {
+                text = "✓"
+                setTextColor(bg)
+                textSize = 13f
+                gravity = android.view.Gravity.CENTER
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(primary)
+                }
+                layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
+            }
+            header.addView(check)
+        }
+        inner.addView(header)
+        val mini = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(surface)
+            }
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(10) }
+        }
+        mini.addView(TextView(this).apply {
+            text = "AutomationHub"
+            setTextColor(onSurface)
+            textSize = 12f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        })
+        mini.addView(TextView(this).apply {
+            text = getString(R.string.conn_automation_on, 0, 0)
+            setTextColor(onSurfaceVariant)
+            textSize = 11f
+        })
+        inner.addView(mini)
+        card.addView(inner)
+        return card
+    }
+
+    private fun showThemePicker() {
+        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottomsheet_theme_picker, null)
+        sheet.setContentView(view)
+        val grid = view.findViewById<LinearLayout>(R.id.themeGrid)
+        val current = Config.appTheme(this)
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+        for (row in themePreviews().chunked(2)) {
+            val rowLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(8) }
+            }
+            for ((i, t) in row.withIndex()) {
+                val card = buildThemeCard(t, t.key == current, ::dp)
+                card.setOnClickListener {
+                    Config.setAppTheme(this, t.key)
+                    sheet.dismiss()
+                    recreate()
+                }
+                val lp = LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                if (i == 0) lp.marginEnd = dp(4) else lp.marginStart = dp(4)
+                rowLayout.addView(card, lp)
+            }
+            grid.addView(rowLayout)
+        }
+        view.findViewById<View>(R.id.btnThemeSheetClose).setOnClickListener {
+            sheet.dismiss()
+        }
+        sheet.show()
+    }
 
     private fun refreshDashboard() {
         tvDashDevice.text = Config.deviceName(this)
@@ -1086,7 +1185,6 @@ class MainActivity : LocalizedActivity() {
         // of Appearance & General (inventory category 7).
         tvGeneralDiag.text = tvHubDiag.text
     }
-
 
 
     private fun ownSsid(): String = try {

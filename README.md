@@ -391,3 +391,140 @@ resolves (the one apparent miss is `android.R.string.ok`); all 35
 manifest components resolve to classes (`QrShowActivity` lives in
 `QrShow.kt`); the two Add-Flow crash-fix files are untouched. CI
 is still the compile judge — not pushed yet.
+
+## Improvement pass (2026-11-06 — Tamim: MQTT stays removed, do the rest, professional theme picker)
+
+This pass supersedes three leftovers from pass 2 above: the Focus
+Guard caveat (now has an off-switch), the Inbox backup/restore
+buttons (now removed), and the dead strings/Config accessors (now
+removed). MQTT stays removed — no MQTT UI was restored anywhere.
+
+### A. Repo cleanup
+- Deleted the 18 inert placeholder layouts from the push tree
+  (each verified as the 6-line empty-LinearLayout placeholder with
+  zero references before deletion).
+- Deleted 27 dead drawables from both trees (54 files) — zero
+  references in code/layouts/styles/manifest.
+- Total: 72 files deleted. Push tree now has 17 layouts, 62
+  drawables. `FlowsMainActivity.kt` / `FlowsSettingsActivity.kt`
+  do NOT exist locally (remote-repo only). No other dead
+  non-placeholder layouts exist locally.
+
+### B. Dead resources
+- Removed 101 dead strings from `values/strings.xml` +
+  `values-bn/strings.xml` in both trees (404 removals). Dynamic
+  strings `at_/ac_/aa_/ath_/ach_/aah_*` were excluded — they are
+  loaded via `getIdentifier` in FlowCatalog/AutomationActivity.
+- Removed 14 dead Config accessors from both trees
+  (`quietOn/quietStart/quietEnd/setQuietWindow/digestMinutes/
+  digitsOf/setSmtp/setMqtt/pinDigestOf/guardOn/sosNumbers/
+  setSosNumbers/setPanicPinHash/panicActive`) — zero callers after
+  the fix. Caught in verification: `Config.applyMode()` "study"
+  branch called `digestMinutes` internally — fixed to a direct
+  prefs read. Kept deliberately: `setFocusOn/setFocusPkgs/
+  setFocusWindow` (needed for D), the `accent()` getter (accent
+  picker still exists), mqtt/smtp getters (the engine uses them),
+  `setPanicActive` + the `panicPinHash` getter (LockActivity
+  uses them).
+
+### C. Data panel
+- Removed `btnBackupInbox` / `btnRestoreInbox` and their wiring
+  (`backupLauncher/restoreLauncher/writeBackup/finishRestore/
+  pendingBackupUri`) from MainActivity (1113 → 937 lines) and the
+  layout row. Those buttons were mislabeled duplicates of the full
+  backup (same `SettingsTransfer.export/import`). Export/Import
+  config buttons remain.
+- Consequence: password-encrypted backup creation/restore goes
+  away (`cfgExportLauncher` writes a plain export) — see
+  "What still blocks a release".
+
+### D. Focus Guard off-switch
+- Enforcement lives only in `A11yService.kt`: `focusOn` + a
+  package in `focusPkgs` + inside `focusWindow` → the app is
+  bounced to home + a local notification. Defaults off.
+- Added a switch to the More card in `panelSmart` (`swFocusGuard`
+  + `tvFocusGuardInfo`, 4 new strings EN+BN). Turning it ON with
+  no saved packages toasts and reverts to off; turning it OFF
+  clears the saved schedule. Wired in MainActivity with a
+  `focusGuardUpdating` guard flag; `refreshFocusGuard()` is called
+  from `refreshStatus()`.
+- The FocusLock token is safe: the token is saved from
+  `AutomationActivity.kt` and read by `focuslock_control` — the
+  removed FocusGuard dialog only set the schedule, so removing it
+  did not break the action.
+
+### E. PhoneLink import ("PhoneLink থেকে আনো")
+- Where: Data panel, in the Full settings backup card
+  (`btnImportPhonelink`), next to Export/Import config.
+- How it works: the button shows a dialog with the exact steps,
+  then opens a multi-file picker. Each picked file is detected
+  by content and merged — never wiped:
+  - PhoneLink full backup (`kind:"full-backup"`, from PhoneLink
+    Settings → Full backup — everything (file)) → its Rules are
+    merged into Hub's rules (deduped, collisions re-id'd).
+  - Flows backup (`formatVersion:1` + `flows`, from PhoneLink
+    Automation → Flows tab ⋮ → Backup flows) → each Flow is saved
+    (same id overwrites the old one).
+  - Single flow JSON (`nodes` + non-empty `name`) → saved
+    (a missing or colliding id gets a fresh one).
+  - Bare rules array → merged like the full-backup rules.
+  - Anything else → skipped and counted in the result toast
+    ("%d rule(s) and %d flow(s) imported (%d file(s) skipped)").
+- Limits (honest): there is NO automatic migration — Android
+  sandboxing blocks reading PhoneLink's private files directly,
+  so the user must export the two files from PhoneLink first and
+  pick them here. Hub settings (theme, PIN) are deliberately NOT
+  overwritten with PhoneLink's `cfg`. `.flo` files are Automate's
+  proprietary binary format, not PhoneLink flows, and are not
+  imported here.
+
+### F. Professional theme picker
+- Replaces the old plain single-choice AlertDialog. Now a bottom
+  sheet (`bottomsheet_theme_picker.xml`) with all 8 themes as
+  preview cards in a 2-column grid. Each card is a mini preview
+  built from that theme's REAL palette (background, blended
+  surface, primary accent dot, on-surface name, a small
+  "AutomationHub" card with the automation pill) and a ✓ check
+  badge in the primary colour on the selected card.
+- Tapping a card saves the choice (`Config.setAppTheme`) and
+  recreates the activity, so the whole app follows instantly.
+  Only the existing 8 palettes are used — no new colours.
+- The light/dark/system toggle in General settings is untouched
+  and independent: it controls night mode. The 7 glass themes
+  render identically in light/dark/system (static palettes);
+  Emerald Dark follows the light/dark palettes, so its card
+  shows the dark look.
+
+### G. Release groundwork (code only)
+- Version: `versionName "1.0.0"`, `versionCode 1` — already
+  1.0.0, so NO version change and NO versionCode bump.
+- `release` build type now has `minifyEnabled true` +
+  `shrinkResources true` (debug build untouched — CI builds
+  debug). `app/proguard-rules.pro` (was empty) now keeps:
+  `FlowCanvasView` (custom view inflated from XML by class
+  name), `RuleWidgetProvider` + `RuleWidgetConfigure`,
+  `rikka.shizuku.Shizuku.newProcess` (called reflectively by
+  name in ShizukuHelper/ShizukuTap — R8 must not rename it)
+  and `ShizukuProvider`. No Gson/Moshi/serialization in the app;
+  the only other reflection is the same Shizuku call.
+- NOTE: minify is NOT exercised by CI (debug only) — the first
+  release build must be phone-tested before it ships.
+
+### H. This README section (both trees).
+
+Local validation for this pass: every removed file/id/string
+greps to 0 across `java/` + `res/` + manifest; every edited
+layout parses as XML; `MainActivity.kt` is brace/paren balanced
+per a proper Kotlin scanner (strings/`${}` templates/raw
+strings/char literals/comments aware); every `R.*` ref in the
+edited Kotlin files resolves; all manifest components resolve to
+classes; the two Add-Flow crash-fix files are untouched
+(`activity_flow_editor.xml` still contains
+`com.mthtamim.phonelinkflows.FlowCanvasView`,
+`widget_rule_info.xml` still contains
+`com.mthtamim.phonelinkflows.RuleWidgetConfigure`); no MQTT UI
+was restored (`panelRelay` / `tileHubRelay` / `mqtt_smtp_title`
+stay absent); the kept items are still present (App Locker +
+PIN, intruder selfie, device admin/accessibility states,
+automation master toggle, geofence). CI is still the compile
+judge — not pushed yet.

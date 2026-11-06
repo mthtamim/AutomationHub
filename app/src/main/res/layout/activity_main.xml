@@ -331,6 +331,27 @@
                     android:layout_marginTop="4dp"
                     android:text="@string/btn_perms_link"
                     app:icon="@drawable/ic_shield_check" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="4dp"
+                    android:background="?attr/colorOutlineVariant" />
+
+                <!-- Focus Guard off-switch: the setup dialog is gone,
+                     but A11yService still enforces a saved schedule
+                     (focus_on/focus_pkgs/focus_window). This switch
+                     turns a saved schedule off (or back on); with no
+                     saved packages it stays off and explains why. -->
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/swFocusGuard"
+                    style="@style/PL.SwitchRow"
+                    android:text="@string/focus_guard_label" />
+
+                <TextView
+                    android:id="@+id/tvFocusGuardInfo"
+                    style="@style/PL.BodySmall" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -569,32 +590,7 @@
 
                 
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnBackupInbox"
-                        style="@style/PL.BtnTonal"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:text="@string/btn_backup_inbox"
-                        app:icon="@drawable/ic_download" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnRestoreInbox"
-                        style="@style/PL.BtnTonal"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:text="@string/btn_restore_inbox"
-                        app:icon="@drawable/ic_upload" />
-                </LinearLayout>
+                
 
                 
 
@@ -649,6 +645,14 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:text="@string/btn_import_config"
+                    app:icon="@drawable/ic_download" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnImportPhonelink"
+                    style="@style/PL.BtnTonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/btn_import_phonelink"
                     app:icon="@drawable/ic_download" />
 
                 <com.google.android.material.button.MaterialButton

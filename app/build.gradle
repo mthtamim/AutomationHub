@@ -22,7 +22,11 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            // Release groundwork (2026-11-06): minify + shrink on.
+            // CI builds the DEBUG apk, so this is NOT exercised by CI
+            // — the first release build must be phone-tested.
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {

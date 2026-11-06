@@ -26,18 +26,6 @@ object Config {
 
     // ---------- smart control (v2.1) ----------
 
-    /** Quiet hours: receiver notifications stay silent in this window. */
-    fun quietOn(ctx: Context) = prefs(ctx).getBoolean("quiet_on", false)
-    fun quietStart(ctx: Context) = prefs(ctx).getInt("quiet_start", 23 * 60)
-    fun quietEnd(ctx: Context) = prefs(ctx).getInt("quiet_end", 7 * 60)
-    fun setQuietWindow(ctx: Context, startMin: Int, endMin: Int) {
-        prefs(ctx).edit().putInt("quiet_start", startMin).putInt("quiet_end", endMin).apply()
-    }
-
-    fun digestMinutes(ctx: Context) = prefs(ctx).getInt("digest_minutes", 60)
-
-    private fun digitsOf(s: String): String = s.filter { it.isDigit() }
-
     fun geoOn(ctx: Context) = prefs(ctx).getBoolean("geo_on", false)
     fun geoLat(ctx: Context) = prefs(ctx).getFloat("geo_lat", 0f).toDouble()
     fun geoLng(ctx: Context) = prefs(ctx).getFloat("geo_lng", 0f).toDouble()
@@ -61,16 +49,6 @@ object Config {
     fun smtpUser(ctx: Context) = prefs(ctx).getString("smtp_user", "") ?: ""
     fun smtpPass(ctx: Context) = prefs(ctx).getString("smtp_pass", "") ?: ""
     fun smtpFrom(ctx: Context) = prefs(ctx).getString("smtp_from", "") ?: ""
-    // AutomationHub: the setter was dropped with MainActivity's old
-    // SMTP-card binding; restored so the SMTP card can save again.
-    fun setSmtp(ctx: Context, host: String, port: Int, user: String, pass: String, from: String) {
-        prefs(ctx).edit().putString("smtp_host", host.trim())
-            .putInt("smtp_port", port)
-            .putString("smtp_user", user.trim())
-            .putString("smtp_pass", pass)
-            .putString("smtp_from", from.trim()).apply()
-    }
-
     // ---------- v2.2 ----------
 
     /** Alert words: any message containing one is treated as urgent. */
@@ -81,13 +59,6 @@ object Config {
     fun mqttBroker(ctx: Context): String = prefs(ctx).getString("mqtt_broker", "") ?: ""
     fun mqttUser(ctx: Context): String = prefs(ctx).getString("mqtt_user", "") ?: ""
     fun mqttPass(ctx: Context): String = prefs(ctx).getString("mqtt_pass", "") ?: ""
-    fun setMqtt(ctx: Context, on: Boolean, broker: String, user: String, pass: String) {
-        prefs(ctx).edit().putBoolean("mqtt_on", on)
-            .putString("mqtt_broker", broker.trim())
-            .putString("mqtt_user", user.trim())
-            .putString("mqtt_pass", pass).apply()
-    }
-
     // ---------- pairing profiles ----------
 
 
@@ -101,12 +72,6 @@ object Config {
     /** Stable per-device id so group chats (3+ phones) can ignore themselves. */
 
     // ----- command PIN (stored only as a salted digest) -----
-    private fun pinDigestOf(pin: String): String {
-        val bytes = java.security.MessageDigest.getInstance("SHA-256")
-            .digest("phonelink-pin:$pin".toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
-
 
     // ----- quiet-until (timed silence, e.g. meeting mode) -----
 
@@ -128,7 +93,7 @@ object Config {
             }
             "study" -> {
                 e.putBoolean("study_mode", true)
-                if (digestMinutes(ctx) == 0) e.putInt("digest_minutes", 30)
+                if (prefs(ctx).getInt("digest_minutes", 60) == 0) e.putInt("digest_minutes", 30)
                 e.putLong("quiet_until", 0L)
             }
             else -> {
@@ -140,7 +105,6 @@ object Config {
     }
 
     // ----- misc v2.3 toggles & data -----
-    fun guardOn(ctx: Context): Boolean = prefs(ctx).getBoolean("guard_on", false)
     fun intruderOn(ctx: Context): Boolean = prefs(ctx).getBoolean("intruder_on", false)
 
     fun autoTapScript(ctx: Context): String = prefs(ctx).getString("autotap_script", "") ?: ""
@@ -281,13 +245,7 @@ object Config {
             .apply()
     }
     // ---- v2.11 ----
-    fun sosNumbers(ctx: Context): List<String> =
-        (prefs(ctx).getString("sos_numbers", "") ?: "")
-            .split(",").map { it.trim() }.filter { it.isNotEmpty() }
-    fun setSosNumbers(ctx: Context, v: String) { prefs(ctx).edit().putString("sos_numbers", v).apply() }
     fun panicPinHash(ctx: Context): String = prefs(ctx).getString("panic_pin_hash", "") ?: ""
-    fun setPanicPinHash(ctx: Context, v: String) { prefs(ctx).edit().putString("panic_pin_hash", v).apply() }
-    fun panicActive(ctx: Context): Boolean = prefs(ctx).getBoolean("panic_active", false)
     fun setPanicActive(ctx: Context, v: Boolean) { prefs(ctx).edit().putBoolean("panic_active", v).apply() }
     fun accent(ctx: Context): String = prefs(ctx).getString("accent", "emerald") ?: "emerald"
     fun setAccent(ctx: Context, v: String) { prefs(ctx).edit().putString("accent", v).apply() }

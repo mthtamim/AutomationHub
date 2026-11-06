@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AutomationHub</string>
-    <string name="mqtt_smtp_title">MQTT &amp; Email</string>
-    <!-- Bottom navigation -->
+    <string name="app_name">AutomationHub</string>    <!-- Bottom navigation -->
     <string name="nav_settings">Settings</string>
     <!-- Status / home -->
     <string name="status_granted">✓ Granted</string>
@@ -46,15 +44,7 @@
     <!-- Foreground service notification -->
     <string name="svc_running">AutomationHub is running</string>
     <!-- v2.0 -->
-    <string name="scan_hint">Point the camera at the other phone\'s QR code</string>
-    <string name="btn_send">Send</string>
-    <string name="btn_cancel">Cancel</string>
-    <string name="btn_send_clipboard">Send clipboard</string>
-    <string name="btn_send_file">Send file</string>
-    <string name="menu_copy">Copy full text</string>
-    <string name="enc_label">End-to-end encryption</string>
-    <string name="enc_hint">Messages are encrypted with a key from your pair code — the relay server cannot read them. Both phones must keep the same setting.</string>
-    <string name="lock_label">App lock (PIN / fingerprint)</string>
+    <string name="scan_hint">Point the camera at the other phone\'s QR code</string>    <string name="btn_cancel">Cancel</string>    <string name="menu_copy">Copy full text</string>    <string name="lock_label">App lock (PIN / fingerprint)</string>
     <string name="btn_change_pin">Set / change app-lock PIN</string>
     <string name="lock_title">AutomationHub is locked</string>
     <string name="lock_subtitle">Enter your PIN to continue</string>
@@ -66,29 +56,10 @@
     <string name="btn_biometric">Use fingerprint</string>
     <string name="toast_pin_set">PIN set</string>
     <string name="toast_pin_mismatch">PINs do not match or are too short</string>
-    <!-- v2.1 -->
-    <string name="apps_hint_short">Pick which apps\' notifications get forwarded, and how.</string>
-    <string name="sec_smart">Smart &amp; automation</string>
-    <string name="btn_apps">Choose apps</string>
-    <string name="quiet_label">Quiet hours (silent delivery)</string>
-    <string name="quiet_window">Window: %1$s – %2$s</string>
-    <string name="btn_quiet_times">Set quiet hours</string>
-    <string name="digest_label">Notification digest</string>
-    <string name="btn_digest">Set digest interval</string>
-    <string name="hint_priority">Priority numbers (comma separated)</string>
-    <string name="btn_save">Save</string>
-    <string name="priority_hint">Priority contacts bypass quiet hours, ring urgently and show a .</string>
-    <string name="sms_trigger_label">SMS trigger (offline fallback)</string>
-    <string name="sms_trigger_hint">No internet? Text #ring, #loc or #battery to this phone — it answers by SMS.</string>
-    <string name="sec_more">More features</string>
-    <string name="tts_label">Read OTP codes aloud (TTS)</string>
-    <string name="sms_reply_label">Allow SMS replies from the other phone</string>
-    <string name="geo_label">Geofence alerts</string>
+    <!-- v2.1 -->    <string name="btn_save">Save</string>    <string name="sec_more">More features</string>    <string name="geo_label">Geofence alerts</string>
     <string name="geo_set">Centre: %1$.5f, %2$.5f • radius %3$d m</string>
     <string name="geo_not_set">Centre not set yet</string>
-    <string name="btn_set_geo">Set current place as centre</string>
-    <string name="daily_summary_label">Daily summary at 9:30 PM</string>
-    <string name="toast_geo_fetching">Getting location…</string>
+    <string name="btn_set_geo">Set current place as centre</string>    <string name="toast_geo_fetching">Getting location…</string>
     <string name="toast_geo_set">Geofence centre set</string>
     <string name="toast_geo_failed">Location not available</string>
     <string name="toast_no_usage_settings">Usage settings not found on this phone</string>
@@ -97,48 +68,18 @@
     <string name="btn_restore_inbox">Restore</string>
     <string name="toast_backup_done">Backup saved</string>
     <string name="toast_backup_failed">That did not work — try again</string>
-    <string name="toast_restore_done">Backup restored</string>
-    <string name="btn_sos">SOS</string>
-    <string name="sos_title">Send SOS?</string>
-    <string name="sos_confirm">An urgent SOS and your location will be sent to the other phone.</string>
-    <string name="toast_sos_sent">SOS sent</string>
-    <string name="perm_line_send_sms">Send SMS</string>
+    <string name="toast_restore_done">Backup restored</string>    <string name="perm_line_send_sms">Send SMS</string>
     <string name="perm_line_call_log">Call log</string>
     <string name="perm_line_call_phone">Make phone calls</string>
     <string name="perm_line_camera">Camera</string>
-    <!-- v2.2 -->
-    <string name="tts_calls_label">Announce caller name aloud</string>
-    <string name="auto_reply_label">Auto-reply SMS on missed call</string>
-    <string name="hint_auto_reply">Auto-reply text (saved with the Save button in Smart control)</string>
-    <string name="routine_label">Morning routine status</string>
-    <string name="btn_routine_time">Set routine time</string>
-    <string name="low_loc_label">Last location when battery is dying (≤5%)</string>
-    <string name="hint_alert_words">Alert words (comma separated) — always urgent</string>
-    <string name="perm_line_media">Photos / media</string>
-    <string name="btn_voice">Voice message</string>
-    <!-- v2.3 -->
+    <!-- v2.2 -->    <string name="perm_line_media">Photos / media</string>    <!-- v2.3 -->
     <string name="perm_line_steps">Step counter (daily summary)</string>
     <string name="pin_state_set">App PIN: set</string>
     <string name="pin_state_unset">App PIN: not set</string>
     <string name="admin_state_on">Device admin: active — lock command works, uninstall needs deactivation first</string>
     <string name="admin_state_off">Device admin: off — the lock command will not work</string>
     <string name="btn_set_pin">Set / change app PIN</string>
-    <string name="btn_admin">Device admin</string>
-    <string name="btn_seclog">Security log</string>
-    <string name="btn_mode">Modes</string>
-    <string name="btn_siren">Siren message</string>
-    <string name="btn_schedule">Schedule message</string>
-    <string name="btn_templates">Templates</string>
-    <string name="btn_contact_card">Contact card</string>
-    <string name="btn_wallpaper">Set their wallpaper</string>
-    <string name="guard_label">Guard mode (movement alarm + unplug siren)</string>
-    <string name="intruder_label">Intruder selfie on failed unlock (needs device admin)</string>
-    <string name="toast_pin_short">PIN is too short</string>
-    <string name="toast_wrong_password">Wrong password</string>
-    <string name="hint_my_status">My status (the other phone sees this)</string>
-    <string name="seclog_title">Security log</string>
-    <string name="seclog_empty">No security events yet</string>
-    <string name="backup_password_title">Backup password (optional)</string>
+    <string name="btn_admin">Device admin</string>    <string name="intruder_label">Intruder selfie on failed unlock (needs device admin)</string>    <string name="toast_wrong_password">Wrong password</string>    <string name="backup_password_title">Backup password (optional)</string>
     <string name="hint_backup_password">Leave empty for no encryption</string>
     <string name="admin_explanation">AutomationHub device admin: enables the lock-screen action, failed-unlock watch and makes uninstalling harder.</string>
     <string name="admin_deactivate_hint">To turn admin off: Settings → Security → Device admin apps → AutomationHub → Deactivate</string>
@@ -263,16 +204,12 @@
     <string name="auto_add_constraint">+ Add condition</string>
     <string name="auto_editor_title">Rule editor</string>
     <string name="auto_empty">No rules yet. Tap + to create one.</string>
-    <string name="auto_param_hint">Value</string>
-    <string name="auto_priority_label">Smart importance (money/OTP always instant)</string>
-    <string name="auto_rule_name_hint">Rule name</string>
+    <string name="auto_param_hint">Value</string>    <string name="auto_rule_name_hint">Rule name</string>
     <string name="auto_save">Save rule</string>
     <string name="auto_test">Test</string>
     <string name="auto_title">Automation rules</string>
     <string name="btn_a11y">Accessibility helper settings</string>
-    <string name="btn_back">Back</string>
-    <string name="btn_checkin">Check-in</string>
-    <string name="btn_config_code">Backup as copyable code</string>
+    <string name="btn_back">Back</string>    <string name="btn_config_code">Backup as copyable code</string>
     <string name="btn_delete">Delete</string>
     <string name="btn_edit">Edit</string>
     <string name="btn_export_config">Full backup — everything (file)</string>
@@ -280,17 +217,11 @@
     <string name="cat_data">Data &amp; backup</string>
     <string name="cat_general">Appearance &amp; general</string>
     <string name="cat_security">Security &amp; App Lock</string>
-    <string name="cat_smart">Smart &amp; automation</string>
-    <string name="clip_sync_label">Clipboard auto-sync</string>
-    <string name="sec_smart_extra">Smart extras</string>
-    <string name="toast_cfg_exported">Full backup saved</string>
+    <string name="cat_smart">Smart &amp; automation</string>    <string name="toast_cfg_exported">Full backup saved</string>
     <string name="toast_cfg_failed">Backup transfer failed</string>
     <string name="toast_cfg_imported">Backup restored — PINs need setting again</string>
     <string name="toast_nfc">NFC tag read</string>
-    <string name="toast_saved">Saved</string>
-    <string name="btn_menu_quick">Quick Send</string>
-    <string name="bt_title">Bluetooth share</string>
-    <string name="at_battery_full">Battery full (100%)</string>
+    <string name="toast_saved">Saved</string>    <string name="at_battery_full">Battery full (100%)</string>
     <string name="at_battery_temp_above">Battery temperature above</string>
     <string name="at_call_outgoing">Outgoing call</string>
     <string name="at_call_ended">Call ended</string>
@@ -419,15 +350,7 @@
     <string name="auto_import_hint">Paste the exported rules JSON here</string>
     <string name="auto_imported">%1$d rule(s) imported</string>
     <string name="auto_import_failed">Could not import — invalid JSON</string>
-    <string name="auto_cat_hint">Category (optional, groups the list)</string>
-    <string name="sec_smtp">Email (SMTP)</string>
-    <string name="smtp_info">Used by the automation Send email action. The password is stored only on this phone.</string>
-    <string name="hint_smtp_host">SMTP server (e.g. smtp.gmail.com)</string>
-    <string name="hint_smtp_port">Port (587 or 465)</string>
-    <string name="hint_smtp_user">Username / email</string>
-    <string name="hint_smtp_pass">Password / app password</string>
-    <string name="hint_smtp_from">From address (blank = username)</string>
-    <string name="widget_rule_label">AutomationHub rule button</string>
+    <string name="auto_cat_hint">Category (optional, groups the list)</string>    <string name="widget_rule_label">AutomationHub rule button</string>
     <string name="widget_rule_unset">Pick a rule</string>
     <string name="at_volume_up">Volume up pressed</string>
     <string name="at_volume_down">Volume down pressed</string>
@@ -657,19 +580,8 @@
     <string name="aa_shell_key">Shell key press (Shizuku)</string>
     <string name="aah_shell_key">Keycode number, or enter/back/home/del/tab/space</string>
     <string name="aa_shell_to_var">Shell output into a variable (Shizuku)</string>
-    <string name="aah_shell_to_var">command|varName</string>
-    <string name="cmd_focus">Focus guard</string>
-    <string name="btn_ptt">Walkie-talkie (voice)</string>
-    <string name="btn_broadcast">Broadcast</string>
-    <string name="btn_voicecmd">Voice command</string>
-    <string name="btn_accent">Accent colour</string>
-    <string name="btn_update">Check for updates</string>
-    <string name="btn_panic_pin">Set panic PIN</string>
-    <string name="label_sos_numbers">SOS numbers (outside the pair, comma separated)</string>
-    <string name="hint_sos_numbers">e.g. 01XXXXXXXXX, 01YYYYYYYYY</string>
-    <string name="btn_open">Open</string>
-    <string name="focus_pkgs_hint">Package names, comma separated (e.g. com.facebook.katana)</string>
-    <string name="update_checking">Checking for updates…</string>
+    <string name="aah_shell_to_var">command|varName</string>    <string name="btn_accent">Accent colour</string>
+    <string name="btn_update">Check for updates</string>    <string name="btn_open">Open</string>    <string name="update_checking">Checking for updates…</string>
     <string name="update_found">New version v%s</string>
     <string name="update_found_msg">A newer AutomationHub build is on GitHub. Open the release page to download it.</string>
     <string name="update_latest">You are on the latest version (or no release info found).</string>
@@ -743,19 +655,7 @@
 
     <!-- ===== v2.17 redesign ===== -->
     <string name="nav_dashboard">Dashboard</string>
-    <string name="nav_automation">Automation</string>
-    <string name="hub_shizuku_on">Shizuku Active • ADB Privileged</string>
-    <string name="hub_shizuku_off">Shizuku not active</string>
-    <string name="dash_location">Location</string>
-    <string name="dash_loc_none">No location received yet — tap to request</string>
-    <string name="dash_flashlight">Flashlight</string>
-    <string name="dash_tap_toggle">Tap to toggle the peer torch</string>
-    <string name="dash_ringer">Ringer</string>
-    <string name="dash_ringer_sub">Set the peer ringer mode</string>
-    <string name="dash_ptt">Walkie-talkie</string>
-    <string name="dash_ptt_hint">Push-to-talk voice</string>
-    <string name="dash_recent">Recent Activity</string>
-    <string name="dash_autotap_title">AutoTap</string>
+    <string name="nav_automation">Automation</string>    <string name="dash_autotap_title">AutoTap</string>
     <string name="dash_autotap_name_hint">Script name</string>
     <string name="dash_autotap_start">Start</string>
     <string name="dash_autotap_stop">Stop</string>
@@ -768,13 +668,8 @@
     <string name="dash_autotap_started">Starting \"%1$s\"</string>
     <string name="dash_autotap_stopped">Stopping</string>
     <string name="autotap_accessibility_label">AutoTap Auto Click</string>
-    <string name="autotap_accessibility_description">AutoTap আপনার বানানো script অনুযায়ী স্ক্রিনে tap ও swipe করে, আর Text tap ধাপে স্ক্রিনের লেখা খুঁজে সেখানে tap করে। এটি শুধু তখনই কাজ করে যখন আপনি নিজে script চালু করেন; কোনো তথ্য সংরক্ষণ বা পাঠানো হয় না।</string>
-    <string name="dash_recent_empty">Nothing received yet</string>
-    <string name="set_status_ok">All systems operational</string>
-    <string name="set_status_warn">%1$d permissions need attention</string>
-    <string name="set_device_card">Connected Device &amp; Account</string>
-    <string name="set_manage_keys">Manage Keys</string>
-    <string name="set_hub">Primary Settings Hub</string>
+    <string name="autotap_accessibility_description">AutoTap আপনার বানানো script অনুযায়ী স্ক্রিনে tap ও swipe করে, আর Text tap ধাপে স্ক্রিনের লেখা খুঁজে সেখানে tap করে। এটি শুধু তখনই কাজ করে যখন আপনি নিজে script চালু করেন; কোনো তথ্য সংরক্ষণ বা পাঠানো হয় না।</string>    <string name="set_status_ok">All systems operational</string>
+    <string name="set_status_warn">%1$d permissions need attention</string>    <string name="set_hub">Primary Settings Hub</string>
     <string name="set_perms">Permissions &amp; Access</string>
     <string name="set_security">Security &amp; App Lock</string>
     <string name="set_data">Data &amp; Backup</string>
@@ -785,10 +680,7 @@
     <string name="ed_constraints">CONSTRAINTS / CONDITIONS</string>
     <string name="ed_then">2. THEN DO (Actions)</string>
     <string name="sec_shield">Security Shield</string>
-    <string name="sec_shield_sub">End-to-end encrypted relay</string>
-    <string name="set_panic_title">Emergency / Panic Mode</string>
-    <string name="set_panic_sub">The panic PIN sends an emergency alert with your location</string>
-    <string name="set_more">More Settings</string>
+    <string name="sec_shield_sub">End-to-end encrypted relay</string>    <string name="set_more">More Settings</string>
     <string name="btn_grant_all">Grant All</string>
     <string name="perm_privileges">System Privileges</string>
     <string name="perm_gauge_fmt">%1$d of %2$d</string>
@@ -842,17 +734,8 @@
     <string name="perm_ctx_install">Install unknown apps (update fallback)</string>
     <string name="perm_btn_grant">Grant</string>
     <string name="btn_perms_link">Open Permissions &amp; Access</string>
-    <string name="btn_geo_radius">Geofence radius</string>
-    <string name="ptt_autoplay_label">Auto-play incoming voice (walkie-talkie)</string>
-    <string name="auto_master_label">Automation engine (master switch)</string>
-    <string name="sec_full_backup">Full settings backup</string>
-    <string name="sec_my_status">My status</string>
-    <string name="sec_automation">Automation</string>
-    <string name="btn_open_studio">Open Automation Studio</string>
-    <string name="a11y_state_fmt">Accessibility helper: %1$s</string>
-    <string name="usage_state_fmt">Screen-time (usage) access: %1$s</string>
-    <string name="studio_info_fmt">%1$d rules • sync %2$s • rest %3$ds</string>
-    <string name="state_on">on</string>
+    <string name="btn_geo_radius">Geofence radius</string>    <string name="auto_master_label">Automation engine (master switch)</string>
+    <string name="sec_full_backup">Full settings backup</string>    <string name="sec_automation">Automation</string>    <string name="a11y_state_fmt">Accessibility helper: %1$s</string>    <string name="state_on">on</string>
     <string name="state_off">off</string>
     <!-- v2.18: Web Companion, Trace/history, nested conditions, MQTT -->
     <string name="at_mqtt_message">MQTT message</string>
@@ -860,21 +743,7 @@
     <string name="aa_mqtt_publish">MQTT publish</string>
     <string name="aah_mqtt_publish">topic|payload|qos|retained — e.g. home/light|{body}|1|0</string>
     <string name="aa_if_else">If / Else</string>
-    <string name="aah_if_else">structured condition step with then / else actions</string>
-    <string name="sec_mqtt">MQTT broker</string>
-    <string name="sw_mqtt_enable">MQTT on</string>
-    <string name="hint_mqtt_broker">Broker URL (tcp://host:1883 or ssl://host:8883)</string>
-    <string name="hint_mqtt_user">Username (optional)</string>
-    <string name="hint_mqtt_pass">Password (optional)</string>
-    <string name="btn_mqtt_save">Save</string>
-    <string name="btn_mqtt_test">Test</string>
-    <string name="mqtt_st_off">MQTT is off</string>
-    <string name="mqtt_st_connecting">MQTT: connecting…</string>
-    <string name="mqtt_st_connected">MQTT: connected</string>
-    <string name="mqtt_st_error">MQTT error: %1$s</string>
-    <string name="mqtt_test_ok">MQTT test: connected OK</string>
-    <string name="mqtt_test_fail">MQTT test failed: %1$s</string>
-    <string name="btn_trace">Trace</string>
+    <string name="aah_if_else">structured condition step with then / else actions</string>    <string name="btn_trace">Trace</string>
     <string name="trace_title">Rule trace — why it would or would not run</string>
     <string name="trace_running">Checking live state…</string>
     <string name="trace_event_based">event-based — cannot be checked now</string>
@@ -1414,6 +1283,16 @@
     <string name="conn_automation_on">Automation on • %1$d rules • %2$d flows</string>
     <string name="conn_automation_off">Automation off</string>
     <string name="stats_rules_flows">%1$d rules • %2$d flows</string>
-    <string name="stats_log_lines">%1$d log lines</string>
-    <string name="focus_state_fmt">Focus: %1$s</string>
+    <string name="stats_log_lines">%1$d log lines</string>    <string name="focus_guard_label">Focus Guard</string>
+    <string name="focus_guard_info_on">On — %1$s–%2$s, %3$d app(s) blocked</string>
+    <string name="focus_guard_info_off">Off</string>
+    <string name="focus_guard_no_schedule">No Focus Guard schedule saved</string>
+    <string name="btn_import_phonelink">Import from PhoneLink</string>
+    <string name="import_phonelink_title">Import from PhoneLink</string>
+    <string name="import_phonelink_msg">1. In PhoneLink: Settings → Full backup — everything (file). That file brings your Rules.
+2. In PhoneLink: Automation → Flows tab ⋮ menu → Backup flows. That file brings all your Flows.
+3. Pick both files here together. Rules are added to the ones you already have; a Flow with the same id is replaced. Hub settings (theme, PIN) stay unchanged.</string>
+    <string name="import_phonelink_pick">Pick files</string>
+    <string name="import_phonelink_done">%1$d rule(s) and %2$d flow(s) imported (%3$d file(s) skipped)</string>
+    <string name="theme_picker_title">Choose a theme</string>
 </resources>
