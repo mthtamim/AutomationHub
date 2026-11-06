@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.PhoneLink" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowAnimationStyle">@style/PL.ActivityAnim</item>
         <item name="colorPrimary">@color/md_primary</item>
         <item name="colorOnPrimary">@color/md_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_primaryContainer</item>

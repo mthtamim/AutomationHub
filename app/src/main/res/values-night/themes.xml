@@ -4,6 +4,7 @@
          values-night palette at night; only the system-bar flags differ.
          (A style in values-night replaces the base style, it does not merge.) -->
     <style name="Theme.PhoneLink" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowAnimationStyle">@style/PL.ActivityAnim</item>
         <item name="colorPrimary">@color/md_primary</item>
         <item name="colorOnPrimary">@color/md_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_primaryContainer</item>

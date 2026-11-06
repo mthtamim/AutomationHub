@@ -17,6 +17,10 @@ import android.view.accessibility.AccessibilityManager
 import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
 import org.json.JSONObject
 import kotlin.concurrent.thread
 
@@ -155,11 +159,28 @@ object AutoCatalog {
 
 class AutomationActivity : LocalizedActivity() {
 
-    private lateinit var container: LinearLayout
+    // Premium feel (v1.2.1): the rule/flow cards are a RecyclerView
+    // now — only visible rows are bound, scrolling recycles views.
+    // Headers (status card, FocusLock card) stay outside the list.
+    private lateinit var autoList: RecyclerView
+    private lateinit var ruleAdapter: RuleAdapter
+    private lateinit var flowAdapter: FlowAdapter
 
     /** v2.24.0 (Lab merge): which tab is showing. Rules rendering
      *  is untouched; the Flows tab builds its own cards below. */
     private var flowTab = false
+
+    // Smoothness (2026-11-06): render()/renderFlows() rebuild every
+    // card view (~15 views per card) on the main thread on EVERY
+    // onResume and tab switch. These fingerprints skip the rebuild
+    // when the underlying data did not change — only the cheap
+    // status/tick lines are repainted. Any write changes the data
+    // (rules: the raw prefs string; flows: FlowStore's version
+    // counter, bumped by every saveFlow/deleteFlow), so a skip can
+    // never show stale cards. Activity recreation resets both, so
+    // the first build after a theme change always rebuilds.
+    private var lastRulesRaw: String? = null
+    private var lastFlowsVer = -1L
 
     companion object {
         private const val MENU_SG = 1
@@ -327,7 +348,11 @@ class AutomationActivity : LocalizedActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_automation)
-        container = findViewById(R.id.autoContainer)
+        autoList = findViewById(R.id.autoList)
+        autoList.layoutManager = LinearLayoutManager(this)
+        ruleAdapter = RuleAdapter()
+        flowAdapter = FlowAdapter()
+        autoList.adapter = ruleAdapter
         // v1.2.0: same Essentials pill bottom bar as MainActivity.
         // Home/Settings hand over to MainActivity with a tab extra;
         // the bar's + button adds a rule (Rules tab) or a flow
@@ -512,7 +537,10 @@ class AutomationActivity : LocalizedActivity() {
      *  sync mark is dim when rule sync is off; the switch itself
      *  lives in the expanded detail. */
     private fun refreshStatusLine() {
-        val list = Automation.rules(this)
+        refreshStatusLine(Automation.rules(this))
+    }
+
+    private fun refreshStatusLine(list: List<JSONObject>) {
         val total = list.size
         val active = list.count { it.optBoolean("enabled", true) }
         val health = findViewById<TextView>(R.id.tvHealthTitle).text.toString()
@@ -744,20 +772,22 @@ class AutomationActivity : LocalizedActivity() {
                 dp(30), LinearLayout.LayoutParams.WRAP_CONTENT)
                 .apply { marginStart = dp(4); marginEnd = dp(4) }
         }
-        val arrow = { glyph: String ->
-            TextView(this).apply {
-                text = glyph
-                textSize = 15f
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(themeAccentColor())
-                gravity = android.view.Gravity.CENTER
+        // Vector icons, not text glyphs: "→"/"←" as text rendered
+        // wrong on the phone (showed as stray letters), so the
+        // arrows are proper drawables now, tinted theme accent.
+        val arrow = { res: Int ->
+            android.widget.ImageView(this).apply {
+                setImageResource(res)
+                imageTintList = android.content.res.ColorStateList
+                    .valueOf(themeAccentColor())
                 setBackgroundResource(R.drawable.bg_arrow_chip)
+                setPadding(dp(4), dp(4), dp(4), dp(4))
                 layoutParams = LinearLayout.LayoutParams(dp(26), dp(26))
                     .apply { topMargin = dp(3); bottomMargin = dp(3) }
             }
         }
-        col.addView(arrow("→"))
-        if (hasExit) col.addView(arrow("←"))
+        col.addView(arrow(R.drawable.ic_arrow_forward))
+        if (hasExit) col.addView(arrow(R.drawable.ic_arrow_back))
         return col
     }
 
@@ -855,52 +885,463 @@ class AutomationActivity : LocalizedActivity() {
             if (flows) View.GONE else View.VISIBLE
         findViewById<View>(R.id.flCard).visibility =
             if (flows) View.GONE else View.VISIBLE
+        // Premium feel (v1.2.1): each tab keeps its own adapter
+        // (and its own list), so switching tabs never rebuilds
+        // the other tab's cards.
+        autoList.adapter = if (flows) flowAdapter else ruleAdapter
         // v1.2.0: the two old FABs are gone — the bar's + button
         // (see setupNavBar) adds a rule or a flow instead.
         if (flows) renderFlows() else render()
     }
 
-    /** v2.24.0 (Lab merge): Flows tab — service switch with a
-     *  liveness line, then one card per flow (toggle + Run now /
-     *  Edit / Dup / Log / Delete). Button rows scroll horizontally
-     *  so Dup and Log stay reachable on narrow screens. */
-    private fun renderFlows() {
-        container.removeAllViews()
-        fun pillButton(labelRes: Int, mint: Boolean) = Button(this).apply {
-            text = getString(labelRes)
-            textSize = 12.5f
-            isAllCaps = false
-            minHeight = 0
-            minimumHeight = 0
-            setBackgroundResource(
-                if (mint) R.drawable.bg_action_pill
-                else R.drawable.bg_action_ghost)
-            setPadding(40, 30, 40, 30)
-            setTextColor(
-                if (mint) themeAccentColor() else themeOnSurface())
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT)
-                .apply { setMargins(8, 0, 0, 0) }
+    /** Live/stale line for the Flows service row. Used both when
+     *  the row is built and when a fingerprint skip only repaints
+     *  the tick line. */
+    private fun flowTickText(svcOn: Boolean, tick: Long): String {
+        val ago = (System.currentTimeMillis() - tick) / 1000
+        return when {
+            !svcOn -> getString(R.string.flow_service_off)
+            tick == 0L || ago > 120 -> getString(R.string.flow_service_stale)
+            else -> getString(R.string.flow_service_live, ago.toString())
         }
-        val svcOn = FlowStore.flowServiceOn(this)
-        val svcRow = LinearLayout(this).apply {
+    }
+
+    // ---- Premium feel (v1.2.1): RecyclerView lists ----
+    // The rule/flow cards used to be rebuilt from scratch into a
+    // LinearLayout on every render — every card, visible or not.
+    // Now only visible rows are bound and scrolling recycles the
+    // card shells (head row, DIY slot and pill row are built once
+    // per holder and rebound with data). DiffUtil updates only the
+    // rows whose data actually changed, and the step-1 fingerprint
+    // skip (no submit at all when nothing changed) still applies
+    // on top. Headers (status card, FocusLock card) stay outside
+    // the list. The RecyclerView's default item animator gives the
+    // free add/remove/change motion — no custom choreography.
+
+    private sealed class RuleItem {
+        data class Cat(val label: String) : RuleItem()
+        data class Card(val rule: JSONObject) : RuleItem()
+        object Empty : RuleItem()
+    }
+
+    private sealed class FlowItem {
+        object Service : FlowItem()
+        data class Card(val flow: JSONObject) : FlowItem()
+        object Empty : FlowItem()
+    }
+
+    private object RuleDiff : DiffUtil.ItemCallback<RuleItem>() {
+        override fun areItemsTheSame(a: RuleItem, b: RuleItem): Boolean = when {
+            a is RuleItem.Cat && b is RuleItem.Cat -> a.label == b.label
+            a is RuleItem.Card && b is RuleItem.Card ->
+                a.rule.optString("id") == b.rule.optString("id")
+            a is RuleItem.Empty && b is RuleItem.Empty -> true
+            else -> false
+        }
+        override fun areContentsTheSame(a: RuleItem, b: RuleItem): Boolean = when {
+            a is RuleItem.Card && b is RuleItem.Card ->
+                a.rule.toString() == b.rule.toString()
+            else -> true
+        }
+    }
+
+    private object FlowDiff : DiffUtil.ItemCallback<FlowItem>() {
+        override fun areItemsTheSame(a: FlowItem, b: FlowItem): Boolean = when {
+            a is FlowItem.Service && b is FlowItem.Service -> true
+            a is FlowItem.Card && b is FlowItem.Card ->
+                a.flow.optString("id") == b.flow.optString("id")
+            a is FlowItem.Empty && b is FlowItem.Empty -> true
+            else -> false
+        }
+        override fun areContentsTheSame(a: FlowItem, b: FlowItem): Boolean = when {
+            a is FlowItem.Card && b is FlowItem.Card ->
+                a.flow.toString() == b.flow.toString()
+            else -> true
+        }
+    }
+
+    private class CatHolder(val tv: TextView) : RecyclerView.ViewHolder(tv) {
+        fun bind(label: String) { tv.text = label }
+    }
+
+    private class EmptyHolder(val tv: TextView) : RecyclerView.ViewHolder(tv) {
+        fun bind(text: String) { tv.text = text }
+    }
+
+    /** One pill button: label + style are fixed per slot and set
+     *  once in the holder; only the click handler is rebound. */
+    private fun pillButton(mint: Boolean): Button = Button(this).apply {
+        textSize = 12.5f
+        isAllCaps = false
+        minHeight = 0
+        minimumHeight = 0
+        setBackgroundResource(
+            if (mint) R.drawable.bg_action_pill
+            else R.drawable.bg_action_ghost)
+        setPadding(40, 30, 40, 30)
+        setTextColor(
+            if (mint) themeAccentColor() else themeOnSurface())
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT)
+            .apply { setMargins(8, 0, 0, 0) }
+    }
+
+    /** Card shell shared by the rule and flow holders: head row
+     *  (name + enable switch), DIY slot, scrolling pill row.
+     *  Built once per holder; bind() only swaps the data. */
+    private class CardViews(
+        val root: LinearLayout,
+        val nameView: TextView,
+        val enableSwitch: Switch,
+        val diySlot: LinearLayout,
+        val pillButtons: List<Button>
+    )
+
+    private fun buildCardShell(pills: List<Pair<Int, Boolean>>): CardViews {
+        val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(20, 14, 20, 14)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            layoutParams = RecyclerView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT)
                 .apply { setMargins(0, 0, 0, 12) }
             setBackgroundResource(R.drawable.card_bg)
         }
-        val svcHead = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val nameView = TextView(this).apply {
+            textSize = 16f
+            layoutParams = LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val enableSwitch = Switch(this)
+        val head = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        head.addView(nameView)
+        head.addView(enableSwitch)
+        root.addView(head)
+        val diySlot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        root.addView(diySlot)
+        val scroll = android.widget.HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { setMargins(0, 8, 0, 0) }
+        }
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        val pillButtons = pills.map { (res, mint) ->
+            pillButton(mint).apply { text = getString(res) }
+        }
+        for (b in pillButtons) row.addView(b)
+        scroll.addView(row)
+        root.addView(scroll)
+        return CardViews(root, nameView, enableSwitch, diySlot, pillButtons)
+    }
+
+    /** Service switch row (Flows tab header): same card as before,
+     *  built once per holder and rebound. */
+    private class ServiceRow(
+        val root: LinearLayout,
+        val enableSwitch: Switch,
+        val tickView: TextView
+    )
+
+    private fun buildServiceRow(): ServiceRow {
+        val tickView = TextView(this).apply {
+            textSize = 13f
+            setPadding(0, 6, 0, 0)
+        }
+        val enableSwitch = Switch(this)
+        val svcHead = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
         svcHead.addView(TextView(this).apply {
             text = getString(R.string.flow_service_switch)
             textSize = 16f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            layoutParams = LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
-        svcHead.addView(Switch(this).apply {
-            isChecked = svcOn
-            setOnCheckedChangeListener { _, on ->
+        svcHead.addView(enableSwitch)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(20, 14, 20, 14)
+            layoutParams = RecyclerView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { setMargins(0, 0, 0, 12) }
+            setBackgroundResource(R.drawable.card_bg)
+        }
+        root.addView(svcHead)
+        root.addView(tickView)
+        return ServiceRow(root, enableSwitch, tickView)
+    }
+
+    /** DIY row for one rule: the same trigger/action computation
+     *  render() used to do inline (first trigger/action + " +N",
+     *  exit box when present, plain summaries for Study Guard /
+     *  screen-rest / FocusLock / AutoTap / Redial first steps). */
+    private fun ruleDiyRow(rule: JSONObject): LinearLayout {
+        val trigList = Automation.ruleTriggers(rule)
+        val trig = trigList.firstOrNull()
+        val acts = rule.optJSONArray("actions") ?: org.json.JSONArray()
+        val nActions = acts.length()
+        val firstAct = acts.optJSONObject(0)?.optString("type") ?: ""
+        val exitActs = Automation.exitActions(rule)
+        // v2.20: a Study Guard first trigger reads as its
+        // plain summary (list/app + minutes), never raw param.
+        // v2.21: a screen-rest first trigger reads as its
+        // plain summary (minutes + warn), never raw param.
+        val trigType = trig?.optString("type") ?: ""
+        val trigParam = trig?.optString("param") ?: ""
+        val ifSummary = if (trigType == "study_guard_continuous" ||
+            trigType == "study_guard_daily")
+            Automation.studyGuardSummary(this, trigType, trigParam)
+        else if (trigType == "screen_on_continuous")
+            Automation.screenRestSummary(this, trigParam)
+        else if (trigType == "time_at_days")
+            Automation.timeAtDaysSummary(this, trigParam)
+        else ""
+        val trigParamText = when {
+            ifSummary.isNotEmpty() -> ifSummary
+            trigType == "app_launched" || trigType == "app_closed" ->
+                Automation.appLabel(this, trigParam)
+            trigParam.isNotBlank() -> trigParam
+            else -> ""
+        }
+        // v2.20: a FocusLock first step reads as its plain
+        // summary ("YouTube ব্লক 60 মিনিট"), never the raw param.
+        // v2.21: an AutoTap first step reads as its plain
+        // summary, never the raw param.
+        // v2.22: a Redial first step reads as its plain
+        // summary, never the raw param.
+        val firstSummary = if (firstAct == "focuslock_control")
+            Automation.focusLockSummary(this,
+                acts.optJSONObject(0)?.optString("param") ?: "")
+        else if (firstAct == "autotap_control")
+            Automation.autoTapSummary(this,
+                acts.optJSONObject(0)?.optString("param") ?: "")
+        else if (firstAct == "redial_control")
+            Automation.redialSummary(this,
+                acts.optJSONObject(0)?.optString("param") ?: "")
+        else ""
+        val entryLabel = AutoCatalog.label(this, "a", firstAct) +
+            (if (firstSummary.isNotEmpty())
+                " — " + firstSummary else "") +
+            (if (nActions > 1) " +${nActions - 1}" else "")
+        val trigLabel = AutoCatalog.label(this, "t", trigType) +
+            (if (trigList.size > 1) " +${trigList.size - 1}" else "")
+        val exitLabel = if (exitActs.length() > 0)
+            firstActionLabel(exitActs, "rule") else null
+        return diyRow(trigLabel, trigParamText,
+            triggerIconRes(trigType), entryLabel, exitLabel)
+    }
+
+    /** DIY row for one flow, or null when the flow has no trigger
+     *  node (the old code simply added no DIY row then). */
+    private fun flowDiyRow(flow: JSONObject): LinearLayout? {
+        val nodes = flow.optJSONArray("nodes")
+        var trigType = ""
+        var trigParam = ""
+        if (nodes != null) {
+            for (k in 0 until nodes.length()) {
+                val n = nodes.optJSONObject(k) ?: continue
+                if (n.optString("kind") == "t") {
+                    trigType = n.optString("type")
+                    trigParam = n.optString("param")
+                    break
+                }
+            }
+        }
+        val trigParamText = when {
+            trigType == "app_launched" || trigType == "app_closed" ->
+                Automation.appLabel(this, trigParam)
+            else -> trigParam
+        }
+        if (trigType.isEmpty()) return null
+        return diyRow(
+            FlowCatalog.label(this, "t", trigType),
+            trigParamText, triggerIconRes(trigType),
+            firstFlowActionLabel(nodes), null)
+    }
+
+    private inner class RuleAdapter :
+        ListAdapter<RuleItem, RecyclerView.ViewHolder>(RuleDiff) {
+        override fun getItemViewType(position: Int): Int = when (getItem(position)) {
+            is RuleItem.Cat -> 0
+            is RuleItem.Card -> 1
+            is RuleItem.Empty -> 2
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
+            when (viewType) {
+                0 -> CatHolder(TextView(this@AutomationActivity).apply {
+                    textSize = 15f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setPadding(4, 10, 4, 6)
+                    layoutParams = RecyclerView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT)
+                })
+                2 -> EmptyHolder(TextView(this@AutomationActivity).apply {
+                    setPadding(8, 24, 8, 24)
+                    layoutParams = RecyclerView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT)
+                })
+                else -> RuleCardHolder(buildCardShell(listOf(
+                    R.string.auto_test to true,
+                    R.string.btn_edit to false,
+                    R.string.flow_card_dup to false,
+                    R.string.flow_card_share to false,
+                    R.string.flow_card_log to false,
+                    R.string.btn_delete to false)))
+            }
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            when (val item = getItem(position)) {
+                is RuleItem.Cat -> (holder as CatHolder).bind(item.label)
+                is RuleItem.Card -> (holder as RuleCardHolder).bind(item.rule)
+                is RuleItem.Empty -> (holder as EmptyHolder)
+                    .bind(getString(R.string.auto_empty))
+            }
+        }
+    }
+
+    private inner class RuleCardHolder(val shell: CardViews) :
+        RecyclerView.ViewHolder(shell.root) {
+        fun bind(rule: JSONObject) {
+            shell.nameView.text = rule.optString("name")
+                .ifEmpty { getString(R.string.auto_title) }
+            shell.enableSwitch.setOnCheckedChangeListener(null)
+            shell.enableSwitch.isChecked = rule.optBoolean("enabled", true)
+            shell.enableSwitch.setOnCheckedChangeListener { _, on ->
+                Automation.setEnabled(this@AutomationActivity, rule.optString("id"), on)
+            }
+            shell.diySlot.removeAllViews()
+            shell.diySlot.addView(ruleDiyRow(rule))
+            val pills = shell.pillButtons
+            pills[0].setOnClickListener {
+                val data = JSONObject()
+                    .put("title", rule.optString("name")).put("body", "test")
+                Automation.runActions(this@AutomationActivity, rule, data, 0)
+            }
+            pills[1].setOnClickListener {
+                startActivity(Intent(this@AutomationActivity, RuleEditorActivity::class.java)
+                    .putExtra("rule_id", rule.optString("id")))
+            }
+            pills[2].setOnClickListener {
+                // Same duplicate as the flow cards: deep-copy,
+                // new id, " (copy)" suffix, save, re-render.
+                val copy = JSONObject(rule.toString())
+                copy.put("id", "r" + System.currentTimeMillis().toString())
+                copy.put("name", rule.optString("name") + getString(R.string.flow_dup_suffix))
+                Automation.upsert(this@AutomationActivity, copy)
+                render()
+            }
+            pills[3].setOnClickListener {
+                // Single-rule share, mirroring the flow share
+                // pill — but as a one-element JSON array: the
+                // rule import (Automation.importJson) only
+                // accepts arrays, so a bare rule object would
+                // fail to import back. This round-trips.
+                val arr = org.json.JSONArray()
+                    .put(JSONObject(rule.toString()))
+                val send = Intent(Intent.ACTION_SEND).setType("application/json")
+                    .putExtra(Intent.EXTRA_TEXT, arr.toString())
+                startActivity(Intent.createChooser(send, rule.optString("name")))
+            }
+            pills[4].setOnClickListener {
+                // Same per-item log dialog as the flow cards,
+                // filtered to lines that mention this rule —
+                // rule runs log "▶ <name> (<event>)".
+                val name = rule.optString("name")
+                val lines = if (name.isEmpty()) emptyList()
+                else Automation.recentLog(this@AutomationActivity)
+                    .filter { it.contains(name) }
+                AlertDialog.Builder(this@AutomationActivity)
+                    .setTitle(rule.optString("name"))
+                    .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
+                        else lines.joinToString("\n"))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            }
+            pills[5].setOnClickListener {
+                Automation.delete(this@AutomationActivity, rule.optString("id"))
+                render()
+            }
+        }
+    }
+
+    private inner class FlowAdapter :
+        ListAdapter<FlowItem, RecyclerView.ViewHolder>(FlowDiff) {
+        // The service row's tick line, updated directly (no rebind,
+        // no change animation) when the data is unchanged.
+        private var serviceTickView: TextView? = null
+
+        fun refreshTick() {
+            serviceTickView?.text = flowTickText(
+                FlowStore.flowServiceOn(this@AutomationActivity),
+                FlowStore.serviceLastTick(this@AutomationActivity))
+        }
+
+        override fun getItemViewType(position: Int): Int = when (getItem(position)) {
+            is FlowItem.Service -> 0
+            is FlowItem.Card -> 1
+            is FlowItem.Empty -> 2
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
+            when (viewType) {
+                0 -> ServiceHolder(buildServiceRow())
+                2 -> EmptyHolder(TextView(this@AutomationActivity).apply {
+                    setPadding(8, 24, 8, 24)
+                    layoutParams = RecyclerView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT)
+                })
+                else -> FlowCardHolder(buildCardShell(listOf(
+                    R.string.flow_card_run to true,
+                    R.string.flow_card_edit to false,
+                    R.string.flow_card_dup to false,
+                    R.string.flow_card_share to false,
+                    R.string.flow_card_log to false,
+                    R.string.flow_card_delete to false)))
+            }
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            when (val item = getItem(position)) {
+                is FlowItem.Service -> {
+                    val serviceHolder = holder as ServiceHolder
+                    serviceHolder.bind()
+                    serviceTickView = serviceHolder.row.tickView
+                }
+                is FlowItem.Card -> (holder as FlowCardHolder).bind(item.flow)
+                is FlowItem.Empty -> (holder as EmptyHolder)
+                    .bind(getString(R.string.flow_empty))
+            }
+        }
+
+        override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+            if (holder is ServiceHolder) serviceTickView = null
+            super.onViewRecycled(holder)
+        }
+    }
+
+    private inner class ServiceHolder(val row: ServiceRow) :
+        RecyclerView.ViewHolder(row.root) {
+        fun bind() {
+            val svcOn = FlowStore.flowServiceOn(this@AutomationActivity)
+            row.enableSwitch.setOnCheckedChangeListener(null)
+            row.enableSwitch.isChecked = svcOn
+            row.enableSwitch.setOnCheckedChangeListener { _, on ->
                 FlowStore.setFlowServiceOn(this@AutomationActivity, on)
                 if (on) {
                     androidx.core.content.ContextCompat.startForegroundService(
@@ -911,142 +1352,94 @@ class AutomationActivity : LocalizedActivity() {
                 }
                 renderFlows()
             }
-        })
-        svcRow.addView(svcHead)
-        val tick = FlowStore.serviceLastTick(this)
-        val ago = (System.currentTimeMillis() - tick) / 1000
-        svcRow.addView(TextView(this).apply {
-            text = when {
-                !svcOn -> getString(R.string.flow_service_off)
-                tick == 0L || ago > 120 -> getString(R.string.flow_service_stale)
-                else -> getString(R.string.flow_service_live, ago.toString())
+            row.tickView.text = flowTickText(svcOn,
+                FlowStore.serviceLastTick(this@AutomationActivity))
+        }
+    }
+
+    private inner class FlowCardHolder(val shell: CardViews) :
+        RecyclerView.ViewHolder(shell.root) {
+        fun bind(flow: JSONObject) {
+            val flowId = flow.optString("id")
+            shell.nameView.text = flow.optString("name")
+                .ifEmpty { getString(R.string.flow_tab_flows) }
+            shell.enableSwitch.setOnCheckedChangeListener(null)
+            shell.enableSwitch.isChecked = flow.optBoolean("enabled", true)
+            shell.enableSwitch.setOnCheckedChangeListener { _, on ->
+                FlowStore.setFlowEnabled(this@AutomationActivity, flowId, on)
             }
-            textSize = 13f
-            setPadding(0, 6, 0, 0)
-        })
-        container.addView(svcRow)
-        val flows = FlowStore.flows(this)
-        if (flows.isEmpty()) {
-            container.addView(TextView(this).apply {
-                text = getString(R.string.flow_empty)
-                setPadding(8, 24, 8, 24)
-            })
+            shell.diySlot.removeAllViews()
+            flowDiyRow(flow)?.let { shell.diySlot.addView(it) }
+            val pills = shell.pillButtons
+            pills[0].setOnClickListener {
+                val f = FlowStore.loadFlow(this@AutomationActivity, flowId)
+                if (f != null) FlowEngine.runFlow(this@AutomationActivity, f)
+            }
+            pills[1].setOnClickListener {
+                startActivity(Intent(this@AutomationActivity, FlowEditorActivity::class.java)
+                    .putExtra("flow_id", flowId))
+            }
+            pills[2].setOnClickListener {
+                val copy = JSONObject(flow.toString())
+                copy.put("id", "f" + System.currentTimeMillis().toString())
+                copy.put("name", flow.optString("name") + getString(R.string.flow_dup_suffix))
+                FlowStore.saveFlow(this@AutomationActivity, copy)
+                renderFlows()
+            }
+            pills[3].setOnClickListener {
+                // Single-flow share: the stored flow JSON is already
+                // the exact single-flow format the PhoneLink import
+                // detects (nodes + non-empty name), so the receiver
+                // can import it with "PhoneLink থেকে আনো".
+                val send = Intent(Intent.ACTION_SEND).setType("application/json")
+                    .putExtra(Intent.EXTRA_TEXT, flow.toString())
+                startActivity(Intent.createChooser(send, flow.optString("name")))
+            }
+            pills[4].setOnClickListener {
+                val lines = FlowStore.flowLog(this@AutomationActivity, flowId)
+                AlertDialog.Builder(this@AutomationActivity)
+                    .setTitle(flow.optString("name"))
+                    .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
+                        else lines.joinToString("\n"))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            }
+            pills[5].setOnClickListener {
+                AlertDialog.Builder(this@AutomationActivity)
+                    .setTitle(flow.optString("name"))
+                    .setMessage(getString(R.string.flow_delete_confirm, flow.optString("name")))
+                    .setPositiveButton(R.string.btn_delete) { _, _ ->
+                        FlowStore.deleteFlow(this@AutomationActivity, flowId)
+                        renderFlows()
+                    }
+                    .setNegativeButton(R.string.btn_cancel, null)
+                    .show()
+            }
+        }
+    }
+
+    /** v2.24.0 (Lab merge): Flows tab — service switch with a
+     *  liveness line, then one card per flow (toggle + Run now /
+     *  Edit / Dup / Log / Delete). Button rows scroll horizontally
+     *  so Dup and Log stay reachable on narrow screens.
+     *  Premium feel (v1.2.1): the cards are RecyclerView items
+     *  now (FlowAdapter) — only visible rows are bound and
+     *  scrolling recycles them. */
+    private fun renderFlows() {
+        // Skip the full rebuild when no flow file changed —
+        // only the live/stale tick line can have moved.
+        val ver = FlowStore.flowsVersion()
+        if (ver == lastFlowsVer && flowAdapter.itemCount > 0) {
+            flowAdapter.refreshTick()
             return
         }
-        for (flow in flows) {
-            val flowId = flow.optString("id")
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(20, 14, 20, 14)
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { setMargins(0, 0, 0, 12) }
-                setBackgroundResource(R.drawable.card_bg)
-            }
-            val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            head.addView(TextView(this).apply {
-                text = flow.optString("name").ifEmpty { getString(R.string.flow_tab_flows) }
-                textSize = 16f
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            })
-            head.addView(Switch(this).apply {
-                isChecked = flow.optBoolean("enabled", true)
-                setOnCheckedChangeListener { _, on ->
-                    FlowStore.setFlowEnabled(this@AutomationActivity, flowId, on)
-                }
-            })
-            row.addView(head)
-            // v1.2.0: Essentials DIY routine card, same as rules —
-            // sage trigger box | → | first action box. The old
-            // one-line summary is replaced by the DIY row.
-            val nodes = flow.optJSONArray("nodes")
-            var trigType = ""
-            var trigParam = ""
-            if (nodes != null) {
-                for (k in 0 until nodes.length()) {
-                    val n = nodes.optJSONObject(k) ?: continue
-                    if (n.optString("kind") == "t") {
-                        trigType = n.optString("type")
-                        trigParam = n.optString("param")
-                        break
-                    }
-                }
-            }
-            val trigParamText = when {
-                trigType == "app_launched" || trigType == "app_closed" ->
-                    Automation.appLabel(this, trigParam)
-                else -> trigParam
-            }
-            if (trigType.isNotEmpty()) {
-                row.addView(diyRow(
-                    FlowCatalog.label(this, "t", trigType),
-                    trigParamText, triggerIconRes(trigType),
-                    firstFlowActionLabel(nodes), null))
-            }
-            val scroll = android.widget.HorizontalScrollView(this).apply {
-                isHorizontalScrollBarEnabled = false
-            }
-            val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            buttons.addView(pillButton(R.string.flow_card_run, true).apply {
-                setOnClickListener {
-                    val f = FlowStore.loadFlow(this@AutomationActivity, flowId)
-                    if (f != null) FlowEngine.runFlow(this@AutomationActivity, f)
-                }
-            })
-            buttons.addView(pillButton(R.string.flow_card_edit, false).apply {
-                setOnClickListener {
-                    startActivity(Intent(this@AutomationActivity, FlowEditorActivity::class.java)
-                        .putExtra("flow_id", flowId))
-                }
-            })
-            buttons.addView(pillButton(R.string.flow_card_dup, false).apply {
-                setOnClickListener {
-                    val copy = JSONObject(flow.toString())
-                    copy.put("id", "f" + System.currentTimeMillis().toString())
-                    copy.put("name", flow.optString("name") + getString(R.string.flow_dup_suffix))
-                    FlowStore.saveFlow(this@AutomationActivity, copy)
-                    renderFlows()
-                }
-            })
-            buttons.addView(pillButton(R.string.flow_card_share, false).apply {
-                setOnClickListener {
-                    // Single-flow share: the stored flow JSON is already
-                    // the exact single-flow format the PhoneLink import
-                    // detects (nodes + non-empty name), so the receiver
-                    // can import it with "PhoneLink থেকে আনো".
-                    val send = Intent(Intent.ACTION_SEND).setType("application/json")
-                        .putExtra(Intent.EXTRA_TEXT, flow.toString())
-                    startActivity(Intent.createChooser(send, flow.optString("name")))
-                }
-            })
-            buttons.addView(pillButton(R.string.flow_card_log, false).apply {
-                setOnClickListener {
-                    val lines = FlowStore.flowLog(this@AutomationActivity, flowId)
-                    AlertDialog.Builder(this@AutomationActivity)
-                        .setTitle(flow.optString("name"))
-                        .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
-                            else lines.joinToString("\n"))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
-            })
-            buttons.addView(pillButton(R.string.flow_card_delete, false).apply {
-                setOnClickListener {
-                    AlertDialog.Builder(this@AutomationActivity)
-                        .setTitle(flow.optString("name"))
-                        .setMessage(getString(R.string.flow_delete_confirm, flow.optString("name")))
-                        .setPositiveButton(R.string.btn_delete) { _, _ ->
-                            FlowStore.deleteFlow(this@AutomationActivity, flowId)
-                            renderFlows()
-                        }
-                        .setNegativeButton(R.string.btn_cancel, null)
-                        .show()
-                }
-            })
-            scroll.addView(buttons)
-            row.addView(scroll)
-            container.addView(row)
-        }
+        lastFlowsVer = ver
+        val flows = FlowStore.flows(this)
+        val items = ArrayList<FlowItem>()
+        items.add(FlowItem.Service)
+        if (flows.isEmpty()) items.add(FlowItem.Empty)
+        else for (flow in flows) items.add(FlowItem.Card(flow))
+        flowAdapter.submitList(items)
     }
 
     /** v2.24.0 (Lab merge): Flows tab ⋮ menu — import, .flo
@@ -1103,205 +1496,26 @@ class AutomationActivity : LocalizedActivity() {
     }
 
     private fun render() {
-        container.removeAllViews()
+        val raw = Automation.rulesRaw(this)
         val list = Automation.rules(this)
             .sortedWith(compareBy({ it.optString("cat") }, { it.optString("name") }))
-        refreshStatusLine()
+        refreshStatusLine(list)
+        if (raw == lastRulesRaw && ruleAdapter.itemCount > 0) return
+        lastRulesRaw = raw
+        val items = ArrayList<RuleItem>()
         if (list.isEmpty()) {
-            container.addView(TextView(this).apply {
-                text = getString(R.string.auto_empty)
-                setPadding(8, 24, 8, 24)
-            })
-            return
+            items.add(RuleItem.Empty)
+        } else {
+            var lastCat = "\u0000"
+            for (rule in list) {
+                val cat = rule.optString("cat")
+                if (cat != lastCat) {
+                    lastCat = cat
+                    if (cat.isNotEmpty()) items.add(RuleItem.Cat(cat))
+                }
+                items.add(RuleItem.Card(rule))
+            }
         }
-        var lastCat = "\u0000"
-        for (rule in list) {
-            val cat = rule.optString("cat")
-            if (cat != lastCat) {
-                lastCat = cat
-                if (cat.isNotEmpty()) {
-                    container.addView(TextView(this).apply {
-                        text = cat
-                        textSize = 15f
-                        setTypeface(typeface, android.graphics.Typeface.BOLD)
-                        setPadding(4, 10, 4, 6)
-                    })
-                }
-            }
-            val trigList = Automation.ruleTriggers(rule)
-            val trig = trigList.firstOrNull()
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(20, 14, 20, 14)
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { setMargins(0, 0, 0, 12) }
-                setBackgroundResource(R.drawable.card_bg)
-            }
-            val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            head.addView(TextView(this).apply {
-                text = rule.optString("name").ifEmpty { getString(R.string.auto_title) }
-                textSize = 16f
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            })
-            head.addView(Switch(this).apply {
-                isChecked = rule.optBoolean("enabled", true)
-                setOnCheckedChangeListener { _, on ->
-                    Automation.setEnabled(this@AutomationActivity, rule.optString("id"), on)
-                }
-            })
-            row.addView(head)
-            // v1.2.0: Essentials DIY routine card — sage trigger
-            // box | arrow chip(s) | action box(es). The old IF /
-            // THEN inset boxes and the "N actions" line are gone;
-            // the same information lives in the boxes (first
-            // trigger/action + " +N", exit box when present).
-            val acts = rule.optJSONArray("actions") ?: org.json.JSONArray()
-            val nActions = acts.length()
-            val firstAct = acts.optJSONObject(0)?.optString("type") ?: ""
-            val exitActs = Automation.exitActions(rule)
-            // v2.20: a Study Guard first trigger reads as its
-            // plain summary (list/app + minutes), never raw param.
-            // v2.21: a screen-rest first trigger reads as its
-            // plain summary (minutes + warn), never raw param.
-            val trigType = trig?.optString("type") ?: ""
-            val trigParam = trig?.optString("param") ?: ""
-            val ifSummary = if (trigType == "study_guard_continuous" ||
-                trigType == "study_guard_daily")
-                Automation.studyGuardSummary(
-                    this@AutomationActivity, trigType, trigParam)
-            else if (trigType == "screen_on_continuous")
-                Automation.screenRestSummary(
-                    this@AutomationActivity, trigParam)
-            else if (trigType == "time_at_days")
-                Automation.timeAtDaysSummary(
-                    this@AutomationActivity, trigParam)
-            else ""
-            val trigParamText = when {
-                ifSummary.isNotEmpty() -> ifSummary
-                trigType == "app_launched" || trigType == "app_closed" ->
-                    Automation.appLabel(this@AutomationActivity, trigParam)
-                trigParam.isNotBlank() -> trigParam
-                else -> ""
-            }
-            // v2.20: a FocusLock first step reads as its plain
-            // summary ("YouTube ব্লক 60 মিনিট"), never the raw param.
-            // v2.21: an AutoTap first step reads as its plain
-            // summary, never the raw param.
-            // v2.22: a Redial first step reads as its plain
-            // summary, never the raw param.
-            val firstSummary = if (firstAct == "focuslock_control")
-                Automation.focusLockSummary(this@AutomationActivity,
-                    acts.optJSONObject(0)?.optString("param") ?: "")
-            else if (firstAct == "autotap_control")
-                Automation.autoTapSummary(this@AutomationActivity,
-                    acts.optJSONObject(0)?.optString("param") ?: "")
-            else if (firstAct == "redial_control")
-                Automation.redialSummary(this@AutomationActivity,
-                    acts.optJSONObject(0)?.optString("param") ?: "")
-            else ""
-            val entryLabel = AutoCatalog.label(
-                this@AutomationActivity, "a", firstAct) +
-                (if (firstSummary.isNotEmpty())
-                    " — " + firstSummary else "") +
-                (if (nActions > 1) " +${nActions - 1}" else "")
-            val trigLabel = AutoCatalog.label(
-                this@AutomationActivity, "t", trigType) +
-                (if (trigList.size > 1) " +${trigList.size - 1}" else "")
-            val exitLabel = if (exitActs.length() > 0)
-                firstActionLabel(exitActs, "rule") else null
-            row.addView(diyRow(trigLabel, trigParamText,
-                triggerIconRes(trigType), entryLabel, exitLabel))
-            val buttons = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.END
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { setMargins(0, 8, 0, 0) }
-            }
-            // v2.17.3: compact pill buttons in the new system
-            // (14dp radius, ~36dp tall) instead of the old bg_pill.
-            fun pillButton(labelRes: Int, mint: Boolean) = Button(this).apply {
-                text = getString(labelRes)
-                textSize = 12.5f
-                isAllCaps = false
-                minHeight = 0
-                minimumHeight = 0
-                setBackgroundResource(
-                    if (mint) R.drawable.bg_action_pill
-                    else R.drawable.bg_action_ghost)
-                setPadding(40, 30, 40, 30)
-                setTextColor(
-                    if (mint) themeAccentColor() else themeOnSurface())
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { setMargins(8, 0, 0, 0) }
-            }
-            buttons.addView(pillButton(R.string.auto_test, true).apply {
-                setOnClickListener {
-                    val data = JSONObject()
-                        .put("title", rule.optString("name")).put("body", "test")
-                    Automation.runActions(this@AutomationActivity, rule, data, 0)
-                }
-            })
-            buttons.addView(pillButton(R.string.btn_edit, false).apply {
-                setOnClickListener {
-                    startActivity(Intent(this@AutomationActivity, RuleEditorActivity::class.java)
-                        .putExtra("rule_id", rule.optString("id")))
-                }
-            })
-            buttons.addView(pillButton(R.string.flow_card_dup, false).apply {
-                setOnClickListener {
-                    // Same duplicate as the flow cards: deep-copy,
-                    // new id, " (copy)" suffix, save, re-render.
-                    val copy = JSONObject(rule.toString())
-                    copy.put("id", "r" + System.currentTimeMillis().toString())
-                    copy.put("name", rule.optString("name") + getString(R.string.flow_dup_suffix))
-                    Automation.upsert(this@AutomationActivity, copy)
-                    render()
-                }
-            })
-            buttons.addView(pillButton(R.string.flow_card_share, false).apply {
-                setOnClickListener {
-                    // Single-rule share, mirroring the flow share
-                    // pill — but as a one-element JSON array: the
-                    // rule import (Automation.importJson) only
-                    // accepts arrays, so a bare rule object would
-                    // fail to import back. This round-trips.
-                    val arr = org.json.JSONArray()
-                        .put(JSONObject(rule.toString()))
-                    val send = Intent(Intent.ACTION_SEND).setType("application/json")
-                        .putExtra(Intent.EXTRA_TEXT, arr.toString())
-                    startActivity(Intent.createChooser(send, rule.optString("name")))
-                }
-            })
-            buttons.addView(pillButton(R.string.flow_card_log, false).apply {
-                setOnClickListener {
-                    // Same per-item log dialog as the flow cards,
-                    // filtered to lines that mention this rule —
-                    // rule runs log "▶ <name> (<event>)".
-                    val name = rule.optString("name")
-                    val lines = if (name.isEmpty()) emptyList()
-                    else Automation.recentLog(this@AutomationActivity)
-                        .filter { it.contains(name) }
-                    AlertDialog.Builder(this@AutomationActivity)
-                        .setTitle(rule.optString("name"))
-                        .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
-                            else lines.joinToString("\n"))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
-            })
-            buttons.addView(pillButton(R.string.btn_delete, false).apply {
-                setOnClickListener {
-                    Automation.delete(this@AutomationActivity, rule.optString("id"))
-                    render()
-                }
-            })
-            row.addView(buttons)
-            container.addView(row)
-        }
+        ruleAdapter.submitList(items)
     }
 }

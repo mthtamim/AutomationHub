@@ -91,6 +91,47 @@ class FlowCanvasView @JvmOverloads constructor(
     private val paintPortText = Paint(Paint.ANTI_ALIAS_FLAG)
     private val paintTemp = Paint(Paint.ANTI_ALIAS_FLAG)
 
+    // Smoothness (2026-11-06): every colour string below was
+    // parsed with Color.parseColor on EVERY onDraw call, per node,
+    // edge and port. Parsed once here; same colours, same look.
+    private val C_MINT = Color.parseColor("#10B981")
+    private val C_AMBER = Color.parseColor("#F5A623")
+    private val C_MINT_LIGHT = Color.parseColor("#2FD68F")
+    private val C_BLUE = Color.parseColor("#2196F3")
+    private val C_CYAN = Color.parseColor("#00BCD4")
+    private val C_BROWN = Color.parseColor("#795548")
+    private val C_GREY_GREEN = Color.parseColor("#8FA79B")
+    private val C_PURPLE = Color.parseColor("#9C27B0")
+    private val C_ORANGE = Color.parseColor("#FF9800")
+    private val C_GREEN = Color.parseColor("#4CAF50")
+    private val C_PINK = Color.parseColor("#E91E63")
+    private val C_YELLOW = Color.parseColor("#FFC107")
+    private val C_BLUE_GREY = Color.parseColor("#607D8B")
+    private val C_INDIGO = Color.parseColor("#3F51B5")
+    private val C_TEAL = Color.parseColor("#009688")
+    private val C_GREY = Color.parseColor("#9E9E9E")
+    private val C_RED = Color.parseColor("#F87171")
+
+    // Smoothness (2026-11-06): onDraw used to (a) draw the dotted
+    // grid with ~2000 individual drawCircle calls per frame,
+    // (b) allocate a HashMap + a bezier Path per edge per frame,
+    // (c) parse colour strings per node/edge/port per frame (now
+    // constants above). Grid dots are one drawPoints call from a
+    // cached array (rebuilt only when size/zoom changes); edge
+    // paths are cached until the nodes/edges JSON changes.
+    private var gridPts = FloatArray(0)
+    private var gridKeyW = -1
+    private var gridKeyH = -1
+    private var gridKeyZoom = -1f
+    private val rectsCache = HashMap<String, RectF>()
+    private var edgePathKey: String? = null
+    private var edgePathCache: List<EdgeDraw> = emptyList()
+
+    private data class EdgeDraw(
+        val path: Path, val tip: PointF, val color: Int,
+        val from: String, val to: String, val branch: String
+    )
+
     private var dragId: String? = null
     private var dragDx = 0f
     private var dragDy = 0f
@@ -136,7 +177,9 @@ class FlowCanvasView @JvmOverloads constructor(
         paintGripBorder.style = Paint.Style.STROKE
         paintGripBorder.color = Color.WHITE
         paintGripBorder.strokeWidth = 2f * density
-        paintGrid.style = Paint.Style.FILL
+        paintGrid.style = Paint.Style.STROKE
+        paintGrid.strokeWidth = 3f * density
+        paintGrid.strokeCap = Paint.Cap.ROUND
         paintGrid.color = ThemeColors.outline(context)
         paintPort.style = Paint.Style.FILL
         paintPortText.textSize = 11f * density
@@ -184,9 +227,9 @@ class FlowCanvasView @JvmOverloads constructor(
 
     private fun borderColor(kind: String): Int {
         return when (kind) {
-            "t" -> Color.parseColor("#10B981")
-            "c" -> Color.parseColor("#F5A623")
-            else -> Color.parseColor("#2FD68F")
+            "t" -> C_MINT
+            "c" -> C_AMBER
+            else -> C_MINT_LIGHT
         }
     }
 
@@ -196,61 +239,61 @@ class FlowCanvasView @JvmOverloads constructor(
         return when {
             type == "time_at" || type == "time_interval" || type == "time_at_days" ||
                 type == "date_at" || type == "sunrise" || type == "sunset" ||
-                type == "stopwatch" -> Color.parseColor("#2196F3")
-            type.startsWith("battery_") -> Color.parseColor("#10B981")
+                type == "stopwatch" -> C_BLUE
+            type.startsWith("battery_") -> C_MINT
             type.startsWith("wifi_") || type.startsWith("bt_") ||
                 type.startsWith("airplane_") || type.startsWith("mobile_data_") ||
                 type.startsWith("hotspot_") || type.startsWith("vpn_") ||
-                type.startsWith("roaming_") -> Color.parseColor("#00BCD4")
+                type.startsWith("roaming_") -> C_CYAN
             type.startsWith("torch_") || type == "vibrate" ||
                 type == "flash_pattern" || type.startsWith("brightness_") ||
                 type == "screen_timeout_set" || type == "auto_rotate_set" ||
                 type == "dnd_set" || type == "volume_set" || type == "mode_set" ||
                 type == "ringer" || type == "keep_awake" ||
                 type == "lock_screen" || type == "wake_screen" ->
-                Color.parseColor("#795548")
+                C_BROWN
             type.startsWith("screen_") || type.startsWith("charging_") ||
                 type.startsWith("volume_") || type.startsWith("storage_") ||
                 type.startsWith("orientation_") || type == "pick_up" ||
-                type == "split_screen" -> Color.parseColor("#8FA79B")
-            type.startsWith("app_") -> Color.parseColor("#9C27B0")
+                type == "split_screen" -> C_GREY_GREEN
+            type.startsWith("app_") -> C_PURPLE
             type.startsWith("sms_") || type.startsWith("notif_") ||
                 type.startsWith("whatsapp_") || type.startsWith("telegram_") ->
-                Color.parseColor("#FF9800")
+                C_ORANGE
             type.startsWith("geofence_") || type.startsWith("gps_") ->
-                Color.parseColor("#4CAF50")
+                C_GREEN
             type.startsWith("music_") || type.startsWith("media_") ||
                 type == "play_sound" || type.startsWith("speak_") ||
                 type.startsWith("record_") || type == "take_photo" ->
-                Color.parseColor("#E91E63")
+                C_PINK
             type == "local_notify" || type == "toast_local" ||
-                type == "rich_notify" -> Color.parseColor("#FFC107")
+                type == "rich_notify" -> C_YELLOW
             type == "write_file" || type == "read_file" ||
                 type.startsWith("file_") || type == "delete_file" ->
-                Color.parseColor("#607D8B")
+                C_BLUE_GREY
             type.startsWith("loop_") || type == "for_each" ||
                 type == "call_flow" || type == "flow_stop" || type == "fork" ||
                 type == "stop_flow" || type == "set_local" ||
                 type.startsWith("list_") || type.startsWith("dict_") ||
                 type.startsWith("text_") || type == "random_int" ->
-                Color.parseColor("#3F51B5")
+                C_INDIGO
             type.startsWith("peer_") || type.startsWith("command_") ||
-                type.startsWith("mqtt_") -> Color.parseColor("#009688")
+                type.startsWith("mqtt_") -> C_TEAL
             type.startsWith("timezone_") || type.startsWith("locale_") ||
                 type.startsWith("calendar_") || type.startsWith("weather") ||
                 type == "webhook" || type.startsWith("qr_") ->
-                Color.parseColor("#9E9E9E")
+                C_GREY
             else -> borderColor(node.optString("kind"))
         }
     }
 
     private fun portColor(port: String): Int {
         return when (port) {
-            "GO" -> Color.parseColor("#2196F3")
-            "YES" -> Color.parseColor("#10B981")
-            "NO" -> Color.parseColor("#F87171")
-            "OK" -> Color.parseColor("#2FD68F")
-            else -> Color.parseColor("#8FA79B")
+            "GO" -> C_BLUE
+            "YES" -> C_MINT
+            "NO" -> C_RED
+            "OK" -> C_MINT_LIGHT
+            else -> C_GREY_GREEN
         }
     }
 
@@ -320,17 +363,17 @@ class FlowCanvasView @JvmOverloads constructor(
 
     private fun edgeColor(edge: JSONObject): Int {
         return when (edge.optString("branch", "any")) {
-            "yes" -> Color.parseColor("#10B981")
-            "no" -> Color.parseColor("#F87171")
+            "yes" -> C_MINT
+            "no" -> C_RED
             "any" -> {
                 val from = nodeById(edge.optString("from"))
                 if (from != null && from.optString("kind") == "t") {
-                    Color.parseColor("#2196F3")
+                    C_BLUE
                 } else {
-                    Color.parseColor("#8FA79B")
+                    C_GREY_GREEN
                 }
             }
-            else -> Color.parseColor("#8FA79B")
+            else -> C_GREY_GREEN
         }
     }
 
@@ -449,38 +492,64 @@ class FlowCanvasView @JvmOverloads constructor(
         canvas.save()
         canvas.scale(zoom, zoom)
 
-        // Dotted grid under everything (24dp world spacing).
-        val worldW = width / zoom
-        val worldH = height / zoom
-        val step = 24f * density
-        var gx = 0f
-        while (gx <= worldW) {
-            var gy = 0f
-            while (gy <= worldH) {
-                canvas.drawCircle(gx, gy, 1.5f * density, paintGrid)
-                gy += step
+        // Dotted grid under everything (24dp world spacing). One
+        // drawPoints call from a cached array — the old nested
+        // loops issued ~2000 drawCircle calls per frame. Dots are
+        // 3dp wide (the old radius was 1.5dp), same positions.
+        if (gridPts.isEmpty() || width != gridKeyW ||
+            height != gridKeyH || zoom != gridKeyZoom
+        ) {
+            val worldW = width / zoom
+            val worldH = height / zoom
+            val step = 24f * density
+            val list = ArrayList<Float>()
+            var gx = 0f
+            while (gx <= worldW) {
+                var gy = 0f
+                while (gy <= worldH) {
+                    list.add(gx); list.add(gy)
+                    gy += step
+                }
+                gx += step
             }
-            gx += step
+            gridPts = FloatArray(list.size) { list[it] }
+            gridKeyW = width; gridKeyH = height; gridKeyZoom = zoom
         }
+        canvas.drawPoints(gridPts, paintGrid)
 
-        val rects = HashMap<String, RectF>()
+        rectsCache.clear()
+        val rects = rectsCache
         for (i in 0 until nodes.length()) {
             val n = nodes.optJSONObject(i) ?: continue
             rects[n.optString("id")] = nodeRect(n)
         }
 
-        for (i in 0 until edges.length()) {
-            val e = edges.optJSONObject(i) ?: continue
-            val (p0, p3) = edgePorts(e) ?: continue
-            val color = edgeColor(e)
-            paintEdge.color = color
+        // Edge curves are cached until the nodes/edges JSON changes
+        // (dragging a node changes the JSON, so the cache rebuilds
+        // then — still cheaper than a Path + port math per edge per
+        // frame).
+        val edgeKey = nodes.toString() + "|" + edges.toString()
+        if (edgeKey != edgePathKey) {
+            val built = mutableListOf<EdgeDraw>()
+            for (i in 0 until edges.length()) {
+                val e = edges.optJSONObject(i) ?: continue
+                val (p0, p3) = edgePorts(e) ?: continue
+                built.add(EdgeDraw(bezierPath(p0, p3), p3, edgeColor(e),
+                    e.optString("from"), e.optString("to"),
+                    e.optString("branch", "any")))
+            }
+            edgePathCache = built
+            edgePathKey = edgeKey
+        }
+        for (ed in edgePathCache) {
+            paintEdge.color = ed.color
             val isSel = selectedEdge != null &&
-                selectedEdge!!.optString("from") == e.optString("from") &&
-                selectedEdge!!.optString("to") == e.optString("to") &&
-                selectedEdge!!.optString("branch") == e.optString("branch")
+                selectedEdge!!.optString("from") == ed.from &&
+                selectedEdge!!.optString("to") == ed.to &&
+                selectedEdge!!.optString("branch") == ed.branch
             paintEdge.strokeWidth = if (isSel) 5f * density else 3f * density
-            canvas.drawPath(bezierPath(p0, p3), paintEdge)
-            drawArrow(canvas, p3)
+            canvas.drawPath(ed.path, paintEdge)
+            drawArrow(canvas, ed.tip)
         }
 
         // Temp curve while dragging from an output port.
@@ -497,17 +566,24 @@ class FlowCanvasView @JvmOverloads constructor(
             }
         }
 
+        // Resolved once per frame, not once per node: the fill
+        // colour and the three kind labels are the same for every
+        // node in this frame.
+        val nodeFill = ThemeColors.secondaryContainer(context)
+        val kindT = context.getString(R.string.flow_kind_trigger)
+        val kindC = context.getString(R.string.flow_kind_condition)
+        val kindA = context.getString(R.string.flow_kind_action)
         for (i in 0 until nodes.length()) {
             val node = nodes.optJSONObject(i) ?: continue
             val r = rects[node.optString("id")] ?: continue
             val s = nodeScale(node)
             // v2.25.1: node fill follows the theme secondaryContainer
             // (Emerald night #1C2326 = the old literal, identical).
-            paintNode.color = ThemeColors.secondaryContainer(context)
+            paintNode.color = nodeFill
             canvas.drawRoundRect(r, 18f * density * s, 18f * density * s, paintNode)
             val isHighlighted = node.optString("id") == highlightId
             paintBorder.color = if (isHighlighted) {
-                Color.parseColor("#FFC107")
+                C_YELLOW
             } else {
                 borderColorFor(node)
             }
@@ -532,9 +608,9 @@ class FlowCanvasView @JvmOverloads constructor(
                 r.left + pad, r.top + 56f * density * s, paintSub
             )
             val kindLabel = when (node.optString("kind")) {
-                "t" -> context.getString(R.string.flow_kind_trigger)
-                "c" -> context.getString(R.string.flow_kind_condition)
-                else -> context.getString(R.string.flow_kind_action)
+                "t" -> kindT
+                "c" -> kindC
+                else -> kindA
             }
             canvas.drawText(
                 kindLabel, r.left + pad, r.top + 80f * density * s, paintSub

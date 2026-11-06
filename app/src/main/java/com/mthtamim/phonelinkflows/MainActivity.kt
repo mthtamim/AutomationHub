@@ -50,6 +50,15 @@ class MainActivity : LocalizedActivity() {
     private lateinit var pageSettings: View
     private var settingsOpen = false
 
+    // Smoothness (2026-11-06): the app version never changes while
+    // the process lives, but refreshSettingsHub() called
+    // getPackageInfo (a Binder call) on EVERY refresh. Resolved once.
+    private val appVersionName: String by lazy {
+        try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+        } catch (_: Exception) { "?" }
+    }
+
     // v2.17 redesign views
     private lateinit var tvConnPill: TextView
     private lateinit var tvDashDevice: TextView
@@ -1240,9 +1249,8 @@ class MainActivity : LocalizedActivity() {
         val pct = BatteryHelper.batteryPercent(this)
         pbDashBattery.progress = pct
         tvDashBatteryPct.text = "$pct%"
-        val ssid = ownSsid()
+        val (ssid, band) = ownWifi()
         tvDashWifi.text = if (ssid.isNotEmpty()) {
-            val band = ownWifiBand()
             "Wi-Fi \u2022 $ssid" + if (band.isNotEmpty()) " \u2022 $band" else ""
         } else "Wi-Fi \u2022 \u2014"
         refreshAutoTapCard()
@@ -1349,10 +1357,7 @@ class MainActivity : LocalizedActivity() {
         else getString(R.string.perm_summary_missing, missing)
         tvHubSecSub.text = "${tvPinInfo.text} • ${tvAdminInfo.text}"
         tvHubDataSub.text = tvStats.text
-        val ver = try {
-            packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
-        } catch (_: Exception) { "?" }
-        tvHubDiag.text = "AutomationHub v$ver • " +
+        tvHubDiag.text = "AutomationHub v$appVersionName • " +
             "${rules.size} rules • " +
             "${flows.size} flows"
         // v2.17.4: the same version line also lives at the bottom
@@ -1367,25 +1372,26 @@ class MainActivity : LocalizedActivity() {
     }
 
 
-    private fun ownSsid(): String = try {
+    // Smoothness (2026-11-06): SSID + band from ONE connectionInfo
+    // read. refreshDashboard() used to call WifiManager.connectionInfo
+    // twice (ownSsid + ownWifiBand) on every refresh — each read is a
+    // Binder call.
+    private fun ownWifi(): Pair<String, String> = try {
         val wm = applicationContext.getSystemService(Context.WIFI_SERVICE)
             as android.net.wifi.WifiManager
         @Suppress("DEPRECATION")
-        val ssid = wm.connectionInfo?.ssid?.trim('"') ?: ""
-        if (ssid == "<unknown ssid>") "" else ssid
-    } catch (_: Exception) { "" }
-
-    private fun ownWifiBand(): String = try {
-        val wm = applicationContext.getSystemService(Context.WIFI_SERVICE)
-            as android.net.wifi.WifiManager
+        val info = wm.connectionInfo
+        val ssid = info?.ssid?.trim('"') ?: ""
+        val clean = if (ssid == "<unknown ssid>") "" else ssid
         @Suppress("DEPRECATION")
-        val freq = wm.connectionInfo?.frequency ?: 0
-        when {
+        val freq = info?.frequency ?: 0
+        val band = when {
             freq >= 4900 -> "5GHz"
             freq >= 2400 -> "2.4GHz"
             else -> ""
         }
-    } catch (_: Exception) { "" }
+        clean to band
+    } catch (_: Exception) { "" to "" }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 }

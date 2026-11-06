@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Premium feel: pill-shaped press ripple for the bottom-bar tabs.
+     Mask only — it draws no fill, the ripple is just clipped to
+     the pill so it never spills over the rounded corners. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <corners android:radius="100dp" />
+            <solid android:color="@android:color/white" />
+        </shape>
+    </item>
+</ripple>

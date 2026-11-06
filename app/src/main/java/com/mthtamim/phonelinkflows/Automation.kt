@@ -59,6 +59,13 @@ object Automation {
         return out
     }
 
+    /** Raw stored rules JSON. The Automation screen fingerprints
+     *  this to skip rebuilding all rule cards when nothing changed
+     *  (plain resume / tab switch) — parsing is cheap, building
+     *  ~15 views per card is not. */
+    fun rulesRaw(ctx: Context): String =
+        prefs(ctx).getString("rules", "[]") ?: "[]"
+
     fun saveAll(ctx: Context, list: List<JSONObject>) {
         val arr = JSONArray()
         list.forEach { arr.put(it) }
@@ -4342,11 +4349,36 @@ object Automation {
         } catch (e: Exception) { "" }
     }
 
+    // App labels, cached in memory: the label of an installed app
+    // never changes while the process lives (install/update clears
+    // the entry via FlowPackageReceiver), and getApplicationInfo is
+    // a Binder call — the rule list called it once per app-triggered
+    // rule on EVERY render. Capped + access-ordered so it cannot
+    // grow without bound.
+    private val appLabelCache = LinkedHashMap<String, String>(64, 0.75f, true)
+
     fun appLabel(ctx: Context, pkg: String): String {
-        return try {
+        synchronized(appLabelCache) { appLabelCache[pkg]?.let { return it } }
+        val label = try {
             val pm = ctx.packageManager
             pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
         } catch (e: Exception) { pkg }
+        synchronized(appLabelCache) {
+            if (appLabelCache.size >= 200) {
+                val it = appLabelCache.keys.iterator()
+                if (it.hasNext()) { it.next(); it.remove() }
+            }
+            appLabelCache[pkg] = label
+        }
+        return label
+    }
+
+    /** Drop one cached label (package installed/updated/removed)
+     *  or the whole cache (null). Called from FlowPackageReceiver. */
+    fun clearAppLabelCache(pkg: String? = null) {
+        synchronized(appLabelCache) {
+            if (pkg == null) appLabelCache.clear() else appLabelCache.remove(pkg)
+        }
     }
 
     // ---------------- v2.20: FocusLock control ----------------

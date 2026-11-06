@@ -913,3 +913,144 @@ as `⏴ <name> (exit: <event>)`, so the Log explains them.
   button on both Automation tabs, DIY cards on rules and flows,
   exit actions firing (Brave / charging templates), theme picker
   across all 8 themes, version showing 1.2.0.
+
+## v1.2.1 — install fix + DIY card fixes (not pushed yet)
+- WHY updates failed ("Something went wrong. App not installed."):
+  every CI build signed the debug APK with a fresh keystore generated
+  on that runner, so each build had a different signature and Android
+  refused to install it over the previous one. This was true for every
+  CI-built app, not just AutomationHub. Fix: one fixed debug keystore
+  (PKCS12, alias `androiddebugkey`, standard Android-debug DN/passwords
+  — a DEBUG-only key, never for release), stored base64-encoded at
+  `app/debug.keystore.b64` because the snapshot push cannot carry binary
+  files, decoded at build time by `app/build.gradle`, and wired via
+  `signingConfigs.debug`. Every build from now on carries the same
+  signature.
+- ONE-TIME COST: this build's signature still differs from the
+  currently installed (random-key) build, so it installs only after
+  one uninstall. Export rules/flows first (⋮ menu → export), uninstall,
+  install 1.2.1, import back. After that, future updates install over
+  the old app normally.
+- Rules pills: the six pills (Test/Edit/Dup/Share/Log/Delete) overflowed
+  the card and the last ones were cut off — the rules row was missing
+  the HorizontalScrollView the flow cards already had. Now wrapped
+  identically; all pills reachable by scrolling.
+- Arrow chips: the →/← text glyphs rendered wrong on the phone (looked
+  like stray letters). Replaced with vector drawables
+  `ic_arrow_forward` / `ic_arrow_back` (new), tinted theme accent.
+- Version 1.2.1 (vc4). Verified: brace/paren balance 0/0 in
+  `AutomationActivity.kt` (both trees); `ic_arrow_forward.xml` parses;
+  `HorizontalScrollView` now in both render paths; no old text-glyph
+  arrow calls left; exit engine + sensor APIs (`armExit`/`fireExits`,
+  `requestAddTileService`, `NetworkCallback`, `onBatteryChanged`)
+  untouched; no MQTT UI; crash-fix files untouched; `diff -rq` the two
+  trees — the ONLY difference is README.md. Not pushed — waits for
+  Tamim's tap. Phone test pending: install 1.2.1 over the old app after
+  one uninstall + export/import, pills scroll on rule cards, arrow
+  chips show real arrows, version 1.2.1.
+
+## v1.2.1 (smoothness pass — same unpushed release, not pushed yet)
+- Audit (code inspection; no benchmark numbers — on-phone
+  confirmation still needed): the dominant cost was
+  AutomationActivity.render()/renderFlows() rebuilding EVERY card
+  (~15 views per card) on the main thread on every onResume and
+  tab switch; FlowStore.flows() re-read + re-parsed every flow
+  file from disk on every MainActivity refresh and Flows render;
+  FlowCanvasView.onDraw issued ~2000 drawCircle calls per frame
+  for the grid plus a Path + HashMap allocation per edge per
+  frame; app labels/icons went through PackageManager (Binder +
+  icon decode) per row per render; theme colours were resolved
+  per pill/card; Wi-Fi SSID/band were two Binder reads per
+  refresh; the app version was a getPackageInfo call per refresh.
+- Fixes: (1) render()/renderFlows() now fingerprint the data
+  (rules raw prefs string; FlowStore version counter) and skip
+  the card rebuild when nothing changed — only the status/tick
+  lines repaint; any write changes the fingerprint, so a skip
+  can never show stale cards. (2) FlowStore.flows() is cached
+  in memory, invalidated only in saveFlow/deleteFlow — the only
+  writers of the flows dir (exports go to exports/, engine
+  scratch to flowfiles/). (3) Canvas: grid is one drawPoints
+  call from a cached array; edge bezier Paths cached until the
+  nodes/edges JSON changes; all Color.parseColor strings are
+  constants now; node fill + kind labels resolved once per
+  frame; node-rect map reused. (4) App labels cached in
+  Automation + AppLocker (label + icon), cleared per-package by
+  FlowPackageReceiver on install/update/remove. (5) Theme colours
+  resolved once per activity instance (theme change recreates
+  the activity, so no staleness). (6) Wi-Fi SSID+band from one
+  connectionInfo read; version name resolved once. (7)
+  refreshStatusLine() reuses render()'s parsed list instead of
+  re-parsing rules.
+- NOT fixed, with reasons: RecyclerView conversion (too invasive
+  for this pass — the fingerprint skip covers all repeat visits;
+  only the first open still builds all cards); moving
+  saveAll()'s refreshWatchers/scheduleTimeRules off the toggle
+  path (async re-registration could race with rapid toggles;
+  needs phone measurement to justify); a time-based debounce of
+  refreshStatus() (would risk stale permission state after
+  returning from the Permissions screen); minify/R8 (reflection
+  risk, excluded); the 60 s tick poll queries (already on the
+  background thread since 1.1.0).
+- Verified: brace/paren/bracket balance 0/0/0 (block-comment-aware
+  checker) on every edited .kt in both trees — the two flagged
+  files show the same deltas as the pristine v1.2.0 files, i.e.
+  pre-existing checker artifacts in untouched code, not edits;
+  1.1.0 + 1.2.1 fixes intact (tick Thread, parse-once refresh,
+  keystore, signingConfigs, arrow drawables, pills scroll,
+  version 1.2.1/vc4); requestAddTileService, NetworkCallback,
+  onBatteryChanged, armExit/fireExits untouched; no MQTT UI;
+  workflow untouched; crash-fix files untouched; diff -rq the
+  two trees — the ONLY difference is README.md. Not pushed —
+  waits for Tamim's tap. Phone test pending: resume/tab-switch
+  smoothness, locker list scroll, flow editor pan/zoom/drag,
+  version still 1.2.1.
+
+## v1.2.1 — premium feel (step 2, not pushed yet)
+- RecyclerView lists: Rules and Flows cards are RecyclerView items
+  now (RuleAdapter / FlowAdapter with DiffUtil + ListAdapter in
+  AutomationActivity.kt) — only visible rows are bound, scrolling
+  recycles the card shells (head row, DIY slot, pill row built once
+  per holder and rebound with data). Category headers (rules), the
+  service switch row (flows) and empty states are adapter items.
+  Headers (status card, FocusLock card) stay outside the list — the
+  FocusLock card is now fixed above the list instead of scrolling
+  with it. The step-1 fingerprint skip still applies on top (no
+  submit when nothing changed); the service tick line is repainted
+  directly without a rebind, so it never flickers.
+- Light animations: press ripple on every pill (bg_action_pill /
+  bg_action_ghost are ripples now — the editor chips and template
+  buttons get it too), pill-shaped ripple on the bottom-bar tabs,
+  borderless ripple on the + button, ripple on the Rules/Flows
+  tabs, the ⋮ menu button, the status line row and the sub-screen
+  back button. One short slide/fade pair for every activity
+  transition (PL.ActivityAnim, 200ms slide / 150ms fade, via
+  android:windowAnimationStyle on Theme.PhoneLink in both
+  values/themes.xml and values-night/themes.xml). List add/remove/
+  change uses the RecyclerView default item animator — nothing
+  custom, nothing heavy.
+- No new dependencies (RecyclerView comes from the Material
+  library's transitive dependency — if CI ever reports it
+  unresolved, add androidx.recyclerview:recyclerview:1.3.2 to
+  app/build.gradle), no new permissions, no minify/R8, version
+  still 1.2.1 (vc4).
+- Verified: brace/paren balance — both checkers give the same
+  result on the edited file as on the CI-proven v1.2.0 file
+  (tracker 3/2 is a pre-existing checker artifact; opcode-level
+  diff of the changed regions nets 0/0), so the edit is
+  balance-neutral; all edited/new XML parses (and all res XML in
+  the tree parses); all R.* refs used resolve (strings in both
+  locales, drawables, anims, styles); step-1 + v1.2.1 fixes intact
+  (caches, fingerprint skip, drawPoints, lazy helpers, keystore,
+  signing config, arrow drawables, pill scroll via the shared
+  shell); APIs intact (requestAddTileService, NetworkCallback,
+  onBatteryChanged, armExit/fireExits); every pill/toggle/menu/
+  template/exit wiring still present; crash-fix files and workflow
+  untouched; `diff -rq` the two trees — the ONLY difference is
+  README.md. One real bug was caught in review and fixed before
+  delivery (ServiceHolder smart-cast in FlowAdapter). Not pushed —
+  waits for Tamim's tap. Phone test pending: smooth scrolling on
+  both tabs, add/delete animations, ripples, slide/fade between
+  screens, FocusLock card pinned, version 1.2.1.
+- Not done: release build (needs a release-keystore decision);
+  on-phone measurement of the feel (needs Tamim's test); tab
+  switches reset the list scroll position (adapter swap).

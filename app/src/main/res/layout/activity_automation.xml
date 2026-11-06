@@ -41,6 +41,7 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_tab_fill"
                     android:backgroundTint="?attr/colorPrimary"
+                    android:foreground="?attr/selectableItemBackground"
                     android:gravity="center"
                     android:padding="10dp"
                     android:text="@string/flow_tab_rules"
@@ -55,6 +56,7 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_tab_fill"
                     android:backgroundTint="@color/btn_fill_night"
+                    android:foreground="?attr/selectableItemBackground"
                     android:gravity="center"
                     android:padding="10dp"
                     android:text="@string/flow_tab_flows"
@@ -68,6 +70,7 @@
                 android:layout_height="38dp"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_back_chip"
+                android:foreground="?attr/selectableItemBackground"
                 android:contentDescription="@string/auto_menu"
                 android:padding="8dp"
                 android:src="@drawable/ic_more_vert"
@@ -94,6 +97,7 @@
                 android:id="@+id/statusLineRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:foreground="?attr/selectableItemBackground"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -217,32 +221,16 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <FrameLayout
+        <!-- v2.20: FocusLock connection card — fixed above the list
+             now, not scrolling with it: the list is a RecyclerView
+             and headers stay outside it. Same ids and wiring in
+             AutomationActivity. One-time token save + install/token
+             status + open-FocusLock. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/flCard"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginTop="14dp"
-            android:layout_weight="1">
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <!-- v2.20: FocusLock connection card. It sits at
-                     the top of the SCROLL content, not in the fixed
-                     header: v2.17.4 deliberately compacted that
-                     header to one card, and this card is contextual
-                     to the rules below it. One-time token save +
-                     install/token status + open-FocusLock. -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/flCard"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp">
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -311,14 +299,19 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
-                    android:id="@+id/autoContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-            </LinearLayout>
-        </ScrollView>
-        </FrameLayout>
+        <!-- Premium feel (v1.2.1): the rule/flow cards are a
+             RecyclerView now — only visible rows are bound and
+             scrolling recycles views instead of rebuilding every
+             card. Headers (status card, FocusLock card) stay
+             outside it. -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/autoList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1"
+            android:fadeScrollbars="true"
+            android:scrollbars="vertical" />
     </LinearLayout>
 
     <!-- v1.2.0: Essentials pill bottom bar (Home / DIY / Settings

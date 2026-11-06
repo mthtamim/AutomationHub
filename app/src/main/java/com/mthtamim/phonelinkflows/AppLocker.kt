@@ -192,14 +192,60 @@ object AppLocker {
 
     data class AppEntry(val pkg: String, val label: String, val system: Boolean)
 
-    fun appLabel(ctx: Context, pkg: String): String = try {
-        val pm = ctx.packageManager
-        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    } catch (_: Exception) { pkg }
+    // Labels + icons, cached in memory: AppLockerActivity's locked
+    // list called getApplicationLabel AND getApplicationIcon (a
+    // Binder call + icon decode) for every row on the main thread,
+    // twice for the label (sort + display). Labels/icons of an
+    // installed app never change while the process lives
+    // (install/update clears the entry via FlowPackageReceiver).
+    // Capped + access-ordered so the caches cannot grow unbounded.
+    private val labelCache = LinkedHashMap<String, String>(64, 0.75f, true)
+    private val iconCache = LinkedHashMap<String, Drawable>(32, 0.75f, true)
 
-    fun appIcon(ctx: Context, pkg: String): Drawable? = try {
-        ctx.packageManager.getApplicationIcon(pkg)
-    } catch (_: Exception) { null }
+    fun appLabel(ctx: Context, pkg: String): String {
+        synchronized(labelCache) { labelCache[pkg]?.let { return it } }
+        val label = try {
+            val pm = ctx.packageManager
+            pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+        } catch (_: Exception) { pkg }
+        synchronized(labelCache) {
+            if (labelCache.size >= 200) {
+                val it = labelCache.keys.iterator()
+                if (it.hasNext()) { it.next(); it.remove() }
+            }
+            labelCache[pkg] = label
+        }
+        return label
+    }
+
+    fun appIcon(ctx: Context, pkg: String): Drawable? {
+        synchronized(iconCache) { iconCache[pkg]?.let { return it } }
+        val icon = try {
+            ctx.packageManager.getApplicationIcon(pkg)
+        } catch (_: Exception) { null }
+        if (icon != null) {
+            synchronized(iconCache) {
+                if (iconCache.size >= 64) {
+                    val it = iconCache.keys.iterator()
+                    if (it.hasNext()) { it.next(); it.remove() }
+                }
+                iconCache[pkg] = icon
+            }
+        }
+        return icon
+    }
+
+    /** Drop one cached label/icon (package installed/updated/
+     *  removed) or the whole cache (null). Called from
+     *  FlowPackageReceiver. */
+    fun clearAppCache(pkg: String? = null) {
+        synchronized(labelCache) {
+            if (pkg == null) labelCache.clear() else labelCache.remove(pkg)
+        }
+        synchronized(iconCache) {
+            if (pkg == null) iconCache.clear() else iconCache.remove(pkg)
+        }
+    }
 
     fun isInstalled(ctx: Context, pkg: String): Boolean = try {
         @Suppress("DEPRECATION")

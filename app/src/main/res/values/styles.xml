@@ -11,6 +11,17 @@
         <item name="cardBackgroundColor">?attr/colorSurface</item>
     </style>
 
+    <!-- Premium feel (v1.2.1): one short slide/fade pair for every
+         activity transition, via android:windowAnimationStyle on
+         Theme.PhoneLink. No per-screen calls, no libraries — 200ms
+         slide, 150ms fade, so a slow device never waits on it. -->
+    <style name="PL.ActivityAnim" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/anim_slide_in_right</item>
+        <item name="android:activityOpenExitAnimation">@anim/anim_fade_out</item>
+        <item name="android:activityCloseEnterAnimation">@anim/anim_fade_in</item>
+        <item name="android:activityCloseExitAnimation">@anim/anim_slide_out_right</item>
+    </style>
+
     <!-- ===== v2.17.3 control system: compact sizes everywhere.
          Action buttons are 48dp-class, radius 14-16dp, text
          13-14sp, single-line or autosized — never a giant slab. -->

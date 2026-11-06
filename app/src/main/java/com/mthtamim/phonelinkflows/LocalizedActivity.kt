@@ -72,21 +72,34 @@ open class LocalizedActivity : AppCompatActivity() {
      *  single ThemeColors resolver (never a fixed R.color read, so
      *  glass themes are followed). Under Emerald Dark each resolves
      *  to its old value: accent #10B981, onSurface #EAF4EE (night),
-     *  onSurfaceVariant #8FA79B (night), outline #2A3336 (night). */
-    protected fun themeAccentColor(): Int = ThemeColors.primary(this)
+     *  onSurfaceVariant #8FA79B (night), outline #2A3336 (night).
+     *  Smoothness (2026-11-06): each resolver is a theme-attribute
+     *  lookup, and the rule/flow lists called them once per pill
+     *  and per card — hundreds of lookups per render. The theme
+     *  cannot change without the activity being recreated, so the
+     *  values are resolved once per activity instance. */
+    private val cachedAccent by lazy { ThemeColors.primary(this) }
+    private val cachedOnSurface by lazy { ThemeColors.onSurface(this) }
+    private val cachedOnBackground by lazy { ThemeColors.onBackground(this) }
+    private val cachedOnSurfaceVariant by lazy { ThemeColors.onSurfaceVariant(this) }
+    private val cachedOnPrimaryContainer by lazy { ThemeColors.onPrimaryContainer(this) }
+    private val cachedOutline by lazy { ThemeColors.outline(this) }
+    private val cachedSurfaceVariant by lazy { ThemeColors.surfaceVariant(this) }
 
-    protected fun themeOnSurface(): Int = ThemeColors.onSurface(this)
+    protected fun themeAccentColor(): Int = cachedAccent
 
-    protected fun themeOnBackground(): Int = ThemeColors.onBackground(this)
+    protected fun themeOnSurface(): Int = cachedOnSurface
 
-    protected fun themeOnSurfaceVariant(): Int = ThemeColors.onSurfaceVariant(this)
+    protected fun themeOnBackground(): Int = cachedOnBackground
+
+    protected fun themeOnSurfaceVariant(): Int = cachedOnSurfaceVariant
 
     /** v1.2.0: text/icon colour on the sage trigger box. */
-    protected fun themeOnPrimaryContainer(): Int = ThemeColors.onPrimaryContainer(this)
+    protected fun themeOnPrimaryContainer(): Int = cachedOnPrimaryContainer
 
-    protected fun themeOutline(): Int = ThemeColors.outline(this)
+    protected fun themeOutline(): Int = cachedOutline
 
-    protected fun themeSurfaceVariant(): Int = ThemeColors.surfaceVariant(this)
+    protected fun themeSurfaceVariant(): Int = cachedSurfaceVariant
 
     /** v2.25.1: bottom-nav tint for glass themes (checked = accent,
      *  unchecked = onSurfaceVariant). Emerald Dark callers must NOT

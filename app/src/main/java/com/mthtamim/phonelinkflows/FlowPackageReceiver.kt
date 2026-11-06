@@ -15,6 +15,11 @@ class FlowPackageReceiver : BroadcastReceiver() {
                 Intent.ACTION_PACKAGE_REPLACED -> "app_updated"
                 else -> return
             }
+            // A changed package may have a new label/icon: drop its
+            // cached entries (Automation + AppLocker) so the lists
+            // never show a stale name or icon.
+            Automation.clearAppLabelCache(pkg)
+            AppLocker.clearAppCache(pkg)
             val data = JSONObject()
             data.put("pkg", pkg)
             FlowEngine.onEvent(ctx, event, data)

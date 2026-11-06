@@ -128,6 +128,7 @@ object FlowStore {
         }
         try {
             File(flowsDir(ctx), id + ".json").writeText(flow.toString())
+            invalidateFlowsCache()
         } catch (_: Exception) {
         }
     }
@@ -135,21 +136,42 @@ object FlowStore {
     fun deleteFlow(ctx: Context, id: String) {
         try {
             File(flowsDir(ctx), id + ".json").delete()
+            invalidateFlowsCache()
         } catch (_: Exception) {
         }
+    }
+
+    // In-memory flows cache: flows() used to read + parse EVERY flow
+    // file from disk on the main thread on every MainActivity refresh
+    // and every Flows-tab render. The only writers of the flows dir
+    // are saveFlow/deleteFlow (exports go to exports/, engine scratch
+    // to flowfiles/), so invalidating here can never go stale.
+    // flowsVersion() is the change signal the Flows tab fingerprints.
+    @Volatile private var flowsCache: List<JSONObject>? = null
+    @Volatile private var flowsVer = 0L
+    private val flowsLock = Any()
+
+    fun flowsVersion(): Long = flowsVer
+
+    fun invalidateFlowsCache() {
+        synchronized(flowsLock) { flowsCache = null; flowsVer++ }
     }
 
     /** v1.4.1: all saved flows as parsed JSON (background dispatch
      *  iterates this; a broken file is skipped, never fatal). */
     fun flows(ctx: Context): List<JSONObject> {
-        val out = mutableListOf<JSONObject>()
-        for (f in flowFiles(ctx)) {
-            try {
-                out.add(JSONObject(f.readText()))
-            } catch (_: Exception) {
+        synchronized(flowsLock) {
+            flowsCache?.let { return it.toList() }
+            val out = mutableListOf<JSONObject>()
+            for (f in flowFiles(ctx)) {
+                try {
+                    out.add(JSONObject(f.readText()))
+                } catch (_: Exception) {
+                }
             }
+            flowsCache = out
+            return out.toList()
         }
-        return out
     }
 
     /** v1.4.1: per-flow ON/OFF, mirroring setEnabled for rules.
