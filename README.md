@@ -1484,6 +1484,15 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.1 — crash catcher (diagnostic for the launch crash)
+
+Why: v1.4.0 (run #37) still crashes on launch on Tamim's phone — the
+nav-bar cast fix was not the (only) cause, and the crash leaves no
+visible stack trace. This version adds `CrashHandler.kt`: a default
+uncaught-exception handler installed first in `LocalizedActivity.onCreate`
+that writes the full stack trace to `Downloads/AutomationHub-crash.txt`
+before the process dies. No UI or behaviour change otherwise.
+
 ## v1.4.0 — preview deltas: palettes, nav bar + FAB, SearchBar, Templates + Log screens, Snackbars (not pushed yet)
 
 Why: Tamim approved the remaining preview-scope items
