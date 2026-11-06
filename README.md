@@ -1266,3 +1266,113 @@ only new visible behaviour is motion: tab/page switches slide
 animation (Rules <-> Flows), Home <-> Settings animation,
 editor open — morph or slide fallback — and back, every other
 activity open slides up, cold-start feel, version 1.2.3.
+
+## v1.2.4 — tab mix-up + redial timing (not pushed yet)
+
+Why: two phone-reported bugs on 1.2.2, confirmed again on
+1.2.3 (screenshots 22:49, video 22:56).
+
+Bug 1 — tab mix-up: the bottom-bar pill and the shown page
+disagreed in BOTH directions (Settings pill + Home/Dashboard
+page, and Home pill + Settings page), and only sometimes — an
+intermittent race, not a permanently wrong mapping.
+
+Bug 1 mechanism, proven from the code: handleTabExtra painted
+the pill ONLY (selectNavTab) and never switched the page, so
+the DIY -> Main round-trip (AutomationActivity.goMain + finish)
+desynced in both directions depending on which page was showing;
+onCreate did the same (selectNavTab(startTab) without showPage);
+onResume repainted the pill from the stale navSelectedId instead
+of healing it; openSettings/closeSettings and the back-press path
+also painted the pill only; setupNavBar re-painted the pill
+after every click.
+
+Bug 1 fix: showPage is now THE tab switcher and the single
+source of truth — it paints the pill FIRST, then switches the
+page. handleTabExtra, onCreate, openSettings/closeSettings,
+the back-press path and the nav-bar clicks all go through
+showPage; onResume heals the pill from the SHOWN page instead
+of repainting from navSelectedId. An idempotency guard at the
+top of showPage (already on that page -> re-assert the pill,
+return, never replay the transition) makes a second tap
+mid-transition safe. The 1.2.3 slideFadeIn motion is untouched.
+
+Bug 2 — redial: the 1st call dials, later ones never dial
+(video on 1.2.3: number 01761348083, SIM 1, gap 5 s, max 4,
+ring 5 s — the first call dialled and ended ~15 s in, then NO
+2nd call in the remaining ~15 s of the 30 s video, status stuck
+at attempt 1). Mechanism: the loop was driven by FlowService's
+60 s Handler tick (not Doze-proof, dies with the process), and
+three state transitions (calling -> ended -> wait -> calling)
+each cost a tick, plus a fixed 25 s log settle — so the real
+wait was minutes, not the 5 s gap. placeCall also swallowed all
+failures silently while the state machine advanced.
+
+Bug 2 fix — CallShield's working pattern, ported: the next
+redial is armed as an EXACT AlarmManager alarm
+(setExactAndAllowWhileIdle, RedialReceiver) instead of waiting
+for the tick; the call end is caught promptly — FlowCallReceiver's
+IDLE branch now polls Redial (the Redial object's own poll, not
+a Lab hook); and one poll can advance several steps (calling ->
+ended -> wait), so the chain no longer costs a tick per
+transition. The 25 s settle is no longer fixed: the log row is
+checked 5 s after the call end (CallShield's log-check delay —
+the row is usually written at call end, but not guaranteed),
+and the full 25 s settle applies only when the row is not there
+yet. A 35 s watchdog (settle + 10 s) still bounds a stalled
+calling/ended phase when the call never starts (no IDLE
+transition then). A call that never started does not burn an
+attempt: the retry re-uses the same attempt number, retries
+after 30 s, and after 5 consecutive failures the session stops
+with a clear message. The answered check now reads only THIS
+call's log row (date >= lastCallAt) — an older row from a
+previous attempt no longer counts as "answered".
+
+Exact-alarm grant (CallShield's rule): SCHEDULE_EXACT_ALARM was
+already declared in the manifest (for the time rules), so this
+pass adds NO new permission. The grant is checked before
+scheduling (canScheduleExactAlarms, API 31+); when it is missing
+there is NO silent inexact fallback — the session still starts
+on the 60 s tick, but the log says so once per session, the
+Dashboard Start toast says so, and the status line carries
+"exact alarm off" while the session runs. The 60 s tick stays
+as the slow fallback driver.
+
+Max-attempts check (video said max 4 but status "1 / 8"):
+verified, NOT a bug. The Dashboard Start handler reads
+etDashRedialMax and passes it straight into Redial.start,
+which stores it and the status line reads it back — bindings
+are correct and no code path turns 4 into 8 (an empty field
+falls back to 20, never 8). The "8" is a misread of the Bengali
+digit ৪. No change made here.
+
+Honest minimum wait: with the grant on, the 2nd call comes
+~gap after the call ends when the log row is already there
+(gap 5 s -> ~5 s), and ~gap + 5 s when the row is late. The
+25 s settle survives only as the fallback bound for a missing
+row, and the place-failure retry is 30 s. No shorter wait is
+safe: reading the log before ~5 s can mistake "row not written
+yet" for "not answered" and dial once more after an answered
+call.
+
+Not ported from CallShield: its dedicated RedialService (a
+foreground service owning the call loop). AutomationHub's Redial
+is a shared object driven by FlowService's tick + the exact
+alarm + the phone-state receiver, and a new foreground service
+would be a bigger change with its own notification and
+lifecycle; the alarm + IDLE-hook design delivers the same
+timing (gap + 5 s) without it. If the exact-alarm grant is off,
+the IDLE hook still fires promptly but the "wait" -> place step
+waits for the next tick (up to 60 s) — that is the only
+slow path left, and it is surfaced, not silent.
+
+Version 1.2.4 (vc7). No new dependencies, no new permissions
+(SCHEDULE_EXACT_ALARM already declared), no minify/R8, no MQTT
+UI, no forwarding/relay touched, no behaviour change beyond the
+two fixes. Phone test pending: tab pill always matches the page
+after Home/DIY/Settings taps + back press + reopen (both
+directions, rapid double taps); redial 2nd/3rd attempts dial on
+time (gap 5 s -> ~5 s after the call ends) in the background
+with the app closed, version 1.2.4; with the exact-alarm grant
+off, the status line shows "exact alarm off" and redial runs
+slow on the tick.

@@ -52,12 +52,17 @@ class FlowCallReceiver : BroadcastReceiver() {
                             wasRinging = false
                             wasOffhook = false
                             FlowEngine.onEvent(ctx, "call_ended", data)
-                            // v1.5.0: redial sessions decide from
-                            // the call log after every call end.
-                            // PhoneLink v2.24.0: NO LabRedial hook here.
-                            // Flow redial_control sessions are PhoneLink
-                            // Redial sessions, driven by PhoneLink's own
-                            // engine and receivers — never from Flow.
+                            // v1.2.4: a redial session decides from
+                            // the call log after every call end — poll
+                            // promptly here (not at the next 60 s
+                            // tick) so the gap is honoured. This is
+                            // the Redial object's own poll, not a Lab
+                            // hook: Flow redial_control sessions are
+                            // PhoneLink Redial sessions, driven by
+                            // PhoneLink's own engine and receivers.
+                            try {
+                                Redial.poll(ctx.applicationContext)
+                            } catch (_: Exception) { }
                         }
                         else -> {
                         }

@@ -892,6 +892,9 @@
     <string name="redial_log_max">max attempts reached, not answered</string>
     <string name="redial_log_stopped">stopped</string>
     <string name="redial_log_perm">permission lost, stopped</string>
+    <string name="redial_log_placefail">stopped — calls could not be started</string>
+    <string name="redial_log_place_failed">call never started, retrying in 30s (fail %1$d of %2$d)</string>
+    <string name="redial_log_no_exact_alarm">exact-alarm grant is off — redial timing will be slow; grant Alarms &amp; reminders in Settings</string>
     <string name="dash_redial_title">Redial until answered</string>
     <string name="dash_redial_number_hint">Number</string>
     <string name="dash_redial_gap_hint">Gap (sec)</string>
@@ -902,6 +905,8 @@
     <string name="dash_redial_no_number">Enter a number</string>
     <string name="dash_redial_no_perm">Call permission or call log missing — check Permissions</string>
     <string name="dash_redial_started">Redial started: %1$s</string>
+    <string name="dash_redial_no_exact_alarm">Redial started, but the exact-alarm grant is off — it will be slow. Grant Alarms &amp; reminders in Settings.</string>
+    <string name="dash_redial_no_exact_alarm_short">exact alarm off</string>
     <string name="dash_redial_stopped">Redial stopped</string>
     <string name="dash_redial_active">Running — attempt %1$d of %2$d</string>
     <string name="dash_redial_idle">No redial running</string>

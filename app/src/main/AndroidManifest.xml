@@ -177,6 +177,11 @@
             android:name=".TimeRuleReceiver"
             android:exported="false" />
 
+        <!-- v1.2.4: AlarmManager entry point for redial -->
+        <receiver
+            android:name=".RedialReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".NotifyButtonReceiver"
             android:exported="false" />

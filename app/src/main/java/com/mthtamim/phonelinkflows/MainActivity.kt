@@ -100,8 +100,10 @@ class MainActivity : LocalizedActivity() {
     private lateinit var tvA11yState: TextView
     private lateinit var tvGeneralDiag: TextView
     // v1.2.0: the pill bottom bar (nav_pill_bar) replaces the old
-    // BottomNavigationView. navSelectedId is the single source of
-    // truth for the selected tab; selectNavTab() paints the bar.
+    // BottomNavigationView. v1.2.4: the SHOWN PAGE is the single
+    // source of truth — showPage() is the only tab switcher and
+    // paints the pill with the page, in the same step; navSelectedId
+    // only mirrors it. Never paint the pill from anywhere else.
     private var navSelectedId: Int = R.id.navHome
 
 
@@ -296,7 +298,7 @@ class MainActivity : LocalizedActivity() {
         val startTab = savedInstanceState?.getInt("tab", R.id.navHome)
             ?: R.id.navHome
         if (startTab in validTabs && startTab != R.id.navHome) {
-            selectNavTab(startTab)
+            showPage(startTab)
         } else {
             showPage(R.id.navHome)
         }
@@ -581,7 +583,15 @@ class MainActivity : LocalizedActivity() {
             when (Redial.start(this, number, dashRedialSim, gap, max,
                 ring, dashRedialOnanswer, dashRedialSpeaker)) {
                 Redial.OK -> {
-                    toast(getString(R.string.dash_redial_started, number))
+                    // v1.2.4: when the exact-alarm grant is
+                    // missing the session still starts, but on
+                    // the 60 s tick — slow. Say so at once.
+                    if (Redial.exactAlarmAllowed(this))
+                        toast(getString(R.string.dash_redial_started,
+                            number))
+                    else
+                        toast(getString(
+                            R.string.dash_redial_no_exact_alarm))
                     refreshRedialCard()
                 }
                 Redial.ERR_NUMBER ->
@@ -659,9 +669,12 @@ class MainActivity : LocalizedActivity() {
 
     override fun onResume() {
         super.onResume()
-        // v1.2.0: re-paint the pill bar selection (the old
-        // applyGlassNavTint call is gone with the BottomNavigationView).
-        selectNavTab(navSelectedId)
+        // v1.2.4: heal the pill from the SHOWN page, not from the
+        // remembered tab — if anything ever desyncs them (a switch
+        // interrupted mid-flight, a recreate), resume re-syncs
+        // them instead of re-painting a stale selection.
+        selectNavTab(if (pageSettings.visibility == View.VISIBLE)
+            R.id.navSettings else R.id.navHome)
         refreshStatus()
         Automation.checkClipboard(this)
         // v2.4 NFC tag trigger (foreground dispatch).
@@ -735,13 +748,15 @@ class MainActivity : LocalizedActivity() {
         findViewById<View>(R.id.toolbar).visibility = View.VISIBLE
     }
 
-    /** v2.17: Settings is a bottom-nav page now, not an overlay. */
+    /** v2.17: Settings is a bottom-nav page now, not an overlay.
+     *  v1.2.4: these go through showPage() like every other
+     *  switch — painting the pill alone desyncs it from the page. */
     private fun openSettings() {
-        selectNavTab(R.id.navSettings)
+        showPage(R.id.navSettings)
     }
 
     private fun closeSettings() {
-        if (settingsOpen) selectNavTab(R.id.navHome)
+        if (settingsOpen) showPage(R.id.navHome)
     }
 
 
@@ -772,7 +787,7 @@ class MainActivity : LocalizedActivity() {
                     if (subScreenOpen()) {
                         closeSubScreen()
                     } else if (navSelectedId != R.id.navHome) {
-                        selectNavTab(R.id.navHome)
+                        showPage(R.id.navHome)
                     } else {
                         isEnabled = false
                         onBackPressedDispatcher.onBackPressed()
@@ -846,25 +861,24 @@ class MainActivity : LocalizedActivity() {
      *  bar's + button opens the Automation activity too. */
     private fun setupNavBar() {
         val bar = findViewById<View>(R.id.bottomNav)
+        // v1.2.4: every tab tap goes through showPage() alone —
+        // it paints the pill with the page and no-ops when already
+        // on that tab, so a second tap mid-transition replays
+        // nothing. No separate selectNavTab() call here: painting
+        // the pill without switching the page is exactly how the
+        // pill and the page desynced.
         bar.findViewById<View>(R.id.navTabHome).setOnClickListener {
-            if (navSelectedId != R.id.navHome) {
-                selectNavTab(R.id.navHome)
-                showPage(R.id.navHome)
-            }
+            showPage(R.id.navHome)
         }
         bar.findViewById<View>(R.id.navTabAuto).setOnClickListener {
             startActivity(Intent(this, AutomationActivity::class.java))
         }
         bar.findViewById<View>(R.id.navTabSettings).setOnClickListener {
-            if (navSelectedId != R.id.navSettings) {
-                selectNavTab(R.id.navSettings)
-                showPage(R.id.navSettings)
-            }
+            showPage(R.id.navSettings)
         }
         bar.findViewById<View>(R.id.navAdd).setOnClickListener {
             startActivity(Intent(this, AutomationActivity::class.java))
         }
-        selectNavTab(navSelectedId)
     }
 
     /** v1.2.0: paint the pill bar — selected tab gets the dark
@@ -895,7 +909,20 @@ class MainActivity : LocalizedActivity() {
         }
     }
 
+    // v1.2.4: THE tab switcher — the only function that changes
+    // the page, and it paints the pill in the same step, so the
+    // two can never disagree. A repeat tap on the current tab
+    // (including a second tap mid-transition) is a no-op: it only
+    // re-asserts the pill, never replays the transition.
     private fun showPage(itemId: Int) {
+        if (pageHome.isLaidOut &&
+            settingsOpen == (itemId == R.id.navSettings)) {
+            selectNavTab(itemId)
+            return
+        }
+        // Paint first, before the transition captures the scene —
+        // the bar is already in its end state when the change runs.
+        selectNavTab(itemId)
         // v1.2.2: Home <-> Settings is a MaterialSharedAxis (X,
         // 300 ms, emphasized easing) — the page slides/fades along
         // the axis in one motion. Skipped on the very first call
@@ -912,10 +939,9 @@ class MainActivity : LocalizedActivity() {
                 itemId == R.id.navSettings, change)
             // v1.2.3: the incoming page slides+fades in directly —
             // the scene transition alone did not show on 1.2.2, so
-            // the visible motion must not depend on it. The
-            // isLaidOut guard (first call, before the first layout)
-            // and the setupNavBar same-tab guard mean this only
-            // runs on a real user-initiated switch.
+            // the visible motion must not depend on it. v1.2.4:
+            // the same-tab guard at the top of showPage() means
+            // this only runs on a real user-initiated switch.
             PLMotion.slideFadeIn(
                 if (itemId == R.id.navSettings) pageSettings else pageHome,
                 itemId == R.id.navSettings)
@@ -926,10 +952,14 @@ class MainActivity : LocalizedActivity() {
 
 
     /** AutomationHub: only home/settings tabs exist now. */
+    // v1.2.4: the tab extra switches the PAGE, not just the pill —
+    // painting the pill without switching the page was the proven
+    // desync (DIY Home/Settings round-trip: pill said Home while
+    // the page showed Settings, and vice versa).
     private fun handleTabExtra(intent: Intent?) {
         when (intent?.getStringExtra("tab")) {
-            "home" -> selectNavTab(R.id.navHome)
-            "settings" -> selectNavTab(R.id.navSettings)
+            "home" -> showPage(R.id.navHome)
+            "settings" -> showPage(R.id.navSettings)
         }
     }
 

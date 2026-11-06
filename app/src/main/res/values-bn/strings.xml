@@ -877,6 +877,9 @@
     <string name="redial_log_max">সর্বোচ্চ চেষ্টা শেষ — উত্তর মেলেনি</string>
     <string name="redial_log_stopped">থামানো হয়েছে</string>
     <string name="redial_log_perm">পারমিশন চলে গেছে — থেমে গেছে</string>
+    <string name="redial_log_placefail">থেমে গেছে — কল শুরু করা যায়নি</string>
+    <string name="redial_log_place_failed">কল শুরুই হয়নি, ৩০ সেকেন্ডে আবার চেষ্টা (ব্যর্থ %1$d/%2$d)</string>
+    <string name="redial_log_no_exact_alarm">exact alarm অনুমতি বন্ধ — redial ধীরে চলবে; Settings-এ Alarms &amp; reminders চালু করো</string>
     <string name="dash_redial_title">উত্তর না দেওয়া পর্যন্ত কল</string>
     <string name="dash_redial_number_hint">নম্বর</string>
     <string name="dash_redial_gap_hint">বিরতি (সেকেন্ড)</string>
@@ -887,6 +890,8 @@
     <string name="dash_redial_no_number">নম্বর দাও</string>
     <string name="dash_redial_no_perm">কল পারমিশন বা কল লগ নেই — Permissions দেখো</string>
     <string name="dash_redial_started">Redial চালু: %1$s</string>
+    <string name="dash_redial_no_exact_alarm">Redial চালু হয়েছে, কিন্তু exact alarm অনুমতি বন্ধ — ধীরে চলবে। Settings-এ Alarms &amp; reminders চালু করো।</string>
+    <string name="dash_redial_no_exact_alarm_short">exact alarm বন্ধ</string>
     <string name="dash_redial_stopped">Redial থামানো হয়েছে</string>
     <string name="dash_redial_active">চলছে — চেষ্টা %1$d / %2$d</string>
     <string name="dash_redial_idle">কোনো redial চলছে না</string>
