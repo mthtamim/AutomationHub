@@ -416,14 +416,20 @@ class MainActivity : LocalizedActivity() {
         // route, which the toast names.
         findViewById<Button>(R.id.btnAddQsTile).setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // requestAddTile takes 5 args: component, icon, label,
+                // executor, callback. (The first version missed the
+                // label, so the call did not match any overload and
+                // CI failed with "Unresolved reference: requestAddTile".)
                 TileService.requestAddTile(
                     ComponentName(this, AutomationTileService::class.java),
                     null,
-                    mainExecutor
-                ) { result ->
-                    toast(getString(if (result == TileService.TILE_ADD_REQUEST_OK)
-                        R.string.tile_requested else R.string.tile_add_manually))
-                }
+                    "AutomationHub",
+                    mainExecutor,
+                    java.util.function.Consumer<Int> { result ->
+                        toast(getString(if (result == TileService.TILE_ADD_REQUEST_OK)
+                            R.string.tile_requested else R.string.tile_add_manually))
+                    }
+                )
             } else {
                 toast(getString(R.string.tile_add_manually))
             }
