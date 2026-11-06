@@ -746,7 +746,7 @@ class MainActivity : LocalizedActivity() {
         // ----- security card -----
         bindToggle(R.id.swGuard, "guard_on", Config.guardOn(this))
         bindToggle(R.id.swIntruder, "intruder_on", Config.intruderOn(this))
-        findViewById<Button>(R.id.btnSetPin).setOnClickListener { showSetPinDialog() }
+        findViewById<Button>(R.id.btnSetPin).setOnClickListener { showSetPinDialog { } }
         // v2.17.4: the Device Admin grant button moved to
         // Permissions & Access — the Security panel keeps the
         // tvAdminInfo state line and the btnSecPermsLink link.
@@ -1162,7 +1162,7 @@ class MainActivity : LocalizedActivity() {
     /** AutomationHub: rules/flows/automation-log counts (no relay stats). */
     private fun buildStatsText(): String {
         val rules = Automation.rules(this).size
-        val flows = FlowStore.all(this).size
+        val flows = FlowStore.flows(this).size
         val logs = Automation.recentLog(this).size
         return getString(R.string.stats_rules_flows, rules, flows) +
             " • " + getString(R.string.stats_log_lines, logs)
@@ -1189,7 +1189,7 @@ class MainActivity : LocalizedActivity() {
         // automation state (rules/flows counts), the hub subtitles
         // show local device/automation status.
         val rules = Automation.rules(this)
-        val flows = FlowStore.all(this)
+        val flows = FlowStore.flows(this)
         val autoOn = Config.automationOn(this)
         tvConnPill.text = if (autoOn) {
             getString(R.string.conn_automation_on, rules.size, flows.size)
@@ -1394,7 +1394,7 @@ class MainActivity : LocalizedActivity() {
         } catch (_: Exception) { "?" }
         tvHubDiag.text = "AutomationHub v$ver • " +
             "${Automation.rules(this).size} rules • " +
-            "${FlowStore.all(this).size} flows"
+            "${FlowStore.flows(this).size} flows"
         // v2.17.4: the same version line also lives at the bottom
         // of Appearance & General (inventory category 7).
         tvGeneralDiag.text = tvHubDiag.text

@@ -2,6 +2,7 @@ package com.mthtamim.phonelinkflows
 
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
+import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
 import android.hardware.Sensor
@@ -246,6 +247,20 @@ object Automation {
 
 
     // ---------------- v2.16: battery-live, flips, waits, calc ----------------
+
+    /**
+     * AutomationHub: local replacement for the removed BtShare.adapter().
+     * Only the plain BluetoothAdapter is needed by the kept code
+     * (bt_connected condition, bt_toggle action, bt_near/bt_far
+     * discovery); BtShare's RFCOMM send/receive server was a
+     * phone-to-phone forwarding feature and stays removed.
+     */
+    @Suppress("DEPRECATION")
+    private fun btAdapter(): BluetoothAdapter? = try {
+        BluetoothAdapter.getDefaultAdapter()
+    } catch (_: Exception) {
+        null
+    }
 
     /** Flip memory for toggle actions. svc/settings writes apply
      *  ASYNC, so a quick second run re-read the OLD live state and
@@ -868,7 +883,7 @@ object Automation {
     fun constraintOk(ctx: Context, type: String, param: String): Boolean {
         return try {
             when (type) {
-                "notif_present" -> NotifListener.hasNotification(param.trim())
+                "notif_present" -> FlowNotifListener.hasNotification(param.trim())
                 "gps_state" -> gpsEnabled(ctx) ==
                     (param.trim().lowercase() != "off")
                 "hotspot_state" -> (hotspotState(ctx) ?: false) ==
@@ -998,7 +1013,7 @@ object Automation {
                     on != wantOff
                 }
                 "bt_connected" -> {
-                    val ad = BtShare.adapter()
+                    val ad = btAdapter()
                     val on = try {
                         ad != null && (ad.getProfileConnectionState(
                             android.bluetooth.BluetoothProfile.A2DP) ==
@@ -1178,7 +1193,7 @@ object Automation {
                 "foreground_app" -> ctx.getString(R.string.trace_fg_app,
                     foregroundPkg(ctx), p)
                 "notif_present" -> ctx.getString(R.string.trace_state,
-                    if (NotifListener.hasNotification(p))
+                    if (FlowNotifListener.hasNotification(p))
                         ctx.getString(R.string.trace_word_yes)
                     else ctx.getString(R.string.trace_word_no), p)
                 "location_in" -> if (Config.geoIsSet(ctx))
@@ -1873,14 +1888,14 @@ object Automation {
                     // v2.15.0: BluetoothAdapter.enable/disable is dead
                     // on Android 13+, but the shell can still do it.
                     // v2.15.1: a blank param flips the real state.
-                    val cur = try { BtShare.adapter()?.isEnabled == true }
+                    val cur = try { btAdapter()?.isEnabled == true }
                         catch (e: Exception) { false }
                     val on = flipTarget(ctx, "bt", param, cur)
                     if (!shOk("svc bluetooth " + (if (on) "enable" else "disable"))) {
                         try {
                             @Suppress("DEPRECATION")
-                            val ok = if (on) BtShare.adapter()?.enable()
-                                else BtShare.adapter()?.disable()
+                            val ok = if (on) btAdapter()?.enable()
+                                else btAdapter()?.disable()
                             if (ok != true) localNotify(ctx,
                                 "Bluetooth সরাসরি বদলানো যায়নি — নতুন Android-এ সীমাবদ্ধ (Shizuku থাকলে হয়ে যেত)।")
                         } catch (e: Exception) {
@@ -2024,8 +2039,8 @@ object Automation {
                     } catch (_: Exception) { }
                 }.start()
                 "clear_notif" ->
-                    if (param.isBlank() || param == "all") NotifListener.dismissAll()
-                    else NotifListener.cancelPackage(param.trim())
+                    if (param.isBlank() || param == "all") FlowNotifListener.dismissAll()
+                    else FlowNotifListener.cancelPackage(param.trim())
                 "global_key" -> A11yService.globalKey(param)
                 "stopwatch_start" ->
                     prefs(ctx).edit().putLong("sw_${param.trim()}",
@@ -2529,7 +2544,7 @@ object Automation {
                 "notif_reply" -> {
                     val parts = param.split("|", limit = 2)
                     if (parts.size == 2)
-                        NotifListener.replyByPackage(ctx, parts[0].trim(), parts[1].trim())
+                        FlowNotifListener.replyByPackage(ctx, parts[0].trim(), parts[1].trim())
                 }
                 "rich_notify" -> richNotify(ctx, param)
                 "type_text" -> A11yService.typeText(param)
@@ -2936,7 +2951,7 @@ object Automation {
                     it.optString("type") == "bt_far" } }
             if (needsBt) {
                 @Suppress("MissingPermission")
-                try { BtShare.adapter()?.takeIf { !it.isDiscovering }
+                try { btAdapter()?.takeIf { !it.isDiscovering }
                     ?.startDiscovery() } catch (_: Exception) { }
             }
         } catch (_: Exception) { }

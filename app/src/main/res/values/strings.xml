@@ -118,11 +118,11 @@
     <string name="btn_voice">Voice message</string>
     <!-- v2.3 -->
     <string name="perm_line_steps">Step counter (daily summary)</string>
-    <string name="pin_state_set">Command PIN: set (needed for snapshot, lock, remote settings)</string>
-    <string name="pin_state_unset">Command PIN: not set — protected commands will be refused</string>
+    <string name="pin_state_set">App PIN: set</string>
+    <string name="pin_state_unset">App PIN: not set</string>
     <string name="admin_state_on">Device admin: active — lock command works, uninstall needs deactivation first</string>
     <string name="admin_state_off">Device admin: off — the lock command will not work</string>
-    <string name="btn_set_pin">Set / change command PIN</string>
+    <string name="btn_set_pin">Set / change app PIN</string>
     <string name="btn_admin">Device admin</string>
     <string name="btn_seclog">Security log</string>
     <string name="btn_mode">Modes</string>

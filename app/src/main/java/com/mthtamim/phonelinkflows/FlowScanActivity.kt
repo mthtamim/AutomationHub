@@ -1,5 +1,6 @@
 package com.mthtamim.phonelinkflows
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
@@ -121,6 +122,14 @@ class FlowScanActivity : LocalizedActivity() {
         }
         handler.removeCallbacksAndMessages(null)
         FlowScan.complete(callId, value)
+        // AutomationHub: the Automation ⋮ menu launches this activity
+        // via scanLauncher and expects PhoneLink ScanActivity's
+        // "code" result extra (fired as the qr_scanned event).
+        // Flow-thread launches ignore the result (they wait on the
+        // FlowScan latch instead), so setting it is harmless there.
+        if (value != null) {
+            setResult(RESULT_OK, Intent().putExtra("code", value))
+        }
         finish()
     }
 

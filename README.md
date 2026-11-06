@@ -72,8 +72,10 @@ as documentation).
 `app/build.gradle` was rewritten from the audit, not copied:
 
 - **Removed:** ML Kit `translate` (0 references), ML Kit `text-recognition`
-  (0 references), Play Services `location` (0 references — no
-  `LocationServices`/`FusedLocation` anywhere).
+  (0 references). Play Services `location` was removed in the first
+  draft on a wrong audit ("0 references") and **re-added 2026-11-06**
+  — see CI fix below: `FlowTriggers.activityRec` and
+  `FlowSystemReceiver` use `com.google.android.gms.location.*`.
 - **Kept, against the first draft of this task:** `lifecycle-service`
   (SnapService extends `LifecycleService`) and CameraX `camera-video`
   (SnapService `Recorder`/`VideoCapture`). The task text said to remove
@@ -138,7 +140,10 @@ as documentation).
   PhoneLink's data layout is not imported automatically.
 - **MQTT subscribe / redial:** carried over from PhoneLink's Automation
   code as-is; not re-verified on a phone in this rebuild.
-- **No CI run yet.** This tree has never been compiled — see Validation.
+- **CI run #4 (2026-11-06, commit `86e549fa`) FAILED** in 1m 50s at
+  `:app:compileDebugKotlin` — the errors are fixed locally (see CI fix
+  below), but the fix has NOT been pushed yet, so no passing CI run
+  exists for this tree.
 - **No phone test yet.** Everything below is static verification only.
 - **Placeholder-free:** the launcher icon is the real chosen icon (no
   placeholder), but the app has never run, so the first launch is
@@ -154,6 +159,86 @@ as documentation).
 | XML well-formedness | All 127 XML files under `res/` + `AndroidManifest.xml` parse clean. |
 | Unused-import scan (edited files) | Clean after removing `kotlin.random.Random` from Config.kt. |
 | Dead strings | 390 with zero references removed from both locales (dynamic `at_`/`ac_`/`aa_` families excluded — they are resolved via `getIdentifier` in AutomationActivity.kt/FlowCatalog.kt). |
+
+## CI fix (2026-11-06 — run #4 failed, fixed locally, NOT pushed)
+
+Run #4 (run ID 42184108471, commit `86e549fa`) failed at
+`:app:compileDebugKotlin`. The first validation missed these because
+it only grepped for `Relay.`/`LinkService`/etc. — it never checked
+whether kept code still **calls** removed classes, or whether kept
+classes' **APIs** still matched. The corrected method, re-run after
+the fix: (1) diff the class lists of PhoneLink v2.25.2 (144 files)
+vs this tree (100 files) = 53 removed classes, then grep the whole
+tree for every one of them with comments stripped; (2) audit every
+`Type.member` call site against the member actually defined in the
+kept file; (3) grep every `com.google.android.gms.*`, ML Kit and
+CameraX reference and confirm its library is in `app/build.gradle`;
+(4) re-validate all `R.*` refs and manifest classes; (5) run
+`kt_check.py` **per file** (it short-circuits on the first failure
+when given many files, so a single bulk run proves nothing).
+
+Fixes, each verified by the re-run audits:
+
+- **NotifListener (5 sites, Automation.kt:871/1181/2027/2028/2532):**
+  the kept `FlowNotifListener` gained the missing API, mirroring
+  PhoneLink's `NotifListener` exactly — live `instance` set in
+  `onCreate`/cleared in `onDestroy`, plus `hasNotification(pkg)`,
+  `cancelPackage(pkg)`, `dismissAll()` and `replyByPackage(ctx, pkg,
+  text)` built on `activeNotifications` + `cancelNotification` +
+  RemoteInput. The `notif_present` condition, `clear_notif` and
+  `notif_reply` actions now work for real; nothing was stubbed to
+  false. Call sites rewired to `FlowNotifListener.*`.
+- **BtShare (5 sites, Automation.kt:1001/1876/1882/1883/2939):**
+  local `btAdapter()` helper (`BluetoothAdapter.getDefaultAdapter()`,
+  try/catch, `@Suppress("DEPRECATION")`) replaces
+  `BtShare.adapter()` for the `bt_connected` condition, `bt_toggle`
+  action and `bt_near`/`bt_far` discovery. BtShare's RFCOMM
+  send/receive server stays removed (forwarding).
+- **SessionState (Automation.kt:1698/1699, SnapService.kt):** the trim
+  had deleted `snapFront`/`videoSecs` while the kept SnapService
+  still reads them — both fields restored with PhoneLink's defaults
+  (`false` / `0`). The trim comment claiming they were "gone with
+  SnapService" was wrong; SnapService is kept.
+- **ScanActivity (AutomationActivity.kt:561):** the ⋮ menu's QR item
+  now launches the kept `FlowScanActivity`, and `finishScan()` sets
+  the `RESULT_OK` + `"code"` result extra PhoneLink's ScanActivity
+  returned, so `scanLauncher` still fires the `qr_scanned` event.
+  Flow-thread launches ignore the result (they wait on the
+  `FlowScan` latch), so this is harmless there.
+- **play-services-location (FlowSystemReceiver.kt:75/93–95,
+  FlowTriggers.kt:1527/1552):** re-added `21.0.1` to
+  `app/build.gradle` and corrected the audit comment. The
+  `flow_activity` trigger is live kept code
+  (`ActivityRecognition.getClient` + `GoogleApiAvailability` +
+  `ActivityRecognitionResult`/`DetectedActivity`); the first audit
+  only grepped `LocationServices`/`FusedLocation` and missed it.
+- **SystemReceiver (Helpers.kt:253):** `batteryStatusText()` is now
+  a local `BatteryHelper` function (PhoneLink's exact logic:
+  `BatteryManager` % + sticky `ACTION_BATTERY_CHANGED` intent),
+  and the diagnostics text calls it.
+- **MainActivity.kt (749/1165/1192/1397):** `showSetPinDialog()`
+  took no arguments but only the `onDone` overload survived the
+  trim — the Security button now calls `showSetPinDialog { }`
+  (the pattern already used at line 370). The no-arg overload in
+  PhoneLink was the *command* PIN dialog; the command PIN's backing
+  store was removed with the relay, so it was not restored.
+  `FlowStore.all(this)` (×3) does not exist — replaced with the
+  kept `FlowStore.flows(this)`. The button/state strings
+  (`btn_set_pin`, `pin_state_set/unset`) still said "command PIN"
+  while the state line already showed the app-lock PIN, so all four
+  were reworded to "app PIN" in both locales.
+
+Re-run validation after the fix (local only, CI is still the
+compile judge):
+
+| Check | Result |
+|---|---|
+| `kt_check.py` per file, all 100 Kotlin files | **92/100 pass** — same 8 pre-existing naive-counter artifacts as before (Automation.kt braces −2, identical to the PhoneLink original; 7 AutoTap files). All 7 edited files pass individually. |
+| Removed-class audit (53 removed classes, comments stripped) | **0 code hits** — the only remaining match is the string literal `"Relay প্যানেলের Shizuku বোতাম থেকে ঠিক করো।"` in Automation.kt:2778. |
+| Cross-object API audit (`Type.member` vs defined members) | **0 mismatches.** |
+| Library audit (gms / ML Kit / CameraX refs vs `app/build.gradle`) | All resolve; `play-services-location:21.0.1` re-added. |
+| R.* / XML refs + manifest classes | **0 missing, 0 unresolved, 0 malformed XML.** |
+| Leftover error sites | `showSetPinDialog()`, `FlowStore.all(`: 0 remaining. |
 
 ## Push note (2026-11-06 — Tamim tapped "Push")
 
@@ -178,8 +263,9 @@ cannot delete files, so 67 files from the v1 skeleton remain in the repo:
 
 ## What still blocks a release
 
-1. **CI compile:** the first CI run after this push must pass — local
-   checks cannot prove compilation.
+1. **CI re-run:** the CI fix above is local-only; it needs Tamim's
+   push tap, then the next CI run must pass — local checks cannot
+   prove compilation.
 2. **Phone test:** first launch, Automation Rules + Flows, Settings/themes,
    AppLock, MQTT/SMTP panel, backup/restore — all unproven until Tamim
    runs them on his phone.

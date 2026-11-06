@@ -558,7 +558,7 @@ class AutomationActivity : LocalizedActivity() {
             when (item.itemId) {
                 MENU_SG -> StudyGuardUi.showManager(this) { }
                 MENU_BACKUP -> showBackups()
-                MENU_QR -> scanLauncher.launch(Intent(this, ScanActivity::class.java))
+                MENU_QR -> scanLauncher.launch(Intent(this, FlowScanActivity::class.java))
                 MENU_LOG -> showLog()
                 MENU_VARS -> showVars()
                 MENU_EXPORT -> {

@@ -108,11 +108,11 @@
     <string name="btn_voice">ভয়েস মেসেজ</string>
     <!-- v2.3 -->
     <string name="perm_line_steps">পদক্ষেপ গণনা (দৈনিক সারাংশে)</string>
-    <string name="pin_state_set">কমান্ড PIN: সেট আছে (ছবি, লক, রিমোট সেটিংসের জন্য লাগে)</string>
-    <string name="pin_state_unset">কমান্ড PIN: সেট নেই — সুরক্ষিত কমান্ড চলবে না</string>
+    <string name="pin_state_set">অ্যাপ PIN: সেট আছে</string>
+    <string name="pin_state_unset">অ্যাপ PIN: সেট নেই</string>
     <string name="admin_state_on">Device admin: চালু — লক কমান্ড চলে, আনইনস্টলের আগে admin বন্ধ করতে হয়</string>
     <string name="admin_state_off">Device admin: বন্ধ — লক কমান্ড চলবে না</string>
-    <string name="btn_set_pin">কমান্ড PIN সেট / বদলাও</string>
+    <string name="btn_set_pin">অ্যাপ PIN সেট / বদলাও</string>
     <string name="btn_admin">Device admin</string>
     <string name="btn_seclog">নিরাপত্তা লগ</string>
     <string name="btn_mode">মোড</string>

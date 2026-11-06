@@ -26,6 +26,90 @@ class FlowNotifListener : NotificationListenerService() {
         private var appCtx: Context? = null
 
         /**
+         * AutomationHub: live service instance, mirroring PhoneLink's
+         * NotifListener pattern. The Automation engine's notification
+         * conditions/actions (notif_present, clear_notif, notif_reply)
+         * need cancel/reply calls that only a bound listener service
+         * can make; the tracked `active` map alone cannot dismiss.
+         * Null while the listener is off — every helper below then
+         * honestly reports false instead of crashing.
+         */
+        @Volatile
+        private var instance: FlowNotifListener? = null
+
+        /**
+         * PhoneLink v2.16 notif_present: is a notification from [pkg]
+         * (blank = any app) currently on the shade? Same semantics
+         * as the removed NotifListener.hasNotification.
+         */
+        fun hasNotification(pkg: String): Boolean {
+            val svc = instance ?: return false
+            return try {
+                svc.activeNotifications.any {
+                    pkg.isEmpty() || it.packageName == pkg
+                }
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        /** Dismisses every notification posted by one package. */
+        fun cancelPackage(pkg: String): Boolean {
+            val svc = instance ?: return false
+            return try {
+                var n = 0
+                for (sbn in svc.activeNotifications) {
+                    if (sbn.packageName == pkg) {
+                        svc.cancelNotification(sbn.key)
+                        n++
+                    }
+                }
+                n > 0
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        /** Dismisses all of this phone's notifications. */
+        fun dismissAll(): Boolean {
+            val svc = instance ?: return false
+            return try {
+                svc.cancelAllNotifications()
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        /**
+         * Replies to the most recent replyable notification of a
+         * package (newest first, RemoteInput action only). Same
+         * contract as the removed NotifListener.replyByPackage.
+         */
+        fun replyByPackage(ctx: Context, pkg: String, text: String): Boolean {
+            val svc = instance ?: return false
+            return try {
+                val target = svc.activeNotifications
+                    .filter { it.packageName == pkg }
+                    .maxByOrNull { it.postTime } ?: return false
+                val n = target.notification ?: return false
+                for (action in n.actions ?: emptyArray()) {
+                    val inputs = action.remoteInputs ?: continue
+                    if (inputs.isEmpty()) continue
+                    val results = Bundle()
+                    results.putCharSequence(inputs[0].resultKey, text)
+                    val intent = android.content.Intent()
+                    RemoteInput.addResultsToIntent(inputs, intent, results)
+                    action.actionIntent.send(ctx, 0, intent)
+                    return true
+                }
+                false
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        /**
          * v1.4.0: ranking for the newest posted notification of
          * [pkg], used by the app_notif_priority / visibility tick
          * branches. Null when nothing from that package is posted.
@@ -118,6 +202,12 @@ class FlowNotifListener : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         appCtx = applicationContext
+        instance = this
+    }
+
+    override fun onDestroy() {
+        if (instance === this) instance = null
+        super.onDestroy()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {

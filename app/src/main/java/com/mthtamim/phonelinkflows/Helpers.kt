@@ -250,7 +250,7 @@ object PhoneInfo {
             }
             sb.append("\nনেটওয়ার্ক: ").append(net)
         } catch (_: Exception) { }
-        sb.append("\n").append(SystemReceiver.batteryStatusText(ctx))
+        sb.append("\n").append(BatteryHelper.batteryStatusText(ctx))
         return sb.toString()
     }
 }
@@ -314,5 +314,26 @@ object BatteryHelper {
     fun batteryPercent(ctx: Context): Int {
         val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager ?: return -1
         return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    }
+
+    /**
+     * AutomationHub: local reimplementation of the removed
+     * SystemReceiver.batteryStatusText — same text, same sources
+     * (BatteryManager % + sticky ACTION_BATTERY_CHANGED intent).
+     * Used by the diagnostics text in this file.
+     */
+    fun batteryStatusText(ctx: Context): String {
+        val pct = batteryPercent(ctx)
+        val intent = ctx.registerReceiver(null, android.content.IntentFilter(
+            android.content.Intent.ACTION_BATTERY_CHANGED))
+        val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+            status == BatteryManager.BATTERY_STATUS_FULL
+        val full = status == BatteryManager.BATTERY_STATUS_FULL
+        return when {
+            full -> "ব্যাটারি $pct% (ফুল, চার্জে আছে)"
+            charging -> "ব্যাটারি $pct% (চার্জ হচ্ছে)"
+            else -> "ব্যাটারি $pct%"
+        }
     }
 }

@@ -43,10 +43,14 @@ android {
 // REMOVED vs PhoneLink v2.25.2:
 // - com.google.mlkit:translate — zero references in kept code.
 // - com.google.mlkit:text-recognition — zero references in kept code.
-// - com.google.android.gms:play-services-location — zero references
-//   (no LocationServices / FusedLocation anywhere in kept code;
-//   PhoneLink's comment claimed it was for Flow activity
-//   recognition, but no kept file imports it).
+// - com.google.mlkit:translate — zero references in kept code.
+// - com.google.mlkit:text-recognition — zero references in kept code.
+// (2026-11-06 CI fix: play-services-location was removed here on a
+//  wrong audit — FlowTriggers.activityRec uses ActivityRecognition
+//  + GoogleApiAvailability and FlowSystemReceiver extracts
+//  ActivityRecognitionResult/DetectedActivity for the flow_activity
+//  trigger. It is re-added below; the "zero references" claim was
+//  false because the audit only grepped LocationServices/FusedLocation.)
 // KEPT, with evidence:
 // - lifecycle-service: SnapService.kt extends LifecycleService.
 // - camera-video: SnapService.kt recordVideo() uses Recorder /
@@ -81,5 +85,8 @@ dependencies {
     implementation "dev.rikka.shizuku:api:13.1.5"
     implementation "dev.rikka.shizuku:provider:13.1.5"
     implementation "com.google.mlkit:barcode-scanning:17.3.0"
+    // Play Services location for the Flow activity-recognition
+    // trigger (FlowTriggers.activityRec + FlowSystemReceiver).
+    implementation "com.google.android.gms:play-services-location:21.0.1"
     implementation "org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5"
 }
