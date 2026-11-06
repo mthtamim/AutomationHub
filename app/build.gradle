@@ -1,5 +1,10 @@
 plugins {
     id 'com.android.application'
+    // v1.2.6: Baseline Profile plugin (AndroidX) — adds the
+    // :app:generateBaselineProfile task and lets the release build
+    // consume the profile from the :baselineprofile module. No
+    // profile file exists yet, so nothing changes in what ships.
+    id 'androidx.baselineprofile'
     id 'org.jetbrains.kotlin.android'
 }
 
@@ -162,4 +167,8 @@ dependencies {
     // trigger (FlowTriggers.activityRec + FlowSystemReceiver).
     implementation "com.google.android.gms:play-services-location:21.0.1"
     implementation "org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5"
+    // v1.2.6: consume the baseline profile produced by the
+    // :baselineprofile module (none exists yet — the release build
+    // simply ships without a profile until one is generated).
+    baselineProfile project(':baselineprofile')
 }

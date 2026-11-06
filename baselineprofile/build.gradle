@@ -1,13 +1,14 @@
 // Baseline profile generator module (v1.2.6).
 //
-// This is a `com.android.test` module: it builds a test APK that runs
-// a Macrobenchmark cold-start benchmark against :app and collects the
-// generated baseline profile. It is NOT part of the app APK and adds
+// This is a `com.android.test` module: it builds a test APK holding
+// (a) BaselineProfileGenerator — collects the baseline profile with
+// BaselineProfileRule, and (b) StartupBenchmark — measures cold start
+// with that profile applied. It is NOT part of the app APK and adds
 // nothing to it — the existing CI task (`:app:assembleDebug` /
 // `:app:assembleRelease`) is unaffected by this module existing.
 //
 // How a profile gets produced (see BASELINE_PROFILE_CI.md):
-//   ./gradlew :baselineprofile:generateBaselineProfile
+//   ./gradlew :app:generateBaselineProfile
 // on a device the app can install on (arm64 — see the ABI note in
 // BASELINE_PROFILE_CI.md). The generated baseline-prof.txt is then
 // copied to app/src/main/baseline-prof.txt, where the release build
@@ -16,7 +17,7 @@
 // ships today.
 plugins {
     id 'com.android.test'
-    id 'com.android.baselineprofile'
+    id 'androidx.baselineprofile'
     id 'org.jetbrains.kotlin.android'
 }
 

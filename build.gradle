@@ -1,5 +1,11 @@
 plugins {
     id 'com.android.application' version '8.5.2' apply false
-    id 'com.android.baselineprofile' version '8.5.2' apply false
+    // v1.2.6: Baseline Profile Gradle plugin (AndroidX). NOTE: the id
+    // is `androidx.baselineprofile`, NOT `com.android.baselineprofile` —
+    // the latter was never published (run #31 failed resolving it), and
+    // the AndroidX marker lives on Google Maven, so it resolves via the
+    // google() repo in settings.gradle. Version 1.2.4 matches the
+    // benchmark-macro-junit4 1.2.4 the generator module uses.
+    id 'androidx.baselineprofile' version '1.2.4' apply false
     id 'org.jetbrains.kotlin.android' version '1.9.24' apply false
 }

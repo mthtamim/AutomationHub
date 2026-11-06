@@ -1537,10 +1537,16 @@ What changed (MainActivity.kt, activity_main.xml):
   the small sub-screen shell inflate.
 
 Baseline profile (scaffolding only — no profile generated yet):
-- Root `build.gradle` gains the `com.android.baselineprofile`
-  plugin (8.5.2, `apply false`); `settings.gradle` includes
-  `:baselineprofile`; the new module holds `StartupBenchmark`
-  (cold launch of MainActivity to first frame, 5 iterations).
+- Root `build.gradle` gains the `androidx.baselineprofile`
+  plugin (1.2.4, `apply false`); `settings.gradle` includes
+  `:baselineprofile`; the new module holds `BaselineProfileGenerator`
+  (creates the profile) and `StartupBenchmark`
+  (cold launch of MainActivity to first frame, 5 iterations, measures
+  with the profile applied); `:app` applies the plugin too and has a
+  `baselineProfile project(':baselineprofile')` dependency, so
+  `:app:generateBaselineProfile` exists. (Fix 01:24 — the first
+  version used the never-published `com.android.baselineprofile`
+  8.5.2 id and CI run #31 failed resolving it in 32s.)
 - No `app/src/main/baseline-prof.txt` exists yet, so the
   release build consumes NO profile today. Generation needs a
   device the app can install on — the app is arm64-only, so

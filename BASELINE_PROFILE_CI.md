@@ -2,13 +2,21 @@
 
 ## What exists now (scaffolding only — no profile is generated yet)
 
-- Root `build.gradle`: `com.android.baselineprofile` plugin 8.5.2
-  (applied to no module yet — `apply false`, same as the other plugins).
+- Root `build.gradle`: `androidx.baselineprofile` plugin 1.2.4
+  (`apply false` there; applied in `:app` and `:baselineprofile`).
+  NOTE: the id is `androidx.baselineprofile`, NOT
+  `com.android.baselineprofile` — the latter was never published as a
+  plugin (run #31 failed resolving it, 32s); the AndroidX marker
+  lives on Google Maven and resolves via `google()` in
+  `settings.gradle`. Version 1.2.4 matches benchmark-macro-junit4.
 - `settings.gradle`: `include ':baselineprofile'`.
-- `baselineprofile/` module (`com.android.test` + `com.android.baselineprofile`,
-  target `:app`): `StartupBenchmark` measures a cold launch of
-  MainActivity to the first frame, 5 iterations, and the plugin's
-  `generateBaselineProfile` task collects the profile from that run.
+- `baselineprofile/` module (`com.android.test` +
+  `androidx.baselineprofile`, target `:app`):
+  `BaselineProfileGenerator` (BaselineProfileRule.collect, startup)
+  creates the profile; `StartupBenchmark` measures a cold launch of
+  MainActivity to the first frame, 5 iterations, with the profile
+  applied. The `:app:generateBaselineProfile` task runs the
+  generator.
 - **No `app/src/main/baseline-prof.txt` exists yet, so the release
   build consumes NO profile today.** Nothing about what ships changes
   until a real profile is generated, verified, and committed there
@@ -72,18 +80,18 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -camera-back none
           disable-animations: true
           emulator-boot-timeout-seconds: 1800
-          script: ./gradlew :baselineprofile:generateBaselineProfile --stacktrace
+          script: ./gradlew :app:generateBaselineProfile --stacktrace
 
       - name: Find the generated profile
         run: |
-          find baselineprofile/build -name 'baseline-prof.txt' -print
-          test -n "$(find baselineprofile/build -name 'baseline-prof.txt' -print -quit)"
+          find app/src app/build -name 'baseline-prof.txt' -print
+          test -n "$(find app/src app/build -name 'baseline-prof.txt' -print -quit)"
 
       - name: Upload baseline-prof.txt
         uses: actions/upload-artifact@v4
         with:
           name: baseline-prof
-          path: baselineprofile/build/**/baseline-prof.txt
+          path: app/src/**/baseline-prof.txt
           if-no-files-found: error
           retention-days: 90
 ```
@@ -102,8 +110,8 @@ jobs:
 4. If the arm64 emulator run keeps failing or timing out, the
    fallback is a real arm64 device (Tamim's phone) with a local
    Android SDK: connect it over USB with USB debugging on and run
-   `./gradlew :baselineprofile:generateBaselineProfile` — same
-   command, same output location, same verify-then-copy step.
+   `./gradlew :app:generateBaselineProfile` — same command, same
+   output location, same verify-then-copy step.
 
 ## What was deliberately NOT done
 
