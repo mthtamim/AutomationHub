@@ -318,43 +318,17 @@
                     android:orientation="vertical" />
             </LinearLayout>
         </ScrollView>
-
-            <!-- v2.24.0: new-flow FAB, Flows tab only. -->
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/fabAddFlow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|end"
-                android:layout_margin="16dp"
-                android:contentDescription="@string/flow_tab_flows"
-                android:src="@drawable/ic_plus"
-                android:visibility="gone"
-                app:backgroundTint="?attr/colorPrimary" />
-
-            <!-- v2.24.1: Add Rule FAB, Rules tab only — same style
-                 and position as the Flows FAB; opens the rule
-                 editor, the exact action the removed header
-                 "+ নিয়ম যোগ করো" button performed. -->
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/fabAddRule"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|end"
-                android:layout_margin="16dp"
-                android:contentDescription="@string/auto_add"
-                android:src="@drawable/ic_plus"
-                app:backgroundTint="?attr/colorPrimary" />
         </FrameLayout>
     </LinearLayout>
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
+    <!-- v1.2.0: Essentials pill bottom bar (Home / DIY / Settings
+         + separate circular + button). Same id and behaviour as
+         the old BottomNavigationView. The bar's + button replaces
+         the two FABs below (removed): it opens the rule editor on
+         the Rules tab and the flow editor on the Flows tab. -->
+    <include
         android:id="@+id/autoBottomNav"
+        layout="@layout/nav_pill_bar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
-        app:itemActiveIndicatorStyle="@style/PL.NavIndicator"
-        app:itemIconTint="@color/bottom_nav_tint"
-        app:itemTextColor="@color/bottom_nav_tint"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/bottom_nav" />
+        android:layout_height="wrap_content" />
 </LinearLayout>

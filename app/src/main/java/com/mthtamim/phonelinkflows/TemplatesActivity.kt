@@ -87,7 +87,14 @@ class TemplatesActivity : LocalizedActivity() {
             else FlowCatalog.label(this, "t", t.trigType)
         val trigPart = when {
             t.trigParam.isEmpty() -> trigLabel
-            t.trigType == "app_launched" -> "$trigLabel · YouTube"
+            // v1.2.0: was hardcoded to "YouTube" for every
+            // app_launched template — now the real app label
+            // (Brave template etc.), falling back to the package.
+            t.trigType == "app_launched" || t.trigType == "app_closed" -> {
+                val app = Automation.appLabel(this, t.trigParam)
+                    .ifEmpty { t.trigParam }
+                "$trigLabel · $app"
+            }
             t.trigType == "time_at_days" -> trigLabel
             t.trigParam.length <= 12 -> "$trigLabel · ${t.trigParam}"
             else -> trigLabel
@@ -96,7 +103,14 @@ class TemplatesActivity : LocalizedActivity() {
             if (t.kind == "rule") AutoCatalog.label(this, "a", type)
             else FlowCatalog.label(this, "a", type)
         }
-        return "$trigPart → $actLabels"
+        // v1.2.0: exit actions (rules only) read as "↩ <labels>".
+        val exitPart = if (t.exitActions.isNotEmpty()) {
+            val labels = t.exitActions.joinToString(" + ") { (type, _) ->
+                AutoCatalog.label(this, "a", type)
+            }
+            " ↩ $labels"
+        } else ""
+        return "$trigPart → $actLabels$exitPart"
     }
 
     private fun addTemplate(t: Templates.Template) {

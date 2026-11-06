@@ -306,6 +306,57 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- ===== v1.2.0: Exit actions — run when the trigger ENDS
+             (Essentials entry/exit). Shown only when the rule's
+             first trigger has a known opposite; otherwise the note
+             below explains why exit actions cannot run. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/exitCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:strokeColor="?attr/colorPrimary"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ed_exit"
+                    android:textSize="16.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvExitNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/ed_exit_note"
+                    android:textSize="13.5sp"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/exitContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddExitAction"
+                    style="@style/PL.BtnMint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/ed_add_exit_action"
+                    app:icon="@drawable/ic_plus" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- ===== Test and delete ===== -->
         <LinearLayout
             android:layout_width="match_parent"

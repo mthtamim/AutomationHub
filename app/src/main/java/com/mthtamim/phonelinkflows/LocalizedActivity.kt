@@ -81,6 +81,9 @@ open class LocalizedActivity : AppCompatActivity() {
 
     protected fun themeOnSurfaceVariant(): Int = ThemeColors.onSurfaceVariant(this)
 
+    /** v1.2.0: text/icon colour on the sage trigger box. */
+    protected fun themeOnPrimaryContainer(): Int = ThemeColors.onPrimaryContainer(this)
+
     protected fun themeOutline(): Int = ThemeColors.outline(this)
 
     protected fun themeSurfaceVariant(): Int = ThemeColors.surfaceVariant(this)

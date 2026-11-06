@@ -678,7 +678,12 @@
     <string name="auto_pill_compact">%1$d of %2$d active</string>
     <string name="ed_when">1. WHEN (Trigger)</string>
     <string name="ed_constraints">CONSTRAINTS / CONDITIONS</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_diy">DIY</string>
     <string name="ed_then">2. THEN DO (Actions)</string>
+    <string name="ed_exit">3. WHEN IT ENDS (Exit actions)</string>
+    <string name="ed_exit_note">এই ট্রিগারের শেষ নেই, তাই exit action চলবে না।</string>
+    <string name="ed_add_exit_action">Exit action যোগ করো</string>
     <string name="sec_shield">Security Shield</string>
     <string name="sec_shield_sub">End-to-end encrypted relay</string>    <string name="set_more">More Settings</string>
     <string name="btn_grant_all">Grant All</string>

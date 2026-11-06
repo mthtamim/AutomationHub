@@ -66,6 +66,11 @@ object ThemeColors {
     fun secondaryContainer(ctx: Context): Int =
         resolve(ctx, MaterialR.attr.colorSecondaryContainer, R.color.md_secondaryContainer)
 
+    /** v1.2.0: text/icon colour for the sage trigger box
+     *  (colorPrimaryContainer). Fallback is the night value. */
+    fun onPrimaryContainer(ctx: Context): Int =
+        resolve(ctx, MaterialR.attr.colorOnPrimaryContainer, R.color.md_onPrimaryContainer)
+
     /** Bottom-nav tint for GLASS themes only: checked = theme accent,
      *  unchecked = theme onSurfaceVariant. Emerald Dark keeps the
      *  old XML selector (callers branch on app_theme), so its

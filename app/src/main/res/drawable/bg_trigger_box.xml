@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Essentials DIY routine card: trigger box. Sage-green container
+     (theme primaryContainer) with light on-container text — the
+     trigger reads as the highlighted box, in every theme. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="20dp" />
+    <solid android:color="?attr/colorPrimaryContainer" />
+</shape>

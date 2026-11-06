@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Essentials pill bottom bar: light sage-green rounded bar holding
+     Home / DIY / Settings. Fixed sage token (same in every theme,
+     like btn_fill_night) — the bar is the app's signature, not a
+     theme colour. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="100dp" />
+    <solid android:color="@color/ess_bar_bg" />
+</shape>

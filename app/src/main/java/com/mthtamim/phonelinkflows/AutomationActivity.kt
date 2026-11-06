@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AlarmManager
@@ -327,41 +328,20 @@ class AutomationActivity : LocalizedActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_automation)
         container = findViewById(R.id.autoContainer)
-        // AutomationHub: same three-tab bar as MainActivity; the
-        // other tabs hand over to MainActivity with a tab extra.
-        val nav = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
-            R.id.autoBottomNav)
-        nav.selectedItemId = R.id.navAutomation
-        applyGlassNavTint(nav)
-        nav.setOnItemSelectedListener { item ->
-            if (item.itemId == R.id.navAutomation) {
-                return@setOnItemSelectedListener true
-            }
-            val tab = when (item.itemId) {
-                R.id.navSettings -> "settings"
-                else -> "home"
-            }
-            startActivity(Intent(this, MainActivity::class.java)
-                .putExtra("tab", tab)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP))
-            finish()
-            true
-        }
+        // v1.2.0: same Essentials pill bottom bar as MainActivity.
+        // Home/Settings hand over to MainActivity with a tab extra;
+        // the bar's + button adds a rule (Rules tab) or a flow
+        // (Flows tab) — it replaces the two old FABs (removed).
+        setupNavBar()
         // v2.24.1: no header row — the Rules FAB (same style and
-        // position as the Flows FAB) opens the rule editor, the
-        // exact action the removed header Add Rule button did.
-        findViewById<View>(R.id.fabAddRule).setOnClickListener {
-            startActivity(Intent(this, RuleEditorActivity::class.java))
-        }
+        // v1.2.0: the bar's + button (see setupNavBar) replaces
+        // the two old FABs — it opens the rule editor on the Rules
+        // tab and the flow editor on the Flows tab.
         // v2.24.1: filled Rules | Flows segmented control on top.
         // The ⋮ menu (right end of the tab row) branches with the
         // tab; the Flows FAB opens a new flow editor.
         findViewById<TextView>(R.id.tabRules).setOnClickListener { switchTab(false) }
         findViewById<TextView>(R.id.tabFlows).setOnClickListener { switchTab(true) }
-        findViewById<View>(R.id.fabAddFlow).setOnClickListener {
-            startActivity(Intent(this, FlowEditorActivity::class.java))
-        }
         findViewById<android.widget.ImageButton>(R.id.btnAutoMenu).setOnClickListener {
             if (flowTab) showFlowMenu(it) else showAutoMenu(it)
         }
@@ -411,8 +391,9 @@ class AutomationActivity : LocalizedActivity() {
 
     override fun onResume() {
         super.onResume()
-        // v2.25.2: re-apply the glass nav tint (see applyGlassNavTint).
-        applyGlassNavTint(findViewById(R.id.autoBottomNav))
+        // v1.2.0: re-paint the pill bar selection (the old
+        // applyGlassNavTint call is gone with the BottomNavigationView).
+        selectNavTab(R.id.navAutomation)
         renderHealth()
         renderFocusLock()
         if (flowTab) renderFlows() else render()
@@ -421,6 +402,10 @@ class AutomationActivity : LocalizedActivity() {
     /** v2.20: FocusLock card status — install state from the
      *  PackageManager, token state from Config. The token itself
      *  is NEVER shown; the status only carries the •••• marker. */
+    // v1.2.0: dp helper for the DIY card builders (the rest of
+    // this file uses raw pixels; the new card code uses dp).
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
     private fun renderFocusLock() {
         val installed = Automation.focusLockInstalled(this)
         val hasToken = Config.focusLockToken(this).isNotEmpty()
@@ -587,6 +572,260 @@ class AutomationActivity : LocalizedActivity() {
      *  the flow FAB, and renders flow cards into the same
      *  container. Token setup stays where it was — the FocusLock
      *  card on the Rules tab and relay settings — never in Flow. */
+    /** v1.2.0: wire the Essentials pill bottom bar — same bar as
+     *  MainActivity. Home/Settings hand over to MainActivity with
+     *  a tab extra and finish; DIY is this screen; the bar's +
+     *  button adds a rule (Rules tab) or a flow (Flows tab),
+     *  replacing the two old FABs. */
+    private fun setupNavBar() {
+        val bar = findViewById<View>(R.id.autoBottomNav)
+        val goMain = { tab: String ->
+            startActivity(Intent(this, MainActivity::class.java)
+                .putExtra("tab", tab)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP))
+            finish()
+        }
+        bar.findViewById<View>(R.id.navTabHome).setOnClickListener {
+            goMain("home")
+        }
+        bar.findViewById<View>(R.id.navTabAuto).setOnClickListener {
+            selectNavTab(R.id.navAutomation)
+        }
+        bar.findViewById<View>(R.id.navTabSettings).setOnClickListener {
+            goMain("settings")
+        }
+        bar.findViewById<View>(R.id.navAdd).setOnClickListener {
+            if (flowTab) startActivity(
+                Intent(this, FlowEditorActivity::class.java))
+            else startActivity(
+                Intent(this, RuleEditorActivity::class.java))
+        }
+        selectNavTab(R.id.navAutomation)
+    }
+
+    /** v1.2.0: paint the pill bar — selected tab gets the dark
+     *  pill with light text+icon; the others stay sage with dark
+     *  text+icon. Fixed sage tokens (ess_bar_*) — not theme
+     *  colours — so the bar looks the same in all 8 themes. */
+    private fun selectNavTab(id: Int) {
+        val bar = findViewById<View>(R.id.autoBottomNav)
+        val tabs = listOf(
+            Triple(R.id.navTabHome, R.id.navIcoHome, R.id.navTxtHome) to R.id.navHome,
+            Triple(R.id.navTabAuto, R.id.navIcoAuto, R.id.navTxtAuto) to R.id.navAutomation,
+            Triple(R.id.navTabSettings, R.id.navIcoSettings, R.id.navTxtSettings) to R.id.navSettings
+        )
+        for ((views, logical) in tabs) {
+            val (tabId, icoId, txtId) = views
+            val tab = bar.findViewById<View>(tabId)
+            val selected = logical == id
+            tab.setBackgroundResource(
+                if (selected) R.drawable.bg_nav_sel else 0)
+            val fg = androidx.core.content.ContextCompat.getColor(
+                this,
+                if (selected) R.color.ess_bar_sel_text
+                else R.color.ess_bar_text)
+            (bar.findViewById<ImageView>(icoId)).imageTintList =
+                android.content.res.ColorStateList.valueOf(fg)
+            (bar.findViewById<TextView>(txtId)).setTextColor(fg)
+        }
+    }
+
+    // ---- Essentials DIY routine card (v1.2.0) ----
+    // A routine card is: sage trigger box | arrow chip(s) | action
+    // box(es). Entry actions get a forward arrow (→); exit actions
+    // (rules only) get a back arrow (←) and a second action box.
+    // Labels ellipsize to one line, exactly like Essentials
+    // ("Toggle Ce..."). All views are built in code from the
+    // existing catalogs — no new per-frame or per-refresh work.
+
+    /** Small icon for a trigger type, by family. Only drawables
+     *  that already exist are used; anything unmapped gets the
+     *  automation glyph. */
+    private fun triggerIconRes(type: String): Int = when {
+        type.startsWith("app_") -> R.drawable.ic_grid
+        type.startsWith("wifi_") -> R.drawable.ic_wifi
+        type.startsWith("time_") || type == "sunrise" ||
+            type == "sunset" || type == "date_at" ||
+            type == "stopwatch" -> R.drawable.ic_clock
+        type.startsWith("geofence") || type.startsWith("location") ->
+            R.drawable.ic_loc
+        type.startsWith("screen_") -> R.drawable.ic_eye
+        type.startsWith("call_") -> R.drawable.ic_phone
+        type.startsWith("charging") || type.startsWith("battery") ->
+            R.drawable.ic_bulb
+        else -> R.drawable.ic_nav_auto
+    }
+
+    /** Sage trigger box: icon + label + param, both lines
+     *  ellipsized. */
+    private fun diyTriggerBox(
+        label: String, param: String, iconRes: Int
+    ): LinearLayout {
+        val onContainer = themeOnPrimaryContainer()
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_trigger_box)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            layoutParams = LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.05f)
+        }
+        box.addView(ImageView(this).apply {
+            setImageResource(iconRes)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(onContainer)
+            layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
+        })
+        box.addView(TextView(this).apply {
+            text = label
+            textSize = 14f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(onContainer)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = dp(4) }
+        })
+        if (param.isNotEmpty()) {
+            box.addView(TextView(this).apply {
+                text = param
+                textSize = 12.5f
+                setTextColor(onContainer)
+                alpha = 0.85f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT)
+            })
+        }
+        return box
+    }
+
+    /** Dark action box: small play glyph + ellipsized label. */
+    private fun diyActionBox(label: String): LinearLayout {
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setBackgroundResource(R.drawable.bg_action_box)
+            setPadding(dp(10), dp(9), dp(10), dp(9))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
+        box.addView(ImageView(this).apply {
+            setImageResource(R.drawable.ic_run)
+            imageTintList = android.content.res.ColorStateList
+                .valueOf(themeOnSurfaceVariant())
+            layoutParams = LinearLayout.LayoutParams(dp(18), dp(18))
+        })
+        box.addView(TextView(this).apply {
+            text = label
+            textSize = 13.5f
+            setTextColor(themeOnSurface())
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                .apply { marginStart = dp(8) }
+        })
+        return box
+    }
+
+    /** Arrow chip column between trigger and actions: → always,
+     *  ← below it when the rule has exit actions. */
+    private fun diyArrowColumn(hasExit: Boolean): LinearLayout {
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                dp(30), LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { marginStart = dp(4); marginEnd = dp(4) }
+        }
+        val arrow = { glyph: String ->
+            TextView(this).apply {
+                text = glyph
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(themeAccentColor())
+                gravity = android.view.Gravity.CENTER
+                setBackgroundResource(R.drawable.bg_arrow_chip)
+                layoutParams = LinearLayout.LayoutParams(dp(26), dp(26))
+                    .apply { topMargin = dp(3); bottomMargin = dp(3) }
+            }
+        }
+        col.addView(arrow("→"))
+        if (hasExit) col.addView(arrow("←"))
+        return col
+    }
+
+    /** Full DIY row: trigger box | arrows | stacked action boxes
+     *  (entry, then exit when present). */
+    private fun diyRow(
+        trigLabel: String, trigParam: String, trigIcon: Int,
+        entryLabel: String, exitLabel: String?
+    ): LinearLayout {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = dp(10) }
+        }
+        row.addView(diyTriggerBox(trigLabel, trigParam, trigIcon))
+        row.addView(diyArrowColumn(exitLabel != null))
+        val acts = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.3f)
+        }
+        acts.addView(diyActionBox(entryLabel))
+        if (exitLabel != null) {
+            val exitBox = diyActionBox(exitLabel)
+            (exitBox.layoutParams as LinearLayout.LayoutParams)
+                .topMargin = dp(6)
+            acts.addView(exitBox)
+        }
+        row.addView(acts)
+        return row
+    }
+
+    /** First action label of a rule/flow action list, with a
+     *  " +N" suffix when more follow. Empty list → "—". */
+    private fun firstActionLabel(
+        acts: org.json.JSONArray, kind: String
+    ): String {
+        if (acts.length() == 0) return "—"
+        val first = acts.optJSONObject(0) ?: return "—"
+        val label = if (kind == "flow")
+            FlowCatalog.label(this, "a", first.optString("type"))
+        else
+            AutoCatalog.label(this, "a", first.optString("type"))
+        return if (acts.length() > 1) "$label +${acts.length() - 1}"
+        else label
+    }
+
+    /** First "a" node label of a flow's node list, with a
+     *  " +N" suffix when more follow. No "a" node → "—". */
+    private fun firstFlowActionLabel(nodes: org.json.JSONArray?): String {
+        if (nodes == null) return "—"
+        var total = 0
+        var first: org.json.JSONObject? = null
+        for (k in 0 until nodes.length()) {
+            val n = nodes.optJSONObject(k) ?: continue
+            if (n.optString("kind") == "a") {
+                total++
+                if (first == null) first = n
+            }
+        }
+        if (first == null) return "—"
+        val label = FlowCatalog.label(this, "a", first.optString("type"))
+        return if (total > 1) "$label +${total - 1}" else label
+    }
+
     private fun switchTab(flows: Boolean) {
         flowTab = flows
         // v2.24.1: filled segmented tabs — selected mint fill with
@@ -616,10 +855,8 @@ class AutomationActivity : LocalizedActivity() {
             if (flows) View.GONE else View.VISIBLE
         findViewById<View>(R.id.flCard).visibility =
             if (flows) View.GONE else View.VISIBLE
-        findViewById<View>(R.id.fabAddRule).visibility =
-            if (flows) View.GONE else View.VISIBLE
-        findViewById<View>(R.id.fabAddFlow).visibility =
-            if (flows) View.VISIBLE else View.GONE
+        // v1.2.0: the two old FABs are gone — the bar's + button
+        // (see setupNavBar) adds a rule or a flow instead.
         if (flows) renderFlows() else render()
     }
 
@@ -719,25 +956,32 @@ class AutomationActivity : LocalizedActivity() {
                 }
             })
             row.addView(head)
+            // v1.2.0: Essentials DIY routine card, same as rules —
+            // sage trigger box | → | first action box. The old
+            // one-line summary is replaced by the DIY row.
             val nodes = flow.optJSONArray("nodes")
-            var summary = ""
+            var trigType = ""
+            var trigParam = ""
             if (nodes != null) {
                 for (k in 0 until nodes.length()) {
                     val n = nodes.optJSONObject(k) ?: continue
                     if (n.optString("kind") == "t") {
-                        val label = FlowCatalog.label(this, "t", n.optString("type"))
-                        val param = n.optString("param")
-                        summary = if (param.isEmpty()) label else label + " · " + param
+                        trigType = n.optString("type")
+                        trigParam = n.optString("param")
                         break
                     }
                 }
             }
-            if (summary.isNotEmpty()) {
-                row.addView(TextView(this).apply {
-                    text = summary
-                    textSize = 13f
-                    setPadding(0, 6, 0, 4)
-                })
+            val trigParamText = when {
+                trigType == "app_launched" || trigType == "app_closed" ->
+                    Automation.appLabel(this, trigParam)
+                else -> trigParam
+            }
+            if (trigType.isNotEmpty()) {
+                row.addView(diyRow(
+                    FlowCatalog.label(this, "t", trigType),
+                    trigParamText, triggerIconRes(trigType),
+                    firstFlowActionLabel(nodes), null))
             }
             val scroll = android.widget.HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false
@@ -907,26 +1151,15 @@ class AutomationActivity : LocalizedActivity() {
                 }
             })
             row.addView(head)
-            // v2.17.2: IF / THEN inset boxes, like the preview cards
-            val acts = rule.optJSONArray("actions")
-            val nActions = acts?.length() ?: 0
-            val firstAct = acts?.optJSONObject(0)?.optString("type") ?: ""
-            val flow = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { setMargins(0, 10, 0, 0) }
-            }
-            fun flowBox(prefixRes: Int, body: String) = TextView(this).apply {
-                text = getString(prefixRes) + " " + body
-                textSize = 13.5f
-                setBackgroundResource(R.drawable.bg_inner_box)
-                setPadding(24, 20, 24, 20)
-                layoutParams = LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            }
+            // v1.2.0: Essentials DIY routine card — sage trigger
+            // box | arrow chip(s) | action box(es). The old IF /
+            // THEN inset boxes and the "N actions" line are gone;
+            // the same information lives in the boxes (first
+            // trigger/action + " +N", exit box when present).
+            val acts = rule.optJSONArray("actions") ?: org.json.JSONArray()
+            val nActions = acts.length()
+            val firstAct = acts.optJSONObject(0)?.optString("type") ?: ""
+            val exitActs = Automation.exitActions(rule)
             // v2.20: a Study Guard first trigger reads as its
             // plain summary (list/app + minutes), never raw param.
             // v2.21: a screen-rest first trigger reads as its
@@ -944,19 +1177,13 @@ class AutomationActivity : LocalizedActivity() {
                 Automation.timeAtDaysSummary(
                     this@AutomationActivity, trigParam)
             else ""
-            flow.addView(flowBox(R.string.auto_if_label,
-                AutoCatalog.label(this@AutomationActivity, "t",
-                    trigType) +
-                    (if (trigList.size > 1) " +${trigList.size - 1}" else "") +
-                    (if (ifSummary.isNotEmpty()) " — " + ifSummary
-                    else trigParam.takeIf { it.isNotBlank() }
-                        ?.let { " — $it" } ?: "")))
-            flow.addView(TextView(this).apply {
-                text = "›"
-                textSize = 20f
-                setTextColor(themeAccentColor())
-                setPadding(12, 0, 12, 0)
-            })
+            val trigParamText = when {
+                ifSummary.isNotEmpty() -> ifSummary
+                trigType == "app_launched" || trigType == "app_closed" ->
+                    Automation.appLabel(this@AutomationActivity, trigParam)
+                trigParam.isNotBlank() -> trigParam
+                else -> ""
+            }
             // v2.20: a FocusLock first step reads as its plain
             // summary ("YouTube ব্লক 60 মিনিট"), never the raw param.
             // v2.21: an AutoTap first step reads as its plain
@@ -965,29 +1192,26 @@ class AutomationActivity : LocalizedActivity() {
             // summary, never the raw param.
             val firstSummary = if (firstAct == "focuslock_control")
                 Automation.focusLockSummary(this@AutomationActivity,
-                    acts?.optJSONObject(0)?.optString("param") ?: "")
+                    acts.optJSONObject(0)?.optString("param") ?: "")
             else if (firstAct == "autotap_control")
                 Automation.autoTapSummary(this@AutomationActivity,
-                    acts?.optJSONObject(0)?.optString("param") ?: "")
+                    acts.optJSONObject(0)?.optString("param") ?: "")
             else if (firstAct == "redial_control")
                 Automation.redialSummary(this@AutomationActivity,
-                    acts?.optJSONObject(0)?.optString("param") ?: "")
+                    acts.optJSONObject(0)?.optString("param") ?: "")
             else ""
-            flow.addView(flowBox(R.string.auto_then_label,
-                AutoCatalog.label(this@AutomationActivity, "a", firstAct) +
-                    (if (firstSummary.isNotEmpty())
-                        " — " + firstSummary else "") +
-                    (if (nActions > 1) " +${nActions - 1}" else "")))
-            row.addView(flow)
-            row.addView(TextView(this).apply {
-                text = getString(R.string.auto_actions_count, nActions)
-                alpha = 0.7f
-                textSize = 12.5f
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { setMargins(2, 8, 0, 0) }
-            })
+            val entryLabel = AutoCatalog.label(
+                this@AutomationActivity, "a", firstAct) +
+                (if (firstSummary.isNotEmpty())
+                    " — " + firstSummary else "") +
+                (if (nActions > 1) " +${nActions - 1}" else "")
+            val trigLabel = AutoCatalog.label(
+                this@AutomationActivity, "t", trigType) +
+                (if (trigList.size > 1) " +${trigList.size - 1}" else "")
+            val exitLabel = if (exitActs.length() > 0)
+                firstActionLabel(exitActs, "rule") else null
+            row.addView(diyRow(trigLabel, trigParamText,
+                triggerIconRes(trigType), entryLabel, exitLabel))
             val buttons = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.END

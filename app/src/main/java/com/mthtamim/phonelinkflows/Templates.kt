@@ -62,6 +62,9 @@ object Templates {
         val condType: String? = null, // flows only
         val condParam: String = "",
         val needsGeo: Boolean = false, // flows only
+        // v1.2.0: exit actions (rules only) — run when the trigger
+        // ends; same (type, param) shape as [actions].
+        val exitActions: List<Pair<String, String>> = emptyList(),
     )
 
     // ---------------- Rules ----------------
@@ -194,6 +197,20 @@ object Templates {
             "ওয়াইফাই ছুটে গেলেই জানাবে",
             "wifi_disconnected", "",
             listOf("local_notify" to "ওয়াইফাই ছুটে গেছে — মোবাইল ডেটা চলছে")),
+        // v1.2.0: exit-action demos — entry runs when the trigger
+        // starts, exit runs when it ends (same toggle back).
+        Template("r_brave_data", "rule",
+            "Brave খুললে ডেটা, বন্ধ করলে আবার",
+            "Brave খুললেই মোবাইল ডেটা টগল হবে, Brave বন্ধ করলেই আবার টগল হবে",
+            "app_launched", "com.brave.browser",
+            listOf("mobile_data_toggle" to ""),
+            exitActions = listOf("mobile_data_toggle" to "")),
+        Template("r_charge_dnd", "rule",
+            "চার্জে দিলে সাইলেন্ট, খুললে শব্দ",
+            "চার্জে দিলেই সাইলেন্ট হবে, চার্জার খুললেই আবার শব্দ ফিরবে",
+            "charging_on", "",
+            listOf("dnd_set" to "none"),
+            exitActions = listOf("dnd_set" to "off")),
     )
 
     // ---------------- Flows ----------------
@@ -350,6 +367,14 @@ object Templates {
             acts.put(JSONObject().put("type", at).put("param", ap))
         }
         rule.put("actions", acts)
+        // v1.2.0: exit actions (rules only).
+        if (t.exitActions.isNotEmpty()) {
+            val exits = JSONArray()
+            for ((at, ap) in t.exitActions) {
+                exits.put(JSONObject().put("type", at).put("param", ap))
+            }
+            rule.put("exit_actions", exits)
+        }
         return rule
     }
 

@@ -122,7 +122,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -275,7 +275,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -344,7 +344,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -494,7 +494,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -542,7 +542,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -564,7 +564,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -619,7 +619,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -649,7 +649,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -697,7 +697,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -753,7 +753,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorSurfaceVariant"
             app:strokeWidth="1dp">
@@ -812,14 +812,12 @@
         </FrameLayout>
     </FrameLayout>
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
+    <!-- v1.2.0: Essentials pill bottom bar (Home / DIY / Settings
+         + separate circular + button). Same id and behaviour as
+         the old BottomNavigationView. -->
+    <include
         android:id="@+id/bottomNav"
+        layout="@layout/nav_pill_bar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
-        app:itemActiveIndicatorStyle="@style/PL.NavIndicator"
-        app:itemIconTint="@color/bottom_nav_tint"
-        app:itemTextColor="@color/bottom_nav_tint"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/bottom_nav" />
+        android:layout_height="wrap_content" />
 </LinearLayout>

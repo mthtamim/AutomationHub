@@ -115,10 +115,16 @@ object Automation {
         if (idx >= 0) snapshotRule(ctx, list[idx])
         if (idx >= 0) list[idx] = rule else list.add(rule)
         saveAll(ctx, list)
+        // v1.2.0: a re-saved rule without exit actions drops any
+        // armed exit — the old entry must not fire an exit for a
+        // rule that no longer has one.
+        if (!hasExitActions(rule)) clearExit(ctx, id)
     }
 
     fun delete(ctx: Context, id: String) {
         saveAll(ctx, rules(ctx).filter { it.optString("id") != id })
+        // v1.2.0: a deleted rule drops its armed exit too.
+        clearExit(ctx, id)
         // v2.18 (WS2): a deleted rule takes its version history along.
         prefs(ctx).edit().remove("rule_history_$id").apply()
     }
@@ -180,6 +186,9 @@ object Automation {
         val target = list.firstOrNull { it.optString("id") == id }
         target?.put("enabled", on)
         saveAll(ctx, list)
+        // v1.2.0: disabling a rule disarms its exit — the exit
+        // must not fire while the rule is off.
+        if (!on) clearExit(ctx, id)
         if (target != null) onEvent(ctx, "rule_toggled", JSONObject()
             .put("title", target.optString("name"))
             .put("body", if (on) "on" else "off"))
@@ -624,6 +633,160 @@ object Automation {
     }
 
 
+    // ---------------- exit actions (v1.2.0) ----------------
+    // Essentials-style entry/exit: a rule with "exit_actions"
+    // runs them when its trigger ENDS. Only trigger types with a
+    // real opposite EVENT (fired into onEvent) can end — this map
+    // is built from the trigger catalogs only. Tick-evaluated
+    // triggers (time_*, battery_below/above/full/temp, steps_goal,
+    // weather...) and FlowEngine-only events (screen_on/off,
+    // geofence_in/out, headphone_in/out) have no end here, so
+    // their rules never arm an exit. wireless_charging has no
+    // opposite event either.
+    private val OPPOSITE_EVENTS = mapOf(
+        "charging_on" to "charging_off",
+        "charging_off" to "charging_on",
+        "wifi_connected" to "wifi_disconnected",
+        "wifi_disconnected" to "wifi_connected",
+        "screen_locked" to "screen_unlocked",
+        "screen_unlocked" to "screen_locked",
+        "app_launched" to "app_closed",
+        "app_closed" to "app_launched",
+        "bt_connected" to "bt_disconnected",
+        "bt_disconnected" to "bt_connected",
+        "dnd_on" to "dnd_off",
+        "dnd_off" to "dnd_on",
+        "airplane_on" to "airplane_off",
+        "airplane_off" to "airplane_on",
+        "vpn_on" to "vpn_off",
+        "vpn_off" to "vpn_on",
+        "roaming_on" to "roaming_off",
+        "roaming_off" to "roaming_on",
+        "dark_on" to "dark_off",
+        "dark_off" to "dark_on",
+        "hotspot_on" to "hotspot_off",
+        "hotspot_off" to "hotspot_on",
+        "battery_saver_on" to "battery_saver_off",
+        "battery_saver_off" to "battery_saver_on",
+        "mobile_data_on" to "mobile_data_off",
+        "mobile_data_off" to "mobile_data_on",
+        "gps_on" to "gps_off",
+        "gps_off" to "gps_on",
+        "music_started" to "music_stopped",
+        "music_stopped" to "music_started",
+        "proximity_near" to "proximity_far",
+        "proximity_far" to "proximity_near",
+        "flip_down" to "flip_up",
+        "flip_up" to "flip_down",
+        "bt_near" to "bt_far",
+        "bt_far" to "bt_near"
+    )
+
+    /** Opposite of an event, or null when the trigger has no end. */
+    fun oppositeEvent(event: String): String? = OPPOSITE_EVENTS[event]
+
+    /** The rule's exit actions (optional "exit_actions" array,
+     *  same shape as "actions"). Empty when the rule has none. */
+    fun exitActions(rule: JSONObject): JSONArray =
+        rule.optJSONArray("exit_actions") ?: JSONArray()
+
+    fun hasExitActions(rule: JSONObject): Boolean =
+        exitActions(rule).length() > 0
+
+    // Active exit entries live in prefs as one JSON object:
+    // {"<ruleId>": {"end": "<endEvent>", "param": "<trigParam>"}}.
+    // Written when the entry fires; cleared when the exit runs,
+    // the rule is disabled/deleted/re-saved without exit actions,
+    // or the phone boots — a stale entry must never fire an exit
+    // without its entry.
+    private fun exitActiveMap(ctx: Context): JSONObject {
+        return try {
+            JSONObject(prefs(ctx).getString("exit_active", "{}") ?: "{}")
+        } catch (_: Exception) { JSONObject() }
+    }
+
+    private fun saveExitActiveMap(ctx: Context, map: JSONObject) {
+        prefs(ctx).edit().putString("exit_active", map.toString()).apply()
+    }
+
+    /** Arm a rule's exit after its entry fired. The entry's
+     *  trigger param is stored too, so the exit only fires for
+     *  the matching end (e.g. app_closed for THAT package —
+     *  wifi_disconnected carries no SSID, so its param is blank
+     *  and always matches). */
+    fun armExit(ctx: Context, ruleId: String, endEvent: String, param: String) {
+        val map = exitActiveMap(ctx)
+        map.put(ruleId, JSONObject().put("end", endEvent).put("param", param))
+        saveExitActiveMap(ctx, map)
+    }
+
+    /** Disarm one rule's exit (disable / delete / re-save without
+     *  exit actions). */
+    fun clearExit(ctx: Context, ruleId: String) {
+        val map = exitActiveMap(ctx)
+        if (map.has(ruleId)) {
+            map.remove(ruleId)
+            saveExitActiveMap(ctx, map)
+        }
+    }
+
+    /** Disarm every exit (boot). */
+    fun clearAllExits(ctx: Context) {
+        prefs(ctx).edit().remove("exit_active").apply()
+    }
+
+    private fun debouncedExit(ctx: Context, ruleId: String, now: Long): Boolean {
+        val rest = restSeconds(ctx)
+        if (rest <= 0) return false
+        val last = prefs(ctx).getLong("fired_exit_$ruleId", 0L)
+        return now - last < rest * 1000L
+    }
+
+    private fun markExitFired(ctx: Context, ruleId: String, now: Long) {
+        prefs(ctx).edit().putLong("fired_exit_$ruleId", now).apply()
+    }
+
+    /** Run a rule's exit actions through the normal interpreter:
+     *  a copy of the rule with "actions" replaced by
+     *  "exit_actions", so loops, waits and If/Else work exactly
+     *  as for entries. */
+    private fun runExitActions(ctx: Context, rule: JSONObject, data: JSONObject) {
+        val copy = JSONObject(rule.toString())
+        copy.put("actions", exitActions(rule))
+        runActions(ctx, copy, data, 0)
+    }
+
+    /** Run armed exit actions whose end event just arrived.
+     *  One-shot: the entry must fire again to re-arm. A param
+     *  mismatch leaves the entry armed (another rule's end, e.g.
+     *  a different app closing, must not consume it); a missing,
+     *  disabled or exit-less rule drops its stale entry. */
+    private fun fireExits(ctx: Context, event: String, data: JSONObject, now: Long) {
+        val active = exitActiveMap(ctx)
+        if (active.length() == 0) return
+        val keys = ArrayList<String>()
+        val it = active.keys()
+        while (it.hasNext()) keys.add(it.next())
+        for (ruleId in keys) {
+            val entry = active.optJSONObject(ruleId) ?: continue
+            if (entry.optString("end") != event) continue
+            val rule = rules(ctx).firstOrNull { it.optString("id") == ruleId }
+            if (rule == null || !rule.optBoolean("enabled", true) ||
+                !hasExitActions(rule)) {
+                clearExit(ctx, ruleId)
+                continue
+            }
+            if (!triggerParamMatches(ctx, event, entry.optString("param"), data)) continue
+            clearExit(ctx, ruleId)
+            if (debouncedExit(ctx, ruleId, now)) continue
+            markExitFired(ctx, ruleId, now)
+            ruleNameHint = rule.optString("name")
+            log(ctx, "⏴ " + rule.optString("name") + " (exit: " + event + ")")
+            runExitActions(ctx, rule, data)
+        }
+    }
+
+
     // ---------------- event entry ----------------
     fun onEvent(ctx: Context, event: String, data: JSONObject = JSONObject()) {
         if (!Config.automationOn(ctx)) return
@@ -634,6 +797,9 @@ object Automation {
                     .putString("lastev_data", data.toString()).apply()
                 resumeUntilWaits(ctx, event, data)
                 val now = System.currentTimeMillis()
+                // v1.2.0: exits first — one event can end a rule
+                // while starting another.
+                fireExits(ctx, event, data, now)
                 for (rule in rules(ctx)) {
                     if (!rule.optBoolean("enabled", true)) continue
                     val trig = ruleTriggers(rule).firstOrNull {
@@ -653,6 +819,15 @@ object Automation {
                     log(ctx, "▶ " + rule.optString("name") + " (" + event +
                         ") — " + verdictSummary(ctx, rule))
                     runActions(ctx, rule, data, 0)
+                    // v1.2.0: arm the exit when the entry fired and
+                    // this trigger has a known opposite. Firing
+                    // twice while armed just re-arms (one entry).
+                    if (hasExitActions(rule)) {
+                        oppositeEvent(event)?.let {
+                            armExit(ctx, rule.optString("id"), it,
+                                trig.optString("param"))
+                        }
+                    }
                 }
             } catch (e: Exception) { /* automation must never crash the host */ }
         }.start()

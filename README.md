@@ -9,7 +9,7 @@ for being bigger than PhoneLink itself). Tamim's corrected scope, confirmed
 
 - **Package:** `com.mthtamim.phonelinkflows` (kept from the skeleton, so the
   `phonelink_*` SharedPreferences keys stay compatible with its data)
-- **Version:** 1.1.0 (vc2) · `compileSdk`/`targetSdk` 34, `minSdk` 26 ·
+- **Version:** 1.2.0 (vc3) · `compileSdk`/`targetSdk` 34, `minSdk` 26 ·
   arm64-v8a only · minify off
 - **Repo (for the push):** `mthtamim/PhoneLink-Flows`
 - **Status: STAGING — not pushed, no release.** This tree is the
@@ -765,3 +765,151 @@ first-pass files intact (FocusGuardPickerActivity,
 judge — not pushed yet. Phone test pending: open Templates from
 both ⋮ menus, add a Rule and a Flow template, share one flow, add
 the QS tile and toggle it.
+
+## Essentials restyle + Exit actions for Rules (2026-11-06) — v1.2.0
+
+### 1. Essentials-style UI, whole app (Views, not Compose)
+Tamim sent the sameerasw/essentials DIY routines screen and chose
+"পুরো অ্যাপ" from the preview. The look is layout + card language,
+not a 9th theme — all 8 themes keep working; accents come from the
+existing `ThemeColors` resolver (`themeAccentColor()` etc.), never
+hardcoded emerald.
+- **Cards:** `PL.CardView` default radius 22dp → **28dp** (theme
+  default, so every `MaterialCardView` without an explicit radius
+  follows), the 11 explicit `cardCornerRadius="22dp"` in layouts →
+  28dp, and `card_bg.xml` (code-built rule/flow/service cards) →
+  28dp. Near-black background, very rounded cards, sage trigger
+  boxes, darker action boxes — same language on Dashboard, Rules,
+  Flows, Focus Guard, AppLock and Settings. No new main-thread work:
+  the restyle only changes drawables/radii and rebuilds the same
+  card views `render()`/`renderFlows()` already built.
+- **DIY routine cards** (`AutomationActivity`): sage trigger box
+  (`bg_trigger_box`, `?attr/colorPrimaryContainer` + on-container
+  text) with a family icon + label + param, a small green arrow
+  chip column (`bg_arrow_chip`, → entry, ← exit), and darker action
+  boxes (`bg_action_box`, `?attr/colorSurfaceContainer`) with an
+  ellipsized label ("Toggle Ce..." style, `+N` when more follow).
+  The old IF/THEN inset boxes and the "N actions" line are gone —
+  the same information lives in the boxes. Per-card pills are
+  unchanged (Rules: Test/Edit/Duplicate/Share/Log/Delete; Flows:
+  Run/Edit/Duplicate/Share/Log/Delete), as are the Rules/Flows tab
+  switch, both ⋮ menus, templates entry and the service switch row.
+  Flow cards use the same DIY row (first trigger node + first
+  action node; Flows have no exit actions).
+- **Pill bottom bar** (`res/layout/nav_pill_bar.xml`, included by
+  `activity_main.xml` as `bottomNav` and by
+  `activity_automation.xml` as `autoBottomNav`): light sage-green
+  rounded bar (`ess_bar_bg` #A9D6B3, fixed token like
+  `btn_fill_night` — same in every theme) holding Home / DIY /
+  Settings; selected tab = dark pill (`ess_bar_sel_bg` #12241B)
+  with light text+icon; a separate dark-green circular + button
+  (`?attr/colorPrimary`) at the right end. Same three destinations
+  and behaviour as the old `BottomNavigationView`: DIY opens
+  `AutomationActivity` (selection stays), Home/Settings switch the
+  dashboard page in `MainActivity` / hand over with the `"tab"`
+  extra from `AutomationActivity`. The bar's + button replaces the
+  two old FABs (removed from the layout and from `switchTab`): it
+  opens the rule editor on the Rules tab and the flow editor on the
+  Flows tab. `selectNavTab()`/`setupNavBar()` in both activities
+  paint the bar; `applyGlassNavTint` is no longer called by either
+  (the function itself stays in `LocalizedActivity`).
+- **New drawables:** `bg_trigger_box`, `bg_action_box`,
+  `bg_arrow_chip`, `bg_nav_bar`, `bg_nav_sel`, `bg_nav_add`;
+  new fixed tokens `ess_bar_bg` / `ess_bar_text` /
+  `ess_bar_sel_bg` / `ess_bar_sel_text`; new strings `nav_home`,
+  `nav_diy`, `ed_exit`, `ed_exit_note`, `ed_add_exit_action`.
+  `ThemeColors.onPrimaryContainer()` + `LocalizedActivity.
+  themeOnPrimaryContainer()` added for the trigger-box text/icon
+  (fallback `md_onPrimaryContainer`, exists in both color files).
+
+### 2. Exit actions for RULES only (Flows out of scope)
+A rule may now carry an optional `"exit_actions"` array (same shape
+as `"actions"`). Entry actions = the existing `"actions"`. When a
+rule fires on an event and it has exit actions AND its trigger type
+has a known opposite, the rule is recorded as active in prefs
+(`exit_active`: `{ruleId: {end, param}}`); when the opposite event
+arrives, the exit actions run through the normal interpreter (a copy
+of the rule with `"actions"` replaced by `"exit_actions"`, so loops,
+waits and If/Else work exactly as for entries) and the entry is
+cleared — one-shot, the entry must fire again to re-arm. Firing
+twice while armed just re-arms (one entry). Exits respect the same
+rest/debounce window as entries (own `fired_exit_<id>` key) and log
+as `⏴ <name> (exit: <event>)`, so the Log explains them.
+- **Opposite-event map** (`Automation.OPPOSITE_EVENTS`, 18 pairs —
+  only trigger types that really exist as events fired into
+  `Automation.onEvent`): charging_on↔charging_off,
+  wifi_connected↔wifi_disconnected, screen_locked↔screen_unlocked,
+  app_launched↔app_closed, bt_connected↔bt_disconnected,
+  dnd_on↔dnd_off, airplane_on↔airplane_off, vpn_on↔vpn_off,
+  roaming_on↔roaming_off, dark_on↔dark_off, hotspot_on↔hotspot_off,
+  battery_saver_on↔battery_saver_off, mobile_data_on↔mobile_data_off,
+  gps_on↔gps_off, music_started↔music_stopped,
+  proximity_near↔proximity_far, flip_down↔flip_up, bt_near↔bt_far.
+  **Excluded:** screen_on/off, geofence_in/out, headphone_in/out
+  (FlowEngine-only events, never reach the Rules engine),
+  wireless_charging (no opposite event), and all tick-evaluated
+  triggers (time_*, battery_below/above/full/temp, steps_goal,
+  weather, etc. — they have no end event).
+- **Param matching:** the exit only fires when the opposite event
+  matches the entry's trigger param (`triggerParamMatches`, same
+  matcher as entries) — e.g. `app_closed` must be for THAT package,
+  so one app closing cannot fire another app's exit. A param
+  mismatch leaves the entry armed. `wifi_disconnected` carries no
+  SSID, so its param is blank and always matches.
+- **Stale entries never fire:** armed exits are cleared on boot
+  (`FlowBootReceiver` → `Automation.clearAllExits`), when a rule is
+  disabled (`setEnabled`), when it is deleted (`delete`), and when
+  it is re-saved without exit actions (`upsert`); `fireExits` also
+  drops the entry when the rule is missing, disabled or exit-less.
+- **Editor** (`RuleEditorActivity`): a "3. WHEN IT ENDS (Exit
+  actions)" card after THEN DO, mirroring the actions editor
+  (same action picker, plain rows only — If/Else, FocusLock,
+  AutoTap and Redial stay entry-only). The section shows only when
+  the rule's FIRST trigger (same order as `buildRule`: plain rows
+  first) has a known opposite; otherwise a note says the trigger
+  has no end so exit actions cannot run. Visibility refreshes when
+  a trigger row is added, removed, or its type is re-picked.
+  `buildRule()` saves `exit_actions` only when the first trigger
+  has an opposite — dead exit actions are dropped, not saved.
+- **Cards:** the rule card shows the exit row (← chip + second
+  action box) only when `exit_actions` is non-empty.
+- **Templates:** 51 total now (27 rules + 24 flows). Two new rule
+  templates demonstrate exit actions, using only real catalog
+  actions: `r_brave_data` (Brave opens → `mobile_data_toggle`,
+  Brave closes → `mobile_data_toggle`) and `r_charge_dnd`
+  (charging on → `dnd_set` none, charger removed → `dnd_set` off).
+  `Template` gains an optional `exitActions` field;
+  `Templates.buildRule` serializes it. `TemplatesActivity.
+  summaryFor` now shows the real app label for app triggers
+  (was hardcoded "YouTube" for every `app_launched` template) and
+  appends ` ↩ <exit labels>` when a template has exit actions.
+- **Rules without `exit_actions` behave exactly as before:** the
+  `onEvent` entry loop is unchanged except for the arm step after
+  `runActions`, which is guarded by `hasExitActions(rule)` AND a
+  non-null opposite — and `fireExits` returns immediately when no
+  exit is armed.
+
+### 3. Version bump
+- `versionName "1.2.0"`, `versionCode 3`.
+
+### Validation (both trees)
+- Kotlin-aware brace/paren balance (comments/strings excluded) on
+  every edited `.kt` in both trees; every layout + values file
+  parses as XML; all new/edited `R.*` refs resolve (strings in both
+  locales, new ids, drawables, layouts, `nav_pill_bar` include).
+- Grep-verified: every id/handler found before the restyle is still
+  present and wired after (bottom-nav destinations, `showPage`,
+  `handleTabExtra`, `onSaveInstanceState` tab, sub-screen hide/show,
+  `tabRules`/`tabFlows`, `btnAutoMenu`, `statusCard`/`flCard`,
+  `btnFlToken`/`btnFlOpen`, `btnRestTime`, `swRulesSync`, all rule
+  and flow pills, all editor rows/buttons); `requestAddTileService`,
+  `NetworkCallback`, `onBatteryChanged` untouched; no MQTT UI
+  reintroduced; no forwarding/relay code touched; workflow
+  untouched; crash-fix files (`activity_flow_editor.xml`,
+  `res/xml/widget_rule_info.xml`) untouched.
+- `diff -rq` the two trees: the ONLY difference is README.md
+  (push-history section, push tree only). Not pushed — waits for
+  Tamim's tap. Phone test pending: pill bar on all 3 tabs + the +
+  button on both Automation tabs, DIY cards on rules and flows,
+  exit actions firing (Brave / charging templates), theme picker
+  across all 8 themes, version showing 1.2.0.

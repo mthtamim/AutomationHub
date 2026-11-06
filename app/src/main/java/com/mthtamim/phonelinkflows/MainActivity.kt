@@ -18,6 +18,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.CompoundButton
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -28,7 +29,6 @@ import androidx.core.content.ContextCompat
 import com.autotap.app.RunnerService
 import com.autotap.app.Store
 import com.autotap.app.TapAccessibilityService
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButtonToggleGroup
 import kotlin.concurrent.thread
 import org.json.JSONObject
@@ -90,7 +90,10 @@ class MainActivity : LocalizedActivity() {
     // Automation Studio info line and the General version line
     private lateinit var tvA11yState: TextView
     private lateinit var tvGeneralDiag: TextView
-    private lateinit var bottomNav: BottomNavigationView
+    // v1.2.0: the pill bottom bar (nav_pill_bar) replaces the old
+    // BottomNavigationView. navSelectedId is the single source of
+    // truth for the selected tab; selectNavTab() paints the bar.
+    private var navSelectedId: Int = R.id.navHome
 
 
     // v2.11 voice commands (system speech recognizer)
@@ -226,8 +229,9 @@ class MainActivity : LocalizedActivity() {
 
         pageHome = findViewById(R.id.pageHome)
         pageSettings = findViewById(R.id.pageSettings)
-        bottomNav = findViewById(R.id.bottomNav)
-        applyGlassNavTint(bottomNav)
+        // (pill bottom bar is wired in setupNavBar() below,
+        //  in the navigation block; selection is re-painted
+        //  in onResume too)
 
         tvConnPill = findViewById(R.id.tvConnPill)
         tvDashDevice = findViewById(R.id.tvDashDevice)
@@ -273,22 +277,17 @@ class MainActivity : LocalizedActivity() {
         tvGeneralDiag = findViewById(R.id.tvGeneralDiag)
 
 
-        // ----- bottom navigation (v2.17: five tabs) -----
-        bottomNav.setOnItemSelectedListener { item ->
-            if (item.itemId == R.id.navAutomation) {
-                // Automation is its own activity with the same bar.
-                startActivity(Intent(this, AutomationActivity::class.java))
-                false
-            } else {
-                showPage(item.itemId)
-                true
-            }
-        }
+        // ----- pill bottom bar (v1.2.0): same three destinations
+        //  as the old BottomNavigationView. DIY opens the
+        //  Automation activity (selection stays where it was,
+        //  exactly like the old listener returning false); the
+        //  bar's + button opens it too.
+        setupNavBar()
         val validTabs = setOf(R.id.navHome, R.id.navSettings)
         val startTab = savedInstanceState?.getInt("tab", R.id.navHome)
             ?: R.id.navHome
         if (startTab in validTabs && startTab != R.id.navHome) {
-            bottomNav.selectedItemId = startTab
+            selectNavTab(startTab)
         } else {
             showPage(R.id.navHome)
         }
@@ -646,13 +645,14 @@ class MainActivity : LocalizedActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putInt("tab", bottomNav.selectedItemId)
+        outState.putInt("tab", navSelectedId)
     }
 
     override fun onResume() {
         super.onResume()
-        // v2.25.2: re-apply the glass nav tint (see applyGlassNavTint).
-        applyGlassNavTint(bottomNav)
+        // v1.2.0: re-paint the pill bar selection (the old
+        // applyGlassNavTint call is gone with the BottomNavigationView).
+        selectNavTab(navSelectedId)
         refreshStatus()
         Automation.checkClipboard(this)
         // v2.4 NFC tag trigger (foreground dispatch).
@@ -728,11 +728,11 @@ class MainActivity : LocalizedActivity() {
 
     /** v2.17: Settings is a bottom-nav page now, not an overlay. */
     private fun openSettings() {
-        bottomNav.selectedItemId = R.id.navSettings
+        selectNavTab(R.id.navSettings)
     }
 
     private fun closeSettings() {
-        if (settingsOpen) bottomNav.selectedItemId = R.id.navHome
+        if (settingsOpen) selectNavTab(R.id.navHome)
     }
 
 
@@ -762,8 +762,8 @@ class MainActivity : LocalizedActivity() {
                 override fun handleOnBackPressed() {
                     if (subScreenOpen()) {
                         closeSubScreen()
-                    } else if (bottomNav.selectedItemId != R.id.navHome) {
-                        bottomNav.selectedItemId = R.id.navHome
+                    } else if (navSelectedId != R.id.navHome) {
+                        selectNavTab(R.id.navHome)
                     } else {
                         isEnabled = false
                         onBackPressedDispatcher.onBackPressed()
@@ -831,6 +831,61 @@ class MainActivity : LocalizedActivity() {
 
     }
 
+    /** v1.2.0: wire the Essentials pill bottom bar. Home and
+     *  Settings switch the dashboard page; DIY opens the
+     *  Automation activity (selection stays, as before); the
+     *  bar's + button opens the Automation activity too. */
+    private fun setupNavBar() {
+        val bar = findViewById<View>(R.id.bottomNav)
+        bar.findViewById<View>(R.id.navTabHome).setOnClickListener {
+            if (navSelectedId != R.id.navHome) {
+                selectNavTab(R.id.navHome)
+                showPage(R.id.navHome)
+            }
+        }
+        bar.findViewById<View>(R.id.navTabAuto).setOnClickListener {
+            startActivity(Intent(this, AutomationActivity::class.java))
+        }
+        bar.findViewById<View>(R.id.navTabSettings).setOnClickListener {
+            if (navSelectedId != R.id.navSettings) {
+                selectNavTab(R.id.navSettings)
+                showPage(R.id.navSettings)
+            }
+        }
+        bar.findViewById<View>(R.id.navAdd).setOnClickListener {
+            startActivity(Intent(this, AutomationActivity::class.java))
+        }
+        selectNavTab(navSelectedId)
+    }
+
+    /** v1.2.0: paint the pill bar — selected tab gets the dark
+     *  pill with light text+icon; the others stay sage with dark
+     *  text+icon. Fixed sage tokens (ess_bar_*) — not theme
+     *  colours — so the bar looks the same in all 8 themes. */
+    private fun selectNavTab(id: Int) {
+        navSelectedId = id
+        val bar = findViewById<View>(R.id.bottomNav)
+        val tabs = listOf(
+            Triple(R.id.navTabHome, R.id.navIcoHome, R.id.navTxtHome) to R.id.navHome,
+            Triple(R.id.navTabAuto, R.id.navIcoAuto, R.id.navTxtAuto) to R.id.navAutomation,
+            Triple(R.id.navTabSettings, R.id.navIcoSettings, R.id.navTxtSettings) to R.id.navSettings
+        )
+        for ((views, logical) in tabs) {
+            val (tabId, icoId, txtId) = views
+            val tab = bar.findViewById<View>(tabId)
+            val selected = logical == id
+            tab.setBackgroundResource(
+                if (selected) R.drawable.bg_nav_sel else 0)
+            val fg = androidx.core.content.ContextCompat.getColor(
+                this,
+                if (selected) R.color.ess_bar_sel_text
+                else R.color.ess_bar_text)
+            (bar.findViewById<ImageView>(icoId)).imageTintList =
+                android.content.res.ColorStateList.valueOf(fg)
+            (bar.findViewById<TextView>(txtId)).setTextColor(fg)
+        }
+    }
+
     private fun showPage(itemId: Int) {
         settingsOpen = itemId == R.id.navSettings
         pageHome.visibility = if (itemId == R.id.navHome) View.VISIBLE else View.GONE
@@ -842,8 +897,8 @@ class MainActivity : LocalizedActivity() {
     /** AutomationHub: only home/settings tabs exist now. */
     private fun handleTabExtra(intent: Intent?) {
         when (intent?.getStringExtra("tab")) {
-            "home" -> bottomNav.selectedItemId = R.id.navHome
-            "settings" -> bottomNav.selectedItemId = R.id.navSettings
+            "home" -> selectNavTab(R.id.navHome)
+            "settings" -> selectNavTab(R.id.navSettings)
         }
     }
 

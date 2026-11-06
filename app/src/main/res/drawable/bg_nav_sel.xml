@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Essentials pill bottom bar: selected tab pill (dark, with light
+     text/icon on top of the sage bar). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="100dp" />
+    <solid android:color="@color/ess_bar_sel_bg" />
+</shape>

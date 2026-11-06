@@ -39,6 +39,12 @@ class RuleEditorActivity : LocalizedActivity() {
     private lateinit var consContainer: LinearLayout
     private lateinit var actContainer: LinearLayout
     private lateinit var cgConsMode: ChipGroup
+    // v1.2.0: exit actions — plain action rows, same picker as
+    // the entry actions. Special picker rows (If/Else, FocusLock,
+    // AutoTap, Redial) stay entry-only.
+    private lateinit var exitContainer: LinearLayout
+    private lateinit var tvExitNote: TextView
+    private lateinit var btnAddExitAction: Button
     private var ruleId: String = ""
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
@@ -270,6 +276,9 @@ class RuleEditorActivity : LocalizedActivity() {
                 showPicker(kind, false) { picked ->
                     this.type = picked
                     refreshChip()
+                    // v1.2.0: a trigger type change can arm or
+                    // disarm the exit section.
+                    if (kind == "t") refreshExitSection()
                 }
             }
             line1.addView(chipType)
@@ -282,6 +291,9 @@ class RuleEditorActivity : LocalizedActivity() {
                 // too (top-level rows behave exactly as before).
                 setOnClickListener {
                     (root.parent as? ViewGroup)?.removeView(root)
+                    // v1.2.0: removing the first trigger can
+                    // disarm the exit section.
+                    if (kind == "t") refreshExitSection()
                 }
             })
             root.addView(line1)
@@ -2543,6 +2555,8 @@ class RuleEditorActivity : LocalizedActivity() {
     private val trigDayRows = mutableListOf<TimeAtDaysRow>()
     private val consRows = mutableListOf<Row>()
     private val actRows = mutableListOf<Row>()
+    // v1.2.0: exit rows (plain "a" rows only).
+    private val exitRows = mutableListOf<Row>()
     // v2.18: groups live beside the flat constraint rows; action
     // items (plain rows, If/Else cards and — v2.20 — FocusLock
     // cards, v2.21 AutoTap cards) share ONE ordered list so the
@@ -2559,6 +2573,10 @@ class RuleEditorActivity : LocalizedActivity() {
         consContainer = findViewById(R.id.consContainer)
         actContainer = findViewById(R.id.actContainer)
         cgConsMode = findViewById(R.id.cgConsMode)
+        exitContainer = findViewById(R.id.exitContainer)
+        tvExitNote = findViewById(R.id.tvExitNote)
+        btnAddExitAction = findViewById(R.id.btnAddExitAction)
+        btnAddExitAction.setOnClickListener { addExitRow("", "") }
 
         findViewById<Button>(R.id.btnAddTrigger).setOnClickListener {
             addRow("t", "", "")
@@ -2645,6 +2663,12 @@ class RuleEditorActivity : LocalizedActivity() {
                     addRedialRow(a)
                 else addRow("a", a.optString("type"), a.optString("param"), a)
             }
+            // v1.2.0: exit actions load as plain rows, same as entries.
+            val exits = existing.optJSONArray("exit_actions")
+            if (exits != null) for (i in 0 until exits.length()) {
+                val a = exits.optJSONObject(i) ?: continue
+                addExitRow(a.optString("type"), a.optString("param"))
+            }
             val btnDelete = findViewById<Button>(R.id.btnDeleteRule)
             btnDelete.visibility = View.VISIBLE
             btnDelete.setOnClickListener {
@@ -2659,6 +2683,7 @@ class RuleEditorActivity : LocalizedActivity() {
             trigRestRows.isEmpty() && trigDayRows.isEmpty())
             addRow("t", "time_at", "")
         if (actItems.isEmpty()) addRow("a", "notify_peer", "")
+        refreshExitSection()
         buildCategoryChips(existing?.optString("cat") ?: "")
     }
 
@@ -2707,6 +2732,33 @@ class RuleEditorActivity : LocalizedActivity() {
                 actContainer.addView(row.root) }
         }
         if (extra != null) row.loadExtra(extra)
+        // v1.2.0: adding/removing the first trigger can arm or
+        // disarm the exit section.
+        if (kind == "t") refreshExitSection()
+    }
+
+    /** v1.2.0: one plain exit-action row (same picker as entry
+     *  rows; the picker already excludes If/Else and the special
+     *  FocusLock/AutoTap/Redial cards). */
+    private fun addExitRow(type: String, param: String) {
+        val t = type.ifEmpty { typesFor("a").first() }
+        val row = Row("a", t, param)
+        exitRows.add(row)
+        exitContainer.addView(row.root)
+    }
+
+    /** v1.2.0: the exit section shows only when the rule's FIRST
+     *  trigger (same order as buildRule: plain rows first) has a
+     *  known opposite — otherwise exit actions could never run,
+     *  so the rows and the add button hide and the note explains
+     *  why. Guard/rest/day triggers have no opposite either. */
+    private fun refreshExitSection() {
+        val firstType = trigRows.firstOrNull { it.root.parent != null }?.type
+        val show = firstType != null &&
+            Automation.oppositeEvent(firstType) != null
+        tvExitNote.visibility = if (show) View.GONE else View.VISIBLE
+        exitContainer.visibility = if (show) View.VISIBLE else View.GONE
+        btnAddExitAction.visibility = if (show) View.VISIBLE else View.GONE
     }
 
     private fun addGroupRow(existing: JSONObject?) {
@@ -2886,6 +2938,18 @@ class RuleEditorActivity : LocalizedActivity() {
             }
         }
         rule.put("actions", acts)
+        // v1.2.0: exit actions serialize only when the first
+        // trigger has a known opposite — otherwise they could
+        // never run, so they are dropped instead of saved dead.
+        val exits = JSONArray()
+        for (row in exitRows) if (row.root.parent != null)
+            exits.put(row.toJson())
+        if (exits.length() > 0) {
+            val firstType = liveTrig.firstOrNull()?.optString("type")
+            if (firstType != null &&
+                Automation.oppositeEvent(firstType) != null)
+                rule.put("exit_actions", exits)
+        }
         return rule
     }
 

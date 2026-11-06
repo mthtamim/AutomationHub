@@ -38,4 +38,11 @@
     <color name="nav_active">#10B981</color>
     <color name="nav_inactive">#5C7267</color>
     <color name="nav_indicator">#D9F6E9</color>
+    <!-- Essentials pill bottom bar (v1.2.0): fixed sage tokens —
+         same in every theme, like btn_fill_night. The bar is the
+         app's signature, not a theme colour. -->
+    <color name="ess_bar_bg">#A9D6B3</color>
+    <color name="ess_bar_text">#12241B</color>
+    <color name="ess_bar_sel_bg">#12241B</color>
+    <color name="ess_bar_sel_text">#CDEED3</color>
 </resources>
