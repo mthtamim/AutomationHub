@@ -105,58 +105,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ===== Recent activity ===== -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardDashRecent"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:clickable="true"
-            android:focusable="true">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="23dp"
-                            android:layout_height="23dp"
-                            android:layout_gravity="center"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_msg" />
-                    </FrameLayout>
-
-                    <TextView
-                        style="@style/PL.TileTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_marginStart="11dp"
-                        android:text="@string/dash_recent" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tvDashRecent"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:ellipsize="end"
-                    android:maxLines="3"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="13.5sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
         <!-- ===== AutoTap (v2.21 bridge card — PhoneLink styles and
              theme colors only, never AutoTap's own palette) ===== -->

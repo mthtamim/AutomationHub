@@ -269,149 +269,6 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-<!-- ===== Smart control card ===== -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
-            app:cardElevation="0dp"
-            app:strokeColor="?attr/colorSurfaceVariant"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    style="@style/PL.CardTitle"
-                    android:text="@string/sec_smart" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnApps"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_apps"
-                    app:icon="@drawable/ic_grid" />
-
-                <TextView
-                    style="@style/PL.BodySmall"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/apps_hint_short" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="14dp"
-                    android:layout_marginBottom="4dp"
-                    android:background="?attr/colorOutlineVariant" />
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swQuiet"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/quiet_label" />
-
-                <TextView
-                    android:id="@+id/tvQuietInfo"
-                    style="@style/PL.BodySmall" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnQuietTimes"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/btn_quiet_times"
-                    app:icon="@drawable/ic_clock" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="14dp"
-                    android:layout_marginBottom="4dp"
-                    android:background="?attr/colorOutlineVariant" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/digest_label"
-                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-                    android:textColor="?attr/colorOnSurface" />
-
-                <TextView
-                    android:id="@+id/tvDigestInfo"
-                    style="@style/PL.BodySmall" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnDigest"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/btn_digest"
-                    app:icon="@drawable/ic_msg" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="14dp"
-                    android:layout_marginBottom="4dp"
-                    android:background="?attr/colorOutlineVariant" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/PL.Field"
-                    android:hint="@string/hint_priority">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etPriority"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="2"
-                        android:textSize="13sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/PL.Field"
-                    android:hint="@string/hint_alert_words">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etAlertWords"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="2"
-                        android:textSize="13sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSaveSmart"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/btn_save"
-                    app:icon="@drawable/ic_check" />
-
-                <TextView
-                    style="@style/PL.BodySmall"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/priority_hint" />
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swSmsTrigger"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/sms_trigger_label" />
-
-                <TextView
-                    style="@style/PL.BodySmall"
-                    android:text="@string/sms_trigger_hint" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 <!-- ===== More features card ===== -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -433,61 +290,6 @@
                     style="@style/PL.CardTitle"
                     android:text="@string/sec_more" />
 
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swTts"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/tts_label" />
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swTtsCalls"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/tts_calls_label" />
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swSmsReply"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/sms_reply_label" />
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swAutoReply"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/auto_reply_label" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/PL.Field"
-                    android:hint="@string/hint_auto_reply">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etAutoReply"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="2"
-                        android:textSize="13sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swRoutine"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/routine_label" />
-
-                <TextView
-                    android:id="@+id/tvRoutineInfo"
-                    style="@style/PL.BodySmall" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnRoutineTime"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/btn_routine_time"
-                    app:icon="@drawable/ic_clock" />
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swLowLoc"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/low_loc_label" />
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/swGeo"
@@ -516,18 +318,10 @@
                     android:text="@string/btn_geo_radius"
                     app:icon="@drawable/ic_loc" />
 
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swDailySummary"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/daily_summary_label" />
 
                 <!-- v2.17.4: Usage Access is GRANTED only in
                      Permissions & Access now — here just its state
                      and a link (no second grant button). -->
-                <TextView
-                    android:id="@+id/tvSmartUsageState"
-                    style="@style/PL.BodySmall"
-                    android:layout_marginTop="10dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSmartPermsLink"
@@ -539,35 +333,10 @@
                     app:icon="@drawable/ic_shield_check" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
-            app:cardElevation="0dp"
-            app:strokeColor="?attr/colorSurfaceVariant"
-            app:strokeWidth="1dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-                <TextView
-                    style="@style/PL.CardTitle"
-                    android:text="@string/sec_smart_extra" />
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swAutoPriority"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/auto_priority_label" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-<!-- ===== Automation card (v2.17.4): engine master switch, the
-     focus guard and the mode bundle (both moved from the Command
-     Hub — they are settings, not commands), and the Studio link
-     row (sync state + rest value live in the Studio itself) ===== -->
+<!-- ===== Automation card: engine master switch only
+     (focus guard, mode bundle and Studio link removed
+     2026-11-06 — forwarding/smart extras, not automation) ===== -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -593,43 +362,7 @@
                     style="@style/PL.SwitchRow"
                     android:text="@string/auto_master_label" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFocusGuard"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/cmd_focus"
-                    app:icon="@drawable/ic_shield_check" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMode"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/btn_mode"
-                    app:icon="@drawable/ic_sliders" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="14dp"
-                    android:layout_marginBottom="4dp"
-                    android:background="?attr/colorOutlineVariant" />
-
-                <TextView
-                    android:id="@+id/tvSmartStudioInfo"
-                    style="@style/PL.BodySmall" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSmartStudio"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/btn_open_studio"
-                    app:icon="@drawable/ic_bulb" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -664,13 +397,6 @@
                 <TextView
                     style="@style/PL.BodySmall"
                     android:text="@string/sec_shield_sub" />
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swEncryption"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/enc_label" />
-                <TextView
-                    style="@style/PL.BodySmall"
-                    android:text="@string/enc_hint" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 <com.google.android.material.card.MaterialCardView
@@ -720,6 +446,10 @@
                     android:layout_marginTop="6dp"
                     android:text="@string/btn_set_pin"
                     app:icon="@drawable/ic_lock" />
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/swIntruder"
+                    style="@style/PL.SwitchRow"
+                    android:text="@string/intruder_label" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 <!-- v2.18 App Locker: entry card — the locker itself is managed on
@@ -770,69 +500,6 @@
                 android:padding="16dp">
                 <TextView
                     style="@style/PL.CardTitle"
-                    android:text="@string/set_panic_title" />
-                <TextView
-                    style="@style/PL.BodySmall"
-                    android:text="@string/set_panic_sub" />
-                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btnPanicPin"
-                                    style="@style/PL.BtnMint"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="8dp"
-                                    android:text="@string/btn_panic_pin"
-                                    app:icon="@drawable/ic_alert" />
-
-                <!-- v2.17.4: SOS numbers moved here from General —
-                     panic PIN and SOS numbers are one emergency
-                     section now (the SOS button stays on Dashboard) -->
-                <TextView
-                    style="@style/PL.BodySmall"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/label_sos_numbers" />
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSosNumbers"
-                    style="@style/PL.Field"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/hint_sos_numbers"
-                    android:inputType="phone" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSaveSos"
-                    style="@style/PL.BtnTonal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/btn_save"
-                    app:icon="@drawable/ic_check" />
-                <!-- AutomationHub: the launcher-hide switch is gone
-                     with the .MainAlias alias (no relay, no SHOWAPP). -->
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swIntruder"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/intruder_label" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-<com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="22dp"
-            app:cardElevation="0dp"
-            app:strokeColor="?attr/colorSurfaceVariant"
-            app:strokeWidth="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-                <TextView
-                    style="@style/PL.CardTitle"
                     android:text="@string/sec_admin_guard" />
                 <!-- v2.17.4: Device Admin and Accessibility are
                      GRANTED only in Permissions & Access now —
@@ -853,18 +520,6 @@
                     android:layout_marginTop="6dp"
                     android:text="@string/btn_perms_link"
                     app:icon="@drawable/ic_shield_check" />
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/swGuard"
-                    style="@style/PL.SwitchRow"
-                    android:text="@string/guard_label" />
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSecLog"
-                    style="@style/PL.BtnPill"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/btn_seclog"
-                    app:icon="@drawable/ic_file" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
         </LinearLayout>

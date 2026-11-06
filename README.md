@@ -315,3 +315,79 @@ Local validation for this pass: all 3 edited layouts parse as XML;
 every `R.*` reference in `MainActivity.kt` resolves; every manifest
 component resolves to a class (except library providers). CI is
 still the compile judge — not pushed yet.
+
+## Unnecessary-items removal pass 2 (2026-11-06 — Tamim's phone screenshots, approved in chat)
+
+Tamim identified leftover unnecessary items in the Security & App
+Lock and Smart & Automation panels, approved their removal, then
+added two exceptions (App Locker stays, wrong-unlock selfie stays)
+and one addition (Dashboard Recent activity also goes).
+
+**Removed — Security panel (`panelSecurity`, hub Panic card):**
+Panic PIN + SOS numbers + save (`btnPanicPin`, `etSosNumbers`,
+`btnSaveSos`), the hub Panic card (`cardHubPanic`, which only opened
+the Security screen), encryption (`swEncryption`), guard
+(`swGuard`), security log (`btnSecLog` + `showSecLogDialog()`).
+The orphaned one-line prompt helper (`showTextPrompt()`, only used
+by the Panic PIN) went with it.
+
+**Removed — Smart panel (`panelSmart`):** the whole first card
+(apps picker `btnApps`, Quiet hours `swQuiet`/`btnQuietTimes`,
+digest `btnDigest`, priority numbers `etPriority`, alert words
+`etAlertWords`, save `btnSaveSmart`, SMS trigger `swSmsTrigger`),
+TTS + calls (`swTts`, `swTtsCalls`), SMS reply/auto-reply
+(`swSmsReply`, `swAutoReply`, `etAutoReply`), routine
+(`swRoutine`, `btnRoutineTime`), low-location (`swLowLoc`), daily
+summary (`swDailySummary`), auto-priority (`swAutoPriority`,
+whole extra card), usage state line (`tvSmartUsageState`),
+FocusGuard (`btnFocusGuard` + `showFocusDialog()`), mode
+(`btnMode`, dead/unwired), Smart Studio (`btnSmartStudio` +
+`tvSmartStudioInfo`). Most of these were dead UI with no code
+wiring at all; Quiet hours and digest had no consumers outside
+`MainActivity`/`Config`, and the #ring/#loc/#battery SMS fallback
+has no handler in code.
+
+**Removed — Dashboard:** Recent activity card (`cardDashRecent` +
+`tvDashRecent` + its `refreshDashboard()` block). Dashboard now
+holds only the device card, AutoTap and Redial.
+
+**Kept — exceptions (Tamim's words):** App Locker IN FULL (app
+PIN set/change, `swAppLock`, `btnAppLocker`, `AppLockerActivity`)
+and wrong-unlock selfie (`swIntruder`, relocated into the App Lock
+card after the PIN buttons — it needs device admin, which stays).
+
+**Kept — infrastructure:** device admin + accessibility state
+lines and the permissions link (Flow lock-screen action and
+AutoTap need them), Automation master toggle (`swAutoMaster`),
+geofence (`swGeo` + set/radius UI — `geofence_in`/`geofence_out`
+is a real Flow trigger), the Smart permissions link
+(`btnSmartPermsLink`, kept for the geo location permission), and
+the Smart/Security hub tiles (the trimmed panels still open from
+them).
+
+**FocusLock token decision:** the token is NOT configured in the
+removed FocusGuard dialog — that dialog only set the Focus *Guard*
+schedule (focusOn/focusPkgs/focusWindow, enforced by
+`A11yService`). The FocusLock token (`Config.focusLockToken`) is
+saved once from `AutomationActivity`, and the `focuslock_control`
+Flow action reads it from there, so removing FocusGuard does not
+break it. Caveat: `A11yService` still enforces a Focus Guard
+schedule if one was saved earlier — with the dialog gone there is
+no UI to turn it off (it defaults off).
+
+**Left in place deliberately:** the Data panel's Inbox
+backup/restore buttons (not in the approved list); dead strings
+for the removed UI remain in `strings.xml` (harmless); `Config`
+accessors for removed toggles remain (dead prefs, harmless).
+
+Local validation for this pass: all 3 edited layouts parse as XML;
+all removed view ids grep to 0 across `java/` + `res/layout/` +
+`res/xml/` (one false positive: `setSosNumbers` in `Config.kt`
+contains the substring of the removed `etSosNumbers` id);
+`MainActivity.kt` (1273 → 1113 lines) is brace/paren balanced per
+a proper Kotlin scanner (strings/`${}` templates/raw strings/char
+literals/comments aware); every `R.*` ref in `MainActivity.kt`
+resolves (the one apparent miss is `android.R.string.ok`); all 35
+manifest components resolve to classes (`QrShowActivity` lives in
+`QrShow.kt`); the two Add-Flow crash-fix files are untouched. CI
+is still the compile judge — not pushed yet.

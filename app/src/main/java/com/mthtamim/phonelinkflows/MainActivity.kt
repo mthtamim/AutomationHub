@@ -1,6 +1,5 @@
 package com.mthtamim.phonelinkflows
 
-import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -27,17 +26,11 @@ import com.autotap.app.Store
 import com.autotap.app.TapAccessibilityService
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButtonToggleGroup
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.concurrent.thread
 
 class MainActivity : LocalizedActivity() {
 
     // v2.17.2: info lines refreshed by refreshStatus().
-    private lateinit var tvQuietInfo: TextView
-    private lateinit var tvDigestInfo: TextView
-    private lateinit var tvRoutineInfo: TextView
     private lateinit var tvPinInfo: TextView
     private lateinit var tvAdminInfo: TextView
     private lateinit var tvGeoInfo: TextView
@@ -54,7 +47,6 @@ class MainActivity : LocalizedActivity() {
     private lateinit var tvDashWifi: TextView
     private lateinit var pbDashBattery: android.widget.ProgressBar
     private lateinit var tvDashBatteryPct: TextView
-    private lateinit var tvDashRecent: TextView
     // v2.21 AutoTap dashboard card views
     private lateinit var tvDashAutoTapStatus: TextView
     private lateinit var etDashAutoTapScript: EditText
@@ -86,9 +78,7 @@ class MainActivity : LocalizedActivity() {
     private lateinit var tvHubDiag: TextView
     // v2.17.4: state lines for accesses granted in Permissions, the
     // Automation Studio info line and the General version line
-    private lateinit var tvSmartUsageState: TextView
     private lateinit var tvA11yState: TextView
-    private lateinit var tvSmartStudioInfo: TextView
     private lateinit var tvGeneralDiag: TextView
     private lateinit var bottomNav: BottomNavigationView
 
@@ -272,7 +262,6 @@ class MainActivity : LocalizedActivity() {
         tvDashWifi = findViewById(R.id.tvDashWifi)
         pbDashBattery = findViewById(R.id.pbDashBattery)
         tvDashBatteryPct = findViewById(R.id.tvDashBatteryPct)
-        tvDashRecent = findViewById(R.id.tvDashRecent)
         tvDashAutoTapStatus = findViewById(R.id.tvDashAutoTapStatus)
         etDashAutoTapScript = findViewById(R.id.etDashAutoTapScript)
         btnDashAutoTapStart = findViewById(R.id.btnDashAutoTapStart)
@@ -299,16 +288,11 @@ class MainActivity : LocalizedActivity() {
         tvHubDataSub = findViewById(R.id.tvHubDataSub)
         tvHubDiag = findViewById(R.id.tvHubDiag)
 
-        tvQuietInfo = findViewById(R.id.tvQuietInfo)
-        tvDigestInfo = findViewById(R.id.tvDigestInfo)
-        tvRoutineInfo = findViewById(R.id.tvRoutineInfo)
         tvPinInfo = findViewById(R.id.tvPinInfo)
         tvAdminInfo = findViewById(R.id.tvAdminInfo)
         tvGeoInfo = findViewById(R.id.tvGeoInfo)
         tvStats = findViewById(R.id.tvStats)
-        tvSmartUsageState = findViewById(R.id.tvSmartUsageState)
         tvA11yState = findViewById(R.id.tvA11yState)
-        tvSmartStudioInfo = findViewById(R.id.tvSmartStudioInfo)
         tvGeneralDiag = findViewById(R.id.tvGeneralDiag)
 
 
@@ -359,25 +343,6 @@ class MainActivity : LocalizedActivity() {
             startActivity(Intent(this, AppLockerActivity::class.java))
         }
 
-        // ----- smart control (v2.1) -----
-
-        val swQuiet = findViewById<CompoundButton>(R.id.swQuiet)
-        swQuiet.isChecked = Config.quietOn(this)
-        swQuiet.setOnCheckedChangeListener { _, checked ->
-            Config.setToggle(this, "quiet_on", checked); refreshStatus()
-        }
-        findViewById<Button>(R.id.btnQuietTimes).setOnClickListener {
-            val start = Config.quietStart(this)
-            TimePickerDialog(this, { _, sh, sm ->
-                val end = Config.quietEnd(this)
-                TimePickerDialog(this, { _, eh, em ->
-                    Config.setQuietWindow(this, sh * 60 + sm, eh * 60 + em)
-                    refreshStatus()
-                }, end / 60, end % 60, true).show()
-            }, start / 60, start % 60, true).show()
-        }
-
-
         // ----- more features (v2.1) -----
         bindToggle(R.id.swGeo, "geo_on", Config.geoOn(this))
 
@@ -419,11 +384,6 @@ class MainActivity : LocalizedActivity() {
                 }
                 .show()
         }
-        // ptt_autoplay finally gets a UI (Smart panel, voice area).
-        // Automation Studio link row (real controls live in Studio).
-        findViewById<Button>(R.id.btnSmartStudio).setOnClickListener {
-            startActivity(Intent(this, AutomationActivity::class.java))
-        }
         // ----- data & statistics (v2.1) -----
 
 
@@ -451,11 +411,6 @@ class MainActivity : LocalizedActivity() {
 
 
 
-
-
-
-
-        findViewById<Button>(R.id.btnFocusGuard).setOnClickListener { showFocusDialog() }
 
 
 
@@ -519,22 +474,6 @@ class MainActivity : LocalizedActivity() {
             Config.setAutoUpdate(this, checked)
         }
 
-        findViewById<Button>(R.id.btnPanicPin).setOnClickListener {
-            showTextPrompt(getString(R.string.btn_panic_pin), "") { pin ->
-                if (pin.length >= 4) {
-                    Config.setPanicPinHash(this, Crypto.pinHash(pin))
-                    toast(getString(R.string.toast_saved))
-                } else toast(getString(R.string.toast_pin_short))
-            }
-        }
-        findViewById<com.google.android.material.textfield.TextInputEditText>(
-            R.id.etSosNumbers).setText(Config.sosNumbers(this).joinToString(", "))
-        findViewById<Button>(R.id.btnSaveSos).setOnClickListener {
-            val v = findViewById<com.google.android.material.textfield.TextInputEditText>(
-                R.id.etSosNumbers).text.toString()
-            Config.setSosNumbers(this, v)
-            toast(getString(R.string.toast_saved))
-        }
         // v2.11: once-a-day silent update check
         if (System.currentTimeMillis() - Config.updateLastCheck(this) >
             24 * 3600_000L) Update.check(this, false)
@@ -638,13 +577,11 @@ class MainActivity : LocalizedActivity() {
 
 
         // ----- security card -----
-        bindToggle(R.id.swGuard, "guard_on", Config.guardOn(this))
         bindToggle(R.id.swIntruder, "intruder_on", Config.intruderOn(this))
         findViewById<Button>(R.id.btnSetPin).setOnClickListener { showSetPinDialog { } }
         // v2.17.4: the Device Admin grant button moved to
         // Permissions & Access — the Security panel keeps the
         // tvAdminInfo state line and the btnSecPermsLink link.
-        findViewById<Button>(R.id.btnSecLog).setOnClickListener { showSecLogDialog() }
 
         // ----- appearance: language & theme -----
         val toggleLang = findViewById<MaterialButtonToggleGroup>(R.id.toggleLang)
@@ -801,8 +738,6 @@ class MainActivity : LocalizedActivity() {
         findViewById<View>(R.id.tileHubSmart).setOnClickListener {
             openSubScreen(R.id.panelSmart, R.string.cat_smart) }
 
-        findViewById<View>(R.id.cardHubPanic).setOnClickListener {
-            openSubScreen(R.id.panelSecurity, R.string.cat_security) }
         // v2.17.3 back map (Back never falls out of the app from a
         // panel or a non-Dashboard tab):
         //   sub-screen open -> close it (back to the Settings hub
@@ -930,81 +865,6 @@ class MainActivity : LocalizedActivity() {
 
 
 
-    private fun showSecLogDialog() {
-        val entries = SecLog.all(this)
-        if (entries.isEmpty()) {
-            toast(getString(R.string.seclog_empty))
-            return
-        }
-        val fmt = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
-        val labels = entries.map { (t, s) -> "${fmt.format(Date(t))} — $s" }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.seclog_title))
-            .setItems(labels, null)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
-    }
-
-
-    /** One-line text prompt (used by SOS/web-pin dialogs). */
-    private fun showTextPrompt(title: String, initial: String,
-                               onOk: (String) -> Unit) {
-        val input = EditText(this).apply {
-            setText(initial)
-            inputType = InputType.TYPE_CLASS_TEXT
-        }
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setView(input)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                val v = input.text.toString().trim()
-                if (v.isNotEmpty()) onOk(v)
-            }
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .show()
-    }
-
-    /** v2.11 focus guard settings (enforced by A11yService). */
-    private fun showFocusDialog() {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 24, 48, 8)
-        }
-        val sw = android.widget.Switch(this).apply {
-            text = getString(R.string.cmd_focus)
-            isChecked = Config.focusOn(this@MainActivity)
-        }
-        val etPkgs = EditText(this).apply {
-            hint = getString(R.string.focus_pkgs_hint)
-            setText(Config.focusPkgs(this@MainActivity).joinToString(", "))
-        }
-        val (fs, fe) = Config.focusWindow(this)
-        val etWin = EditText(this).apply {
-            hint = "HH:MM-HH:MM"
-            setText("%02d:%02d-%02d:%02d".format(fs / 60, fs % 60, fe / 60, fe % 60))
-        }
-        layout.addView(sw); layout.addView(etPkgs); layout.addView(etWin)
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.cmd_focus))
-            .setView(layout)
-            .setPositiveButton(getString(R.string.btn_save)) { _, _ ->
-                Config.setFocusOn(this, sw.isChecked)
-                Config.setFocusPkgs(this, etPkgs.text.toString())
-                val m = Regex("(\\d{1,2}):(\\d{2})-(\\d{1,2}):(\\d{2})")
-                    .find(etWin.text.toString().trim())
-                if (m != null) {
-                    Config.setFocusWindow(this,
-                        m.groupValues[1].toInt() * 60 + m.groupValues[2].toInt(),
-                        m.groupValues[3].toInt() * 60 + m.groupValues[4].toInt())
-                }
-                toast(getString(R.string.toast_saved))
-            }
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .show()
-    }
-
-
-
     private fun showSetPinDialog(onDone: (Boolean) -> Unit) {
         val pin1 = EditText(this).apply {
             hint = getString(R.string.hint_pin)
@@ -1038,9 +898,6 @@ class MainActivity : LocalizedActivity() {
             .show()
     }
 
-    private fun fmtClock(minutes: Int): String =
-        String.format(Locale.US, "%02d:%02d", minutes / 60, minutes % 60)
-
     /** AutomationHub: rules/flows/automation-log counts (no relay stats). */
     private fun buildStatsText(): String {
         val rules = Automation.rules(this).size
@@ -1066,15 +923,9 @@ class MainActivity : LocalizedActivity() {
         tvConnPill.setTextColor(ContextCompat.getColor(this,
             if (autoOn) R.color.status_ok else R.color.status_bad))
         // Smart-control / data info lines
-        tvQuietInfo.text = getString(R.string.quiet_window,
-            fmtClock(Config.quietStart(this)), fmtClock(Config.quietEnd(this)))
-        tvDigestInfo.text = getString(R.string.stats_log_lines,
-            Automation.recentLog(this).size)
         tvGeoInfo.text = if (Config.geoIsSet(this)) {
             getString(R.string.geo_set, Config.geoLat(this), Config.geoLng(this), Config.geoRadius(this))
         } else getString(R.string.geo_not_set)
-        tvRoutineInfo.text = getString(R.string.focus_state_fmt,
-            getString(if (Config.focusOn(this)) R.string.state_on else R.string.state_off))
         tvStats.text = buildStatsText()
         tvPinInfo.text = getString(
             if (Config.pinHash(this).isNotEmpty()) R.string.pin_state_set else R.string.pin_state_unset)
@@ -1085,14 +936,6 @@ class MainActivity : LocalizedActivity() {
         tvA11yState.text = getString(R.string.a11y_state_fmt,
             getString(if (PermChecks.a11yEnabled(this)) R.string.state_on
                 else R.string.state_off))
-        tvSmartUsageState.text = getString(R.string.usage_state_fmt,
-            getString(if (PermChecks.usageAccess(this)) R.string.status_granted
-                else R.string.status_missing))
-        tvSmartStudioInfo.text = getString(R.string.studio_info_fmt,
-            rules.size,
-            getString(if (Config.automationOn(this)) R.string.state_on
-                else R.string.state_off),
-            Automation.restSeconds(this))
         refreshDashboard()
         refreshSettingsHub()
     }
@@ -1129,9 +972,6 @@ class MainActivity : LocalizedActivity() {
             val band = ownWifiBand()
             "Wi-Fi \u2022 $ssid" + if (band.isNotEmpty()) " \u2022 $band" else ""
         } else "Wi-Fi \u2022 \u2014"
-        val recent = Automation.recentLog(this).take(3)
-        tvDashRecent.text = if (recent.isEmpty()) getString(R.string.dash_recent_empty)
-            else recent.joinToString("\n") { "• $it" }
         refreshAutoTapCard()
         refreshRedialCard()
     }
