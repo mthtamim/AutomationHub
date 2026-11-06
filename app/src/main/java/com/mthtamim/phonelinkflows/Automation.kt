@@ -229,6 +229,22 @@ object Automation {
         prefs(ctx).edit().remove("auto_log").apply()
     }
 
+    /** v1.4.0: timestamped log for the Log screen — (millis, message)
+     *  pairs, newest first, reading the same "auto_log" JSON array
+     *  log() / recentLog() use. Additive only: the stored format and
+     *  the existing functions above are untouched. */
+    fun recentLogRaw(ctx: Context): List<Pair<Long, String>> {
+        val out = mutableListOf<Pair<Long, String>>()
+        try {
+            val arr = JSONArray(prefs(ctx).getString("auto_log", "[]") ?: "[]")
+            for (i in arr.length() - 1 downTo 0) {
+                val o = arr.optJSONObject(i) ?: continue
+                out.add(o.optLong("t") to o.optString("m"))
+            }
+        } catch (_: Exception) { }
+        return out
+    }
+
     fun exportJson(ctx: Context): String =
         prefs(ctx).getString("rules", "[]") ?: "[]"
 

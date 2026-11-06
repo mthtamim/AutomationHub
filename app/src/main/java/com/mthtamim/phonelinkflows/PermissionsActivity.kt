@@ -11,8 +11,9 @@ import android.text.SpannableStringBuilder
 import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.content.ContextCompat
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import kotlin.concurrent.thread
 
 /**
@@ -28,7 +29,7 @@ import kotlin.concurrent.thread
  */
 class PermissionsActivity : LocalizedActivity() {
 
-    private lateinit var pbGauge: android.widget.ProgressBar
+    private lateinit var pbGauge: CircularProgressIndicator
     private lateinit var tvGauge: TextView
     private lateinit var tvGaugeSub: TextView
     private lateinit var tvGaugeMark: TextView
@@ -299,6 +300,6 @@ class PermissionsActivity : LocalizedActivity() {
         setState(tvInstallState, PermChecks.installOk(this), okColor, badColor)
     }
 
-    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+    private fun toast(msg: String) = Snackbar.make(findViewById(android.R.id.content), msg, Snackbar.LENGTH_LONG).show()
 }
 

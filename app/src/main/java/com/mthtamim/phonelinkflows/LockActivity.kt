@@ -2,9 +2,9 @@ package com.mthtamim.phonelinkflows
 
 import android.os.Bundle
 import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
+import com.google.android.material.textfield.TextInputEditText
 import androidx.biometric.BiometricManager
+import com.google.android.material.snackbar.Snackbar
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 
@@ -16,7 +16,7 @@ class LockActivity : LocalizedActivity() {
         if (!Config.appLockOn(this) || SessionState.unlocked) { proceed(); return }
         setContentView(R.layout.activity_lock)
 
-        val etPin = findViewById<EditText>(R.id.etPin)
+        val etPin = findViewById<TextInputEditText>(R.id.etPin)
         findViewById<Button>(R.id.btnUnlock).setOnClickListener {
             val pin = etPin.text.toString()
             // v2.11 panic mode: the panic PIN opens the decoy screen
@@ -67,5 +67,5 @@ class LockActivity : LocalizedActivity() {
         finish()
     }
 
-    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    private fun toast(msg: String) = Snackbar.make(findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show()
 }

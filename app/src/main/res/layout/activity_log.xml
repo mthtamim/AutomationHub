@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Log screen (new v1.4.0): the preview's dedicated "কার্যকলাপের লগ"
+     sub-screen. Back button only — NOT a nav tab, so no nav bar and
+     no FAB. Filter chips (আজ / গতকাল / সব + মুছে ফেলো), then the
+     log list, newest first; rows are built in code (LogActivity). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <ImageButton
+            android:id="@+id/btnLogBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_back_chip"
+            android:contentDescription="@string/btn_back"
+            android:padding="10dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="?attr/colorOnSurface" />
+
+        <TextView
+            style="@style/PL.H1"
+            android:layout_width="0dp"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:text="@string/log_title" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/cgLogFilter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipLogToday"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/log_filter_today" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipLogYesterday"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/log_filter_yesterday" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipLogAll"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/log_filter_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipLogClear"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="false"
+                android:text="@string/log_filter_clear" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1">
+
+            <ListView
+                android:id="@+id/lvLog"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@null" />
+
+            <TextView
+                android:id="@+id/tvLogEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="@string/log_empty"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="14sp"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

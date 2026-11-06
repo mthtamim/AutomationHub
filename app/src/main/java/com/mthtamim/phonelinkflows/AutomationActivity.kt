@@ -226,31 +226,17 @@ class AutomationActivity : LocalizedActivity() {
             JSONObject().put("title", code).put("body", code))
     }
 
+    /** v1.4.0: the log lines moved to their own Log screen
+     *  (LogActivity, with day filters + clear). */
     private fun showLog() {
-        val lines = Automation.recentLog(this)
-        val tv = TextView(this).apply {
-            text = if (lines.isEmpty()) getString(R.string.auto_log_empty)
-                else lines.joinToString("\n")
-            setPadding(48, 24, 48, 24)
-            typeface = android.graphics.Typeface.MONOSPACE
-            textSize = 13f
-        }
-        val scroll = android.widget.ScrollView(this).apply { addView(tv) }
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.auto_log))
-            .setView(scroll)
-            .setNeutralButton(getString(R.string.auto_log_clear)) { _, _ ->
-                Automation.clearLog(this)
-            }
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+        startActivity(Intent(this, LogActivity::class.java))
     }
 
     private fun showVars() {
         val names = Automation.varNames(this)
         if (names.isEmpty()) {
-            android.widget.Toast.makeText(this,
-                getString(R.string.auto_vars_empty), android.widget.Toast.LENGTH_SHORT).show()
+            com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
+                getString(R.string.auto_vars_empty), com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
             return
         }
         val labels = names.map { "$it = ${Automation.getVar(this, it)}" }.toTypedArray()
@@ -281,9 +267,9 @@ class AutomationActivity : LocalizedActivity() {
     private fun showBackups() {
         val backs = Automation.backups(this)
         if (backs.isEmpty()) {
-            android.widget.Toast.makeText(this,
+            com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
                 getString(R.string.auto_backup_none),
-                android.widget.Toast.LENGTH_SHORT).show()
+                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
             return
         }
         val fmt = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.US)
@@ -296,9 +282,9 @@ class AutomationActivity : LocalizedActivity() {
             .setTitle(getString(R.string.auto_backup_title))
             .setItems(labels) { _, which ->
                 if (Automation.restoreBackup(this, backs[which].second)) {
-                    android.widget.Toast.makeText(this,
+                    com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
                         getString(R.string.auto_backup_restored),
-                        android.widget.Toast.LENGTH_SHORT).show()
+                        com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
                     render()
                 }
             }
@@ -324,16 +310,16 @@ class AutomationActivity : LocalizedActivity() {
         val text = raw.trim()
         if (text.startsWith("{") && text.contains("full-backup")) {
             val ok = SettingsTransfer.import(this, text)
-            android.widget.Toast.makeText(this,
+            com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
                 getString(if (ok) R.string.toast_cfg_imported
                     else R.string.auto_import_failed),
-                android.widget.Toast.LENGTH_SHORT).show()
+                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
         } else {
             val n = Automation.importJson(this, text)
-            android.widget.Toast.makeText(this,
+            com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
                 if (n >= 0) getString(R.string.auto_imported, n)
                 else getString(R.string.auto_import_failed),
-                android.widget.Toast.LENGTH_SHORT).show()
+                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
         }
         renderHealth()
         render()
@@ -404,9 +390,9 @@ class AutomationActivity : LocalizedActivity() {
             val launch = packageManager.getLaunchIntentForPackage(
                 Automation.FOCUSLOCK_PKG)
             if (launch != null) startActivity(launch)
-            else android.widget.Toast.makeText(this,
+            else com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
                 getString(R.string.fl_not_installed_toast),
-                android.widget.Toast.LENGTH_SHORT).show()
+                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
         }
         renderFocusLock()
         val btnRest = findViewById<Button>(R.id.btnRestTime)
@@ -481,10 +467,10 @@ class AutomationActivity : LocalizedActivity() {
             .setPositiveButton(getString(R.string.btn_save)) { _, _ ->
                 val v = input.text.toString().trim()
                 Config.setFocusLockToken(this, v)
-                android.widget.Toast.makeText(this,
+                com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
                     getString(if (v.isEmpty()) R.string.fl_token_cleared
                         else R.string.fl_token_saved),
-                    android.widget.Toast.LENGTH_SHORT).show()
+                    com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
                 renderFocusLock()
             }
             .setNegativeButton(getString(R.string.btn_cancel), null)
@@ -646,8 +632,11 @@ class AutomationActivity : LocalizedActivity() {
      *  a tab extra and finish; DIY is this screen; the bar's +
      *  button adds a rule (Rules tab) or a flow (Flows tab),
      *  replacing the two old FABs. */
+    /** v1.4.0: the M3 NavigationBar + FAB (NavBarHelper). The
+     *  FAB opens the "new" bottom sheet now (new rule / new flow /
+     *  from template) instead of opening the editor for the
+     *  current tab directly. */
     private fun setupNavBar() {
-        val bar = findViewById<View>(R.id.autoBottomNav)
         val goMain = { tab: String ->
             startActivity(Intent(this, MainActivity::class.java)
                 .putExtra("tab", tab)
@@ -655,27 +644,16 @@ class AutomationActivity : LocalizedActivity() {
                     Intent.FLAG_ACTIVITY_SINGLE_TOP))
             finish()
         }
-        bar.findViewById<View>(R.id.navTabHome).setOnClickListener {
-            goMain("home")
+        NavBarHelper.setupBar(this, R.id.autoBottomNav, R.id.nav_diy) { id ->
+            when (id) {
+                R.id.nav_home -> goMain("home")
+                R.id.nav_diy -> selectNavTab(R.id.navAutomation)
+                R.id.nav_templates -> startActivity(
+                    Intent(this, TemplatesActivity::class.java))
+                R.id.nav_settings -> goMain("settings")
+            }
         }
-        bar.findViewById<View>(R.id.navTabAuto).setOnClickListener {
-            selectNavTab(R.id.navAutomation)
-        }
-        bar.findViewById<View>(R.id.navTabSettings).setOnClickListener {
-            goMain("settings")
-        }
-        bar.findViewById<View>(R.id.navAdd).setOnClickListener {
-            // v1.2.2: the + button morphs into the editor
-            // (container transform, 450 ms, emphasized easing) —
-            // the FAB's fill is colorPrimary, so that is the
-            // morph's start colour.
-            if (flowTab) PLMotion.openWithTransform(this,
-                Intent(this, FlowEditorActivity::class.java),
-                it, "fab_new_flow", ThemeColors.primary(this))
-            else PLMotion.openWithTransform(this,
-                Intent(this, RuleEditorActivity::class.java),
-                it, "fab_new_rule", ThemeColors.primary(this))
-        }
+        NavBarHelper.setupFab(this)
         selectNavTab(R.id.navAutomation)
     }
 
@@ -698,31 +676,17 @@ class AutomationActivity : LocalizedActivity() {
             sharedView, "flow_card_" + flow.optString("id"))
     }
 
-    /** v1.2.0: paint the pill bar — selected tab gets the dark
-     *  pill with light text+icon; the others stay sage with dark
-     *  text+icon. Fixed sage tokens (ess_bar_*) — not theme
-     *  colours — so the bar looks the same in all 8 themes. */
+    /** v1.4.0: the NavigationBarView paints itself (M3
+     *  secondaryContainer indicator); this only sets which item
+     *  is selected. DIY is the selected tab on this screen. */
     private fun selectNavTab(id: Int) {
-        val bar = findViewById<View>(R.id.autoBottomNav)
-        val tabs = listOf(
-            Triple(R.id.navTabHome, R.id.navIcoHome, R.id.navTxtHome) to R.id.navHome,
-            Triple(R.id.navTabAuto, R.id.navIcoAuto, R.id.navTxtAuto) to R.id.navAutomation,
-            Triple(R.id.navTabSettings, R.id.navIcoSettings, R.id.navTxtSettings) to R.id.navSettings
-        )
-        for ((views, logical) in tabs) {
-            val (tabId, icoId, txtId) = views
-            val tab = bar.findViewById<View>(tabId)
-            val selected = logical == id
-            tab.setBackgroundResource(
-                if (selected) R.drawable.bg_nav_sel else 0)
-            val fg = androidx.core.content.ContextCompat.getColor(
-                this,
-                if (selected) R.color.ess_bar_sel_text
-                else R.color.ess_bar_text)
-            (bar.findViewById<ImageView>(icoId)).imageTintList =
-                android.content.res.ColorStateList.valueOf(fg)
-            (bar.findViewById<TextView>(txtId)).setTextColor(fg)
+        val menuId = when (id) {
+            R.id.navAutomation -> R.id.nav_diy
+            R.id.navSettings -> R.id.nav_settings
+            else -> R.id.nav_home
         }
+        findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.autoBottomNav)
+            ?.let { if (it.selectedItemId != menuId) it.selectedItemId = menuId }
     }
 
     // ---- Essentials DIY routine card (v1.2.0) ----
@@ -941,9 +905,13 @@ class AutomationActivity : LocalizedActivity() {
         // the next frame's end-state capture on a normal list.
         PLMotion.beginSharedAxisX(
             findViewById<View>(R.id.autoList).parent as ViewGroup, flows) {
-        // v2.24.1: filled segmented tabs — selected mint fill with
-        // dark text, unselected dark fill with light text.
-        val fillSelected = android.content.res.ColorStateList.valueOf(themeAccentColor())
+        // v2.24.1: filled segmented tabs — selected SecondaryContainer
+        // with onSecondaryContainer text (v1.4.0, per the preview;
+        // v1.3.0 used the mint fill), unselected dark fill with
+        // light text.
+        val fillSelected = android.content.res.ColorStateList.valueOf(
+            ThemeColors.secondaryContainer(this))
+        val textSelected = ThemeColors.onSecondaryContainer(this)
         // v2.25.1: unselected tab fill follows the theme — Emerald
         // keeps btn_fill_night exactly; glass themes use the theme's
         // surfaceVariant (translucent, so the gradient shows).
@@ -952,7 +920,6 @@ class AutomationActivity : LocalizedActivity() {
         } else {
             android.content.res.ColorStateList.valueOf(themeSurfaceVariant())
         }
-        val textDark = androidx.core.content.ContextCompat.getColor(this, R.color.tab_text_dark)
         val textLight = androidx.core.content.ContextCompat.getColor(this, R.color.tab_text_light)
         // v1.3.0: the tabs are MaterialButtons in a
         // MaterialButtonToggleGroup now (same ids) — the fill /
@@ -961,11 +928,11 @@ class AutomationActivity : LocalizedActivity() {
         val tabRules = findViewById<MaterialButton>(R.id.tabRules)
         val tabFlows = findViewById<MaterialButton>(R.id.tabFlows)
         tabRules.backgroundTintList = if (flows) fillUnselected else fillSelected
-        tabRules.setTextColor(if (flows) textLight else textDark)
+        tabRules.setTextColor(if (flows) textLight else textSelected)
         tabRules.setTypeface(tabRules.typeface,
             if (flows) android.graphics.Typeface.NORMAL else android.graphics.Typeface.BOLD)
         tabFlows.backgroundTintList = if (flows) fillSelected else fillUnselected
-        tabFlows.setTextColor(if (flows) textDark else textLight)
+        tabFlows.setTextColor(if (flows) textSelected else textLight)
         tabFlows.setTypeface(tabFlows.typeface,
             if (flows) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
         findViewById<MaterialButtonToggleGroup>(R.id.tabGroup)
@@ -978,8 +945,8 @@ class AutomationActivity : LocalizedActivity() {
         // (and its own list), so switching tabs never rebuilds
         // the other tab's cards.
         autoList.adapter = if (flows) flowAdapter else ruleAdapter
-        // v1.2.0: the two old FABs are gone — the bar's + button
-        // (see setupNavBar) adds a rule or a flow instead.
+        // v1.4.0: the nav FAB opens the "new" sheet (new rule /
+        // new flow / from template) — see NavBarHelper.
         if (flows) renderFlows() else render()
         }
         // v1.2.3: the list itself slides+fades in from the tab
@@ -1649,22 +1616,16 @@ class AutomationActivity : LocalizedActivity() {
                 }
                 MENU_FLOW_BACKUP -> {
                     if (!FlowIO.exportBackup(this)) {
-                        android.widget.Toast.makeText(this,
+                        com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
                             getString(R.string.flow_export_failed),
-                            android.widget.Toast.LENGTH_SHORT).show()
+                            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
                     }
                 }
                 MENU_FLOW_RESTORE -> startActivity(
                     Intent(this, FlowRestoreActivity::class.java))
-                MENU_FLOW_LOG -> {
-                    val lines = FlowStore.recentLog(this)
-                    MaterialAlertDialogBuilder(this)
-                        .setTitle(getString(R.string.flow_menu_log))
-                        .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
-                            else lines.joinToString("\n"))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
+                // v1.4.0: flow log lines live on the Log screen now.
+                MENU_FLOW_LOG -> startActivity(
+                    Intent(this, LogActivity::class.java))
                 MENU_TEMPLATES -> startActivity(
                     Intent(this, TemplatesActivity::class.java))
             }

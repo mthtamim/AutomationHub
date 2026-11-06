@@ -3,7 +3,11 @@
      Templates entry on both Automation tabs. Mirrors the Focus Guard
      picker layout: back chip + title, search box, then a list with
      Rules and Flows sections. Rows are built in code
-     (TemplatesActivity) because the Add button state changes per row. -->
+     (TemplatesActivity) because the Add button state changes per row.
+     v1.4.0: M3 restyle per the preview — PL.Field search,
+     category filter chips (combine with search), card rows with an
+     8dp transparent ListView divider as the gap between cards,
+     and the shared M3 nav bar + FAB at the bottom. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -43,18 +47,86 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp">
 
-        <EditText
-            android:id="@+id/etTemplatesSearch"
-            style="@style/PL.SearchBox"
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/PL.Field"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:hint="@string/templates_search_hint"
-            android:inputType="text"
-            app:drawableStartCompat="@drawable/ic_search" />
+            app:startIconDrawable="@drawable/ic_search">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etTemplatesSearch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/cgTemplatesFilter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTplAll"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/template_filter_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTplCharging"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/template_filter_charging" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTplTime"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/template_filter_time" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTplLocation"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/template_filter_location" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTplApp"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/template_filter_app" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTplFocusLock"
+                style="@style/PL.ChipFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/template_filter_focuslock" />
+        </com.google.android.material.chip.ChipGroup>
 
         <ListView
             android:id="@+id/lvTemplates"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:layout_marginTop="8dp"
             android:layout_weight="1"
-            android:divider="@null" />
+            android:divider="@android:color/transparent"
+            android:dividerHeight="8dp" />
     </LinearLayout>
+
+    <include
+        android:id="@+id/bottomNav"
+        layout="@layout/nav_m3_bar"
+        android:layout_width="match_parent"
+        android:layout_height="156dp" />
 </LinearLayout>

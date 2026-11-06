@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.4.0: the preview's 4-item M3 NavigationBar menu (Home / DIY /
+     Templates / Settings). Replaces menu/bottom_nav.xml (3 items, no
+     Templates) — that file is now unused. Icons are the existing
+     drawables; Templates reuses ic_grid (the 4-square grid). -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="@string/nav_home" />
+    <item
+        android:id="@+id/nav_diy"
+        android:icon="@drawable/ic_nav_auto"
+        android:title="@string/nav_diy" />
+    <item
+        android:id="@+id/nav_templates"
+        android:icon="@drawable/ic_grid"
+        android:title="@string/nav_templates" />
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/nav_settings" />
+</menu>

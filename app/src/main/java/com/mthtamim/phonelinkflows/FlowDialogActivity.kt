@@ -8,8 +8,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognizerIntent
-import android.widget.EditText
-import android.widget.ProgressBar
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
@@ -71,7 +71,7 @@ class FlowDialogActivity : LocalizedActivity() {
 
     private fun showInput(title: String, def: String) {
         try {
-            val edit = EditText(this)
+            val edit = TextInputEditText(this)
             edit.setText(def)
             MaterialAlertDialogBuilder(this)
                 .setTitle(title)
@@ -106,7 +106,7 @@ class FlowDialogActivity : LocalizedActivity() {
 
     private fun showProgress(title: String, seconds: Int) {
         try {
-            val bar = ProgressBar(this)
+            val bar = CircularProgressIndicator(this)
             val dialog = MaterialAlertDialogBuilder(this)
                 .setTitle(title)
                 .setView(bar)

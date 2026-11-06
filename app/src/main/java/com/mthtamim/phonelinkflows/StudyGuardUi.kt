@@ -1,9 +1,9 @@
 package com.mthtamim.phonelinkflows
 
 import android.app.Activity
-import android.widget.EditText
-import android.widget.Toast
+import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 
 /**
  * v2.20: the ONE Study Guard list manager (zero-duplicate
@@ -100,7 +100,7 @@ object StudyGuardUi {
     private fun namePrompt(activity: Activity,
                            existing: Config.StudyList?,
                            onSaved: (Config.StudyList) -> Unit) {
-        val et = EditText(activity).apply {
+        val et = TextInputEditText(activity).apply {
             hint = activity.getString(R.string.sg_list_name_hint)
             setSingleLine()
             if (existing != null) {
@@ -115,9 +115,11 @@ object StudyGuardUi {
             .setPositiveButton(R.string.btn_save) { _, _ ->
                 val name = et.text.toString().trim()
                 if (name.isEmpty()) {
-                    Toast.makeText(activity,
+                    Snackbar.make(
+                        activity.findViewById(android.R.id.content),
                         activity.getString(R.string.sg_name_empty),
-                        Toast.LENGTH_SHORT).show()
+                        Snackbar.LENGTH_SHORT
+                    ).show()
                     return@setPositiveButton
                 }
                 if (existing != null) {
@@ -140,9 +142,11 @@ object StudyGuardUi {
                          onSaved: (Config.StudyList) -> Unit) {
         val apps = AppLocker.launchableApps(activity)
         if (apps.isEmpty()) {
-            Toast.makeText(activity,
+            Snackbar.make(
+                activity.findViewById(android.R.id.content),
                 activity.getString(R.string.sg_no_apps),
-                Toast.LENGTH_SHORT).show()
+                Snackbar.LENGTH_SHORT
+            ).show()
             return
         }
         val labels = apps.map { it.label + "\n" + it.pkg }

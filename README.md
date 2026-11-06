@@ -1484,7 +1484,136 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
-## v1.3.0 — full Material Design 3 (not pushed yet)
+## v1.4.0 — preview deltas: palettes, nav bar + FAB, SearchBar, Templates + Log screens, Snackbars (not pushed yet)
+
+Why: Tamim approved the remaining preview-scope items
+("baki gulo koro", 2026-11-07) for ALL places — Autotap,
+Autodial (redial) and AppLock included. This pass also folds
+in the fix for the v1.3.0 CI failure (run #34): v1.3.0 used
+Compose Material3 role names that do not exist as attributes
+in the Views material library, so `:app:processDebugResources`
+failed with "style attribute 'attr/colorInverseSurface' not
+found" (same for the other three). The Views names are
+colorSurfaceInverse, colorOnSurfaceInverse,
+colorPrimaryInverse and scrimBackground — renamed everywhere
+in this pass. v1.3.0 never produced an APK and has no release;
+this build is the proof.
+
+What changed:
+- Palettes: the preview's hex values applied verbatim for all
+  8 themes, dark + light (Emerald primary #4edeB4, replacing
+  the app's #10B981). Derived rules, documented in the theme
+  files: surfaceContainerHighest = high lightened (dark) /
+  darkened (light) by 6% HSL lightness; outlineVariant = 50%
+  RGB mix of outline + onSurface; scrimBackground = #52000000
+  (M3 standard); onError dark #450A0A / light #FFFFFF;
+  errorContainer dark #33151A / light #FDECEC; secondary =
+  primary (app convention — the preview has no secondary
+  token). Glass rgba values become #AARRGGBB; aurora/graphite
+  gradients are 3-stop linear (angle 270), no glow layers;
+  NEW light drawables bg_theme_aurora_light.xml and
+  bg_theme_graphite_mono_light.xml. Solid themes' flat
+  android:windowBackground removed (the preview is flat for
+  them). themePreviews() hardcoded hex updated to the preview's
+  dark values.
+- Navigation: the signature pill bottom bar is replaced by the
+  preview's 4-item NavigationBar + FAB (same 4 destinations
+  the pill served: Home, DIY, Templates, Settings). FAB
+  (primaryContainer, 60dp) opens the "নতুন তৈরি করো" sheet
+  (new rule / new flow / from template); it hides on
+  sub-screens because the bar hides as a unit. New files:
+  res/menu/nav_main.xml, res/layout/nav_m3_bar.xml,
+  res/layout/bottomsheet_new.xml, res/values/strings_m3nav.xml,
+  NavBarHelper.kt (setupBar / setupFab / showNewSheet).
+- Home SearchBar: inline search over rules, flows and
+  templates (HomeSearch.kt, SearchBar in page_home.xml);
+  a rule hit opens the Rule editor, a flow hit the Flow
+  editor, a template hit the Templates screen with the query.
+  Back closes the search first; leaving Home closes it.
+- Templates screen: own activity (TemplatesActivity.kt,
+  activity_templates.xml) — MaterialCardView rows, category
+  chips (সব / চার্জিং / সময় / লোকেশন / অ্যাপ / FocusLock),
+  search with a "query" extra. Categories come from the real
+  trigger types. Note: the FocusLock chip currently shows an
+  empty list — no template in Templates.kt has a focuslock
+  trigger yet (mapping kept for future templates).
+- Log screen: own activity (LogActivity.kt,
+  activity_log.xml) — chips আজ (default) / গতকাল / সব +
+  "মুছে ফেলো" (confirm dialog, clears both logs);
+  newest-first rows with `dd MMM HH:mm`. Automation log
+  (timestamped) in all filters; FlowStore log (undated) only
+  under সব. Entry points: the Data panel's "কার্যকলাপের লগ
+  দেখো" button and the Automation menu log items (the
+  per-rule filtered log dialog is unchanged).
+- Snackbars: 33 Toasts become Snackbar (same text, same
+  duration, anchor = content view). 31 Toasts stay Toast, for
+  two reasons only: (a) 17 background paths with no Activity
+  / view to anchor to — FlowEngine (1), Automation (1), and
+  the AutoTap overlay services RecordOverlay (5),
+  EditOverlay (4), Dock (2), Runner (1), PreflightOverlay (1),
+  PickerOverlay (1), Calibrate (1); (b) 14 places where the
+  Activity calls finish() right after the message — a
+  Snackbar dies with its Activity, so the confirmation would
+  never be seen; Toast is the only visible confirmation there
+  — FlowRestoreActivity (4: bad file, empty, restore done,
+  error), FlowFlowImportActivity (3: bad, success, error),
+  FlowFloImportActivity (2: bad file, error), ScanActivity (4:
+  permission denied, camera failed, scripts imported, QR
+  no-match), RuleEditorActivity (1: history restored).
+- Motion: PLMotion 300 ms → 340 ms (tabs) / 320 ms
+  (shared-axis) per the preview; window transitions stay
+  300 ms, editor morph stays 450 ms.
+- Segmented: the Automation Rules | Flows selected state is
+  now SecondaryContainer + onSecondaryContainer text (was the
+  v1.3.0 mint fill); unselected state unchanged.
+- Leftover non-M3 audit, everywhere: AutoTap's programmatic
+  UI (EditText → TextInputEditText, Button → MaterialButton —
+  backgroundTintList = null where a custom GradientDrawable
+  background is assigned afterwards, so it is not tinted
+  primary); redial rows in the rule editor (etNumber / etGap /
+  etMax / etRing, cbSpeaker / cbAlert → MaterialCheckBox);
+  FlowPicker etFilter cast (matches dialog_picker.xml);
+  AppLock was already fully M3 (no change). Latent crash
+  fixed: v1.3.0 converted the Permissions gauge XML to
+  CircularProgressIndicator but left the Kotlin field typed
+  ProgressBar — findViewById<ProgressBar> would have thrown
+  ClassCastException the moment PermissionsActivity opened
+  (never shipped: v1.3.0 has no APK). Field type fixed.
+
+Deliberately NOT changed: the pill bar's files remain as
+dead files (nav_pill_bar.xml, bg_nav_*.xml, ess_bar_* colours,
+menu/bottom_nav.xml — the snapshot push cannot delete files);
+the old solid-theme gradient drawables (bg_theme_ocean_deep,
+bg_theme_midnight_sapphire, bg_theme_sunset_ember,
+bg_theme_rose_quartz, bg_theme_forest_mist) are now unused;
+the battery ring; switches; PLMotion window transitions
+(300 ms) / morph (450 ms); the FocusLock chip (empty until a
+focuslock template exists); PromptActivity's plain Button (it
+runs under a framework dialog theme — a MaterialButton would
+crash); Ui.kt's custom toggleSwitch / valueButton / chip
+controls and its SeekBar (converting it would change the
+on-release reporting API); ImageButtons (custom backgrounds,
+no Material equivalent needed); FlowService notification id
+101; no MQTT UI restored; no speed claim — nothing measured.
+
+Version 1.4.0 (vc11). No new dependencies, no new
+permissions, no behaviour change except the messages listed
+above (Snackbar where the screen stays open, Toast where it
+closes or there is no screen). Phone test pending: all 8
+themes on every screen (light + dark); nav bar tab switches
+(Home / DIY / Templates / Settings) and FAB sheet (new rule,
+new flow, from template); Home SearchBar (rule, flow,
+template hits; Back closes it); Templates screen (chips +
+search, add from template); Log screen (আজ / গতকাল / সব,
+মুছে ফেলো, Data-panel entry); segmented selected state in
+both themes; Snackbars visible where the screen stays open
+(save flow, copy/paste node, PIN wrong, permission gauge);
+Toasts still seen on import/restore/scan close; redial rows
+in the rule editor (number, gap, max, ring, speaker, alert);
+AutoTap screens (buttons, fields, PIN dialog); AppLock PIN
+screen; version 1.4.0.
+
+## v1.3.0 — full Material Design 3 (pushed 2026-11-07)
 
 Why: the app's M3 adoption was partial — AppCompat dialogs,
 framework date/time pickers, a round MaterialButton posing as a
@@ -1562,7 +1691,9 @@ NavigationBar + FAB where the app keeps its signature pill bar;
 a Home SearchBar; Snackbars instead of Toasts; motion at
 340 ms (tabs) / 320 ms (shared-axis) vs PLMotion's 300 ms;
 segmented selected = SecondaryContainer where the app keeps its
-approved mint fill. None of these were changed in this pass.
+approved mint fill. None of these were changed in this pass —
+they were built in v1.4.0 (section above), on Tamim's approval
+2026-11-07.
 
 ## v1.2.6 — cold-start speed: lazy Settings + baseline profile (shipped 2026-11-07)
 

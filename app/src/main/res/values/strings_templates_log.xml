@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.4.0 strings: Templates category filter chips + Log screen.
+     Kept in their own file so this work does not touch strings.xml
+     or strings_m3nav.xml. -->
+<resources>
+    <string name="template_filter_all">সব</string>
+    <string name="template_filter_charging">চার্জিং</string>
+    <string name="template_filter_time">সময়</string>
+    <string name="template_filter_location">লোকেশন</string>
+    <string name="template_filter_app">অ্যাপ</string>
+    <string name="template_filter_focuslock">FocusLock</string>
+
+    <string name="log_title">কার্যকলাপের লগ</string>
+    <string name="log_filter_today">আজ</string>
+    <string name="log_filter_yesterday">গতকাল</string>
+    <string name="log_filter_all">সব</string>
+    <string name="log_filter_clear">মুছে ফেলো</string>
+    <string name="log_empty">এখনো কোনো লগ নেই</string>
+    <string name="log_clear_title">লগ মুছে ফেলব?</string>
+    <string name="log_clear_confirm">সব লগ (রুল ও ফ্লো) মুছে যাবে। এই কাজ ফেরানো যাবে না।</string>
+    <string name="log_clear_yes">মুছে ফেলো</string>
+</resources>

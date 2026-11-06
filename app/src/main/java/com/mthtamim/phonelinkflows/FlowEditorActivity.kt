@@ -6,12 +6,12 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.CheckBox
-import android.widget.EditText
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.textfield.TextInputEditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
@@ -44,8 +44,8 @@ import org.json.JSONObject
  */
 class FlowEditorActivity : LocalizedActivity() {
 
-    private lateinit var etFlowName: EditText
-    private lateinit var etFlowFolder: EditText
+    private lateinit var etFlowName: TextInputEditText
+    private lateinit var etFlowFolder: TextInputEditText
     private lateinit var canvas: FlowCanvasView
     private lateinit var tvZoomPct: TextView
     private lateinit var btnUndoFlow: View
@@ -61,9 +61,9 @@ class FlowEditorActivity : LocalizedActivity() {
     private var flowId: String = ""
     private var isNew: Boolean = true
     private lateinit var flow: JSONObject
-    private val dialogFields = ArrayList<Pair<String, EditText>>()
+    private val dialogFields = ArrayList<Pair<String, TextInputEditText>>()
     private var dialogFallback = false
-    private var dialogFallbackField: EditText? = null
+    private var dialogFallbackField: TextInputEditText? = null
     private var dialogNoInput = false
     private var dialogOrigParam = ""
 
@@ -236,15 +236,15 @@ class FlowEditorActivity : LocalizedActivity() {
             }
             if (node != null) {
                 copiedNodeJson = node.toString()
-                Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show()
+                Snackbar.make(findViewById(android.R.id.content), R.string.toast_saved, Snackbar.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, R.string.flow_copy_no_selection, Toast.LENGTH_SHORT).show()
+                Snackbar.make(findViewById(android.R.id.content), R.string.flow_copy_no_selection, Snackbar.LENGTH_SHORT).show()
             }
         }
         findViewById<View>(R.id.btnPasteNode).setOnClickListener {
             val json = copiedNodeJson
             if (json == null) {
-                Toast.makeText(this, R.string.flow_paste_empty, Toast.LENGTH_SHORT).show()
+                Snackbar.make(findViewById(android.R.id.content), R.string.flow_paste_empty, Snackbar.LENGTH_SHORT).show()
             } else {
                 try {
                     val node = JSONObject(json)
@@ -258,7 +258,7 @@ class FlowEditorActivity : LocalizedActivity() {
                     canvas.selectedId = node.optString("id")
                     canvas.invalidate()
                 } catch (_: Exception) {
-                    Toast.makeText(this, R.string.flow_paste_empty, Toast.LENGTH_SHORT).show()
+                    Snackbar.make(findViewById(android.R.id.content), R.string.flow_paste_empty, Snackbar.LENGTH_SHORT).show()
                 }
             }
         }
@@ -272,18 +272,18 @@ class FlowEditorActivity : LocalizedActivity() {
         findViewById<View>(R.id.btnRunFlow).setOnClickListener {
             if (saveFlowSilent()) {
                 FlowEngine.runFlow(this, flow)
-                Toast.makeText(this, R.string.btn_run, Toast.LENGTH_SHORT).show()
+                Snackbar.make(findViewById(android.R.id.content), R.string.btn_run, Snackbar.LENGTH_SHORT).show()
             }
         }
         findViewById<View>(R.id.btnSaveFlow).setOnClickListener {
             if (saveFlowSilent()) {
-                Toast.makeText(this, R.string.flow_saved, Toast.LENGTH_SHORT).show()
+                Snackbar.make(findViewById(android.R.id.content), R.string.flow_saved, Snackbar.LENGTH_SHORT).show()
             }
         }
         findViewById<View>(R.id.btnExportFlow).setOnClickListener {
             if (saveFlowSilent()) {
                 if (!FlowIO.exportFlow(this, flow)) {
-                    Toast.makeText(this, R.string.flow_export_failed, Toast.LENGTH_SHORT).show()
+                    Snackbar.make(findViewById(android.R.id.content), R.string.flow_export_failed, Snackbar.LENGTH_SHORT).show()
                 }
             }
         }
@@ -384,7 +384,7 @@ class FlowEditorActivity : LocalizedActivity() {
     }
 
     private fun showNewFolderDialog() {
-        val input = EditText(this)
+        val input = TextInputEditText(this)
         input.hint = getString(R.string.flow_folder_name_hint)
         input.setText(etFlowFolder.text.toString())
         MaterialAlertDialogBuilder(this)
@@ -430,25 +430,25 @@ class FlowEditorActivity : LocalizedActivity() {
         }
 
         section(R.string.panel_options)
-        val cbImmediate = CheckBox(this)
+        val cbImmediate = MaterialCheckBox(this)
         cbImmediate.text = getString(R.string.panel_proceed)
         cbImmediate.textSize = 14f
         cbImmediate.setTextColor(themeOnBackground())
         cbImmediate.isChecked = node.optBoolean("immediate", true)
         root.addView(cbImmediate)
-        val cbEnabled = CheckBox(this)
+        val cbEnabled = MaterialCheckBox(this)
         cbEnabled.text = getString(R.string.panel_enabled)
         cbEnabled.textSize = 14f
         cbEnabled.setTextColor(themeOnBackground())
         cbEnabled.isChecked = node.optBoolean("enabled", true)
         root.addView(cbEnabled)
-        val cbContinueOnError = CheckBox(this)
+        val cbContinueOnError = MaterialCheckBox(this)
         cbContinueOnError.text = getString(R.string.panel_continue_on_error)
         cbContinueOnError.textSize = 14f
         cbContinueOnError.setTextColor(themeOnBackground())
         cbContinueOnError.isChecked = node.optString("onerror", "stop") == "continue"
         root.addView(cbContinueOnError)
-        val etNote = EditText(this)
+        val etNote = TextInputEditText(this)
         etNote.setText(node.optString("note"))
         etNote.hint = getString(R.string.panel_note_hint)
         etNote.textSize = 14f
@@ -722,7 +722,7 @@ class FlowEditorActivity : LocalizedActivity() {
                 label.textSize = 13f
                 label.setTextColor(themeOnSurfaceVariant())
                 inputContainer.addView(label)
-                val field = EditText(this)
+                val field = TextInputEditText(this)
                 field.setText(param)
                 val example = FlowFlow.defaultParam(type)
                 field.hint = when {
@@ -783,7 +783,7 @@ class FlowEditorActivity : LocalizedActivity() {
                 node.put("note", etNote.text.toString())
                 node.put("param", composeParam(type))
                 canvas.invalidate()
-                Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show()
+                Snackbar.make(findViewById(android.R.id.content), R.string.toast_saved, Snackbar.LENGTH_SHORT).show()
             }
             .setNegativeButton(R.string.flow_delete_node) { _, _ ->
                 pushUndo()
@@ -810,7 +810,7 @@ class FlowEditorActivity : LocalizedActivity() {
         label.textSize = 13f
         label.setTextColor(themeOnSurfaceVariant())
         container.addView(label)
-        val field = EditText(this)
+        val field = TextInputEditText(this)
         field.setText(initial)
         field.inputType = inputType
         if (hint.isNotEmpty()) {
@@ -1069,11 +1069,11 @@ class FlowEditorActivity : LocalizedActivity() {
     private fun saveFlowSilent(): Boolean {
         val name = etFlowName.text.toString().trim()
         if (name.isEmpty()) {
-            Toast.makeText(this, R.string.toast_need_name, Toast.LENGTH_SHORT).show()
+            Snackbar.make(findViewById(android.R.id.content), R.string.toast_need_name, Snackbar.LENGTH_SHORT).show()
             return false
         }
         if (FlowFlow.nodesOf(flow).length() == 0) {
-            Toast.makeText(this, R.string.toast_need_node, Toast.LENGTH_SHORT).show()
+            Snackbar.make(findViewById(android.R.id.content), R.string.toast_need_node, Snackbar.LENGTH_SHORT).show()
             return false
         }
         flow.put("name", name)

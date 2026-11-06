@@ -7,14 +7,14 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import android.widget.CheckBox
-import android.widget.EditText
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.textfield.TextInputEditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
-import android.widget.Toast
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.snackbar.Snackbar
 import kotlin.concurrent.thread
 
 /**
@@ -59,7 +59,7 @@ class FocusGuardPickerActivity : LocalizedActivity() {
 
         findViewById<View>(R.id.btnFocusPickerBack).setOnClickListener { finish() }
 
-        findViewById<EditText>(R.id.etFocusPickerSearch)
+        findViewById<TextInputEditText>(R.id.etFocusPickerSearch)
             .addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
                     query = s?.toString()?.trim()?.lowercase().orEmpty()
@@ -127,7 +127,7 @@ class FocusGuardPickerActivity : LocalizedActivity() {
             val texts = line.getChildAt(1) as LinearLayout
             val labelTv = texts.getChildAt(0) as TextView
             val pkgTv = texts.getChildAt(1) as TextView
-            val check = line.getChildAt(2) as CheckBox
+            val check = line.getChildAt(2) as MaterialCheckBox
             val icon = AppLocker.appIcon(this@FocusGuardPickerActivity, e.pkg)
             if (icon != null) iv.setImageDrawable(icon)
             else iv.setImageResource(R.drawable.ic_grid)
@@ -174,11 +174,11 @@ class FocusGuardPickerActivity : LocalizedActivity() {
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })
             line.addView(texts)
-            line.addView(CheckBox(this@FocusGuardPickerActivity))
+            line.addView(MaterialCheckBox(this@FocusGuardPickerActivity))
             return line
         }
     }
 
     private fun toast(msg: String) =
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        Snackbar.make(findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show()
 }

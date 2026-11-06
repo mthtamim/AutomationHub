@@ -55,6 +55,13 @@ object PLMotion {
     const val DURATION_MEDIUM = 300L
     const val DURATION_LARGE = 450L
 
+    /** v1.4.0: preview motion — tab change (fade-through) 340 ms,
+     *  sub-screen (shared-axis X) 320 ms. Window transitions keep
+     *  DURATION_MEDIUM (300 ms); the editor morph keeps
+     *  DURATION_LARGE (450 ms). */
+    const val DURATION_TAB = 340L
+    const val DURATION_SHARED_AXIS = 320L
+
     const val EXTRA_SHARED_ELEMENT_NAME = "pl_shared_element_name"
     const val EXTRA_START_COLOR = "pl_start_color"
 
@@ -90,7 +97,8 @@ object PLMotion {
      *  transition has nothing to move (proven on 1.2.2: the tab
      *  switch showed no motion at all). The visible motion comes
      *  from this instead: the incoming content slides in from the
-     *  tab direction (48dp) and fades in, 300 ms, emphasized
+     *  tab direction (48dp) and fades in, 340 ms (v1.4.0: the
+     *  preview's fade-through duration), emphasized
      *  easing. It runs on the view itself, so it shows regardless
      *  of what the list diff does underneath. view.animate()
      *  cancels any in-flight animation on the same view, and the
@@ -103,7 +111,7 @@ object PLMotion {
         view.animate()
             .alpha(1f)
             .translationX(0f)
-            .setDuration(DURATION_MEDIUM)
+            .setDuration(DURATION_TAB)
             .setInterpolator(EMPHASIZED)
             .start()
     }
@@ -131,7 +139,7 @@ object PLMotion {
 
     fun sharedAxisX(forward: Boolean): MaterialSharedAxis =
         MaterialSharedAxis(MaterialSharedAxis.X, forward).apply {
-            duration = DURATION_MEDIUM
+            duration = DURATION_SHARED_AXIS
             interpolator = EMPHASIZED
         }
 

@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:text="@string/btn_back" />
 
-        <EditText
+        <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etFlowName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -47,7 +47,7 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <EditText
+        <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etFlowFolder"
             android:layout_width="110dp"
             android:layout_height="wrap_content"

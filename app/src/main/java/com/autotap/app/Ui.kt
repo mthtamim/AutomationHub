@@ -8,7 +8,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.SeekBar
-import android.widget.Button
+import com.google.android.material.button.MaterialButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -212,10 +212,11 @@ object Ui {
         this.text = text; textSize = 12f; setTextColor(MUTED)
     }
 
-    fun primaryButton(ctx: Context, text: String, onClick: () -> Unit) = Button(ctx).apply {
+    fun primaryButton(ctx: Context, text: String, onClick: () -> Unit) = MaterialButton(ctx).apply {
         this.text = text; textSize = 14f; isAllCaps = false
         setTextColor(BG)
         typeface = Typeface.create("sans-serif", Typeface.BOLD)
+        backgroundTintList = null
         background = rounded(ctx, ACCENT, 14)
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(
@@ -223,9 +224,10 @@ object Ui {
         ).apply { topMargin = dp(ctx, 8) }
     }
 
-    fun secondaryButton(ctx: Context, text: String, onClick: () -> Unit) = Button(ctx).apply {
+    fun secondaryButton(ctx: Context, text: String, onClick: () -> Unit) = MaterialButton(ctx).apply {
         this.text = text; textSize = 14f; isAllCaps = false
         setTextColor(TEXT)
+        backgroundTintList = null
         background = rounded(ctx, RAISED, 14, stroke = true)
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(
@@ -233,9 +235,10 @@ object Ui {
         ).apply { topMargin = dp(ctx, 8) }
     }
 
-    fun dangerButton(ctx: Context, text: String, onClick: () -> Unit) = Button(ctx).apply {
+    fun dangerButton(ctx: Context, text: String, onClick: () -> Unit) = MaterialButton(ctx).apply {
         this.text = text; textSize = 14f; isAllCaps = false
         setTextColor(DANGER)
+        backgroundTintList = null
         background = rounded(ctx, RAISED, 14, stroke = true)
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(

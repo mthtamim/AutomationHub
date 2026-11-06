@@ -314,14 +314,11 @@
             android:scrollbars="vertical" />
     </LinearLayout>
 
-    <!-- v1.2.0: Essentials pill bottom bar (Home / DIY / Settings
-         + separate circular + button). Same id and behaviour as
-         the old BottomNavigationView. The bar's + button replaces
-         the two FABs below (removed): it opens the rule editor on
-         the Rules tab and the flow editor on the Flows tab. -->
+    <!-- v1.4.0: M3 NavigationBar + FAB (see NavBarHelper). The
+         FAB opens the "new" sheet; the old pill bar is gone. -->
     <include
         android:id="@+id/autoBottomNav"
-        layout="@layout/nav_pill_bar"
+        layout="@layout/nav_m3_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 </LinearLayout>

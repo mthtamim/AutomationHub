@@ -5,14 +5,14 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
+import com.google.android.material.textfield.TextInputEditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
@@ -164,7 +164,7 @@ class AppLockerActivity : LocalizedActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(6), dp(20), 0)
         }
-        fun field(hintRes: Int): EditText = EditText(this).apply {
+        fun field(hintRes: Int): TextInputEditText = TextInputEditText(this).apply {
             hint = getString(hintRes)
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or
                 android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -285,5 +285,5 @@ class AppLockerActivity : LocalizedActivity() {
     }
 
     private fun toast(msg: String) =
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        Snackbar.make(findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show()
 }

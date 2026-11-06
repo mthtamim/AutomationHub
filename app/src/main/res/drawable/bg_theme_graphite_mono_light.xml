@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.4.0: window background = the preview bggrad verbatim
+     (3-stop diagonal; shape gradients support start/center/end only).
+     No glow layers — the preview has none. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#f4f4f5" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#ffffff"
+                android:centerColor="#f0f0f1"
+                android:endColor="#e9e9eb"
+                android:type="linear" />
+        </shape>
+    </item>
+</layer-list>

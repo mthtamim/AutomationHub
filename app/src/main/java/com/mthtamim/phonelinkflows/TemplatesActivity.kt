@@ -1,19 +1,23 @@
 package com.mthtamim.phonelinkflows
 
+import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
-import android.widget.Toast
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.chip.ChipGroup
+import com.google.android.material.snackbar.Snackbar
 import org.json.JSONArray
 
 /**
@@ -25,9 +29,13 @@ import org.json.JSONArray
  * FlowStore.saveFlow (re-id on collision). The row then shows
  * "যোগ হয়েছে ✓" and disables, so the same tap cannot double-add.
  * Geofence flow templates need a saved geo centre; without one the
- * add is refused with a toast instead of saving a broken flow.
+ * add is refused with a message instead of saving a broken flow.
  * Returning to the Automation screen shows the new item at once
  * (AutomationActivity re-renders in onResume).
+ * v1.4.0: M3 restyle per the preview — template cards, tonal Add
+ * button, PL.Field search, category filter chips (combine with
+ * search), Snackbars instead of Toasts, "query" intent extra for
+ * Home search, and the shared M3 nav bar + FAB.
  */
 class TemplatesActivity : LocalizedActivity() {
 
@@ -35,8 +43,37 @@ class TemplatesActivity : LocalizedActivity() {
     private lateinit var adapter: TemplatesAdapter
     private val added = mutableSetOf<String>()
     private var query = ""
+    // v1.4.0: category chip filter (null = সব). Combines with the
+    // search query — both filters apply in allRows().
+    private var category: String? = null
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
+    /** The preview's surfaceContainerLow for the template cards. */
+    private fun surfaceContainerLow(): Int {
+        val tv = android.util.TypedValue()
+        theme.resolveAttribute(
+            com.google.android.material.R.attr.colorSurfaceContainerLow,
+            tv, true)
+        return tv.data
+    }
+
+    /** Category of a template from its real trigType (Templates.kt):
+     *  charging/battery_* -> চার্জিং, time_*/sunrise/sunset -> সময়,
+     *  geofence_*/location* -> লোকেশন, app_* -> অ্যাপ,
+     *  focuslock -> FocusLock. Anything else (shake, boot, wifi…)
+     *  has no category and shows only under সব. */
+    private fun categoryOf(t: Templates.Template): String? = when {
+        t.trigType == "charging_on" || t.trigType == "charging_off" ||
+            t.trigType.startsWith("battery_") -> "charging"
+        t.trigType.startsWith("time_") || t.trigType == "sunrise" ||
+            t.trigType == "sunset" -> "time"
+        t.trigType.startsWith("geofence") ||
+            t.trigType.startsWith("location") -> "location"
+        t.trigType.startsWith("app_") -> "app"
+        t.trigType == "focuslock" -> "focuslock"
+        else -> null
+    }
 
     private sealed interface Row
     private data class Header(val kind: String) : Row
@@ -45,8 +82,9 @@ class TemplatesActivity : LocalizedActivity() {
     private fun allRows(): List<Row> {
         val q = query.lowercase()
         fun matches(t: Templates.Template): Boolean =
-            q.isEmpty() || t.name.lowercase().contains(q) ||
-                t.desc.lowercase().contains(q)
+            (category == null || categoryOf(t) == category) &&
+                (q.isEmpty() || t.name.lowercase().contains(q) ||
+                    t.desc.lowercase().contains(q))
         val out = mutableListOf<Row>()
         val rs = Templates.rules.filter(::matches)
         if (rs.isNotEmpty()) {
@@ -71,6 +109,20 @@ class TemplatesActivity : LocalizedActivity() {
 
         findViewById<View>(R.id.btnTemplatesBack).setOnClickListener { finish() }
 
+        // v1.4.0: category filter chips (single-select, সব by default).
+        findViewById<ChipGroup>(R.id.cgTemplatesFilter)
+            .setOnCheckedStateChangeListener { _, checkedIds ->
+                category = when (checkedIds.firstOrNull()) {
+                    R.id.chipTplCharging -> "charging"
+                    R.id.chipTplTime -> "time"
+                    R.id.chipTplLocation -> "location"
+                    R.id.chipTplApp -> "app"
+                    R.id.chipTplFocusLock -> "focuslock"
+                    else -> null
+                }
+                adapter.refresh()
+            }
+
         findViewById<EditText>(R.id.etTemplatesSearch)
             .addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
@@ -80,6 +132,40 @@ class TemplatesActivity : LocalizedActivity() {
                 override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
                 override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             })
+
+        // v1.4.0: Home search launches here with a "query" extra —
+        // prefill the search box (the TextWatcher above refreshes
+        // the list as the text lands).
+        intent.getStringExtra("query")?.let { q ->
+            if (q.isNotEmpty())
+                findViewById<EditText>(R.id.etTemplatesSearch).setText(q)
+        }
+
+        // v1.4.0: M3 nav bar + FAB (this is a main destination now).
+        // Back chip above still serves the ⋮-menu entry path.
+        NavBarHelper.setupBar(this, R.id.bottomNav, R.id.nav_templates) { id ->
+            when (id) {
+                R.id.nav_home -> {
+                    startActivity(Intent(this, MainActivity::class.java)
+                        .putExtra("tab", "home")
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                    finish()
+                }
+                R.id.nav_diy -> {
+                    startActivity(Intent(this, AutomationActivity::class.java))
+                    finish()
+                }
+                R.id.nav_settings -> {
+                    startActivity(Intent(this, MainActivity::class.java)
+                        .putExtra("tab", "settings")
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                    finish()
+                }
+            }
+        }
+        NavBarHelper.setupFab(this)
     }
 
     private fun summaryFor(t: Templates.Template): String {
@@ -120,15 +206,16 @@ class TemplatesActivity : LocalizedActivity() {
             if (n > 0) {
                 added.add(t.key)
                 adapter.refresh()
-                Toast.makeText(this,
+                Snackbar.make(findViewById(android.R.id.content),
                     getString(R.string.template_added, t.name),
-                    Toast.LENGTH_SHORT).show()
+                    Snackbar.LENGTH_SHORT).show()
             }
         } else {
             val flow = Templates.buildFlow(this, t)
             if (flow == null) {
-                Toast.makeText(this, getString(R.string.template_geo_needed),
-                    Toast.LENGTH_LONG).show()
+                Snackbar.make(findViewById(android.R.id.content),
+                    getString(R.string.template_geo_needed),
+                    Snackbar.LENGTH_LONG).show()
                 return
             }
             var id = flow.optString("id")
@@ -141,9 +228,9 @@ class TemplatesActivity : LocalizedActivity() {
             FlowStore.saveFlow(this, flow)
             added.add(t.key)
             adapter.refresh()
-            Toast.makeText(this,
+            Snackbar.make(findViewById(android.R.id.content),
                 getString(R.string.template_added, t.name),
-                Toast.LENGTH_SHORT).show()
+                Snackbar.LENGTH_SHORT).show()
         }
     }
 
@@ -185,18 +272,32 @@ class TemplatesActivity : LocalizedActivity() {
             return tv
         }
 
+        // v1.4.0: row root is a MaterialCardView (28dp corners,
+        // surfaceContainerLow) per the preview; the Add button is a
+        // tonal MaterialButton — the style paints it, so no manual
+        // background/text-colour paint here. Title/desc/summary keep
+        // their content; the isAdded/isEnabled logic is unchanged.
         private fun buildRow(convertView: View?,
-                            t: Templates.Template): LinearLayout {
-            val line = (convertView as? LinearLayout) ?: LinearLayout(this@TemplatesActivity).apply {
+                            t: Templates.Template): View {
+            val card = (convertView as? MaterialCardView)
+                ?: MaterialCardView(this@TemplatesActivity).apply {
+                    radius = dp(28).toFloat()
+                    setCardBackgroundColor(surfaceContainerLow())
+                    cardElevation = 0f
+                    setContentPadding(dp(16), dp(12), dp(16), dp(12))
+                    layoutParams = android.widget.AbsListView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT)
+                }
+            // Rebuild children each bind: rows are cheap and the Add
+            // button state changes after a tap.
+            card.removeAllViews()
+            val line = LinearLayout(this@TemplatesActivity).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(16), dp(10), dp(16), dp(10))
-                layoutParams = android.widget.AbsListView.LayoutParams(
+                layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT)
             }
-            // Rebuild children each bind: rows are cheap and the Add
-            // button state changes after a tap.
-            line.removeAllViews()
             val head = LinearLayout(this@TemplatesActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -211,18 +312,13 @@ class TemplatesActivity : LocalizedActivity() {
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
             val isAdded = added.contains(t.key)
-            head.addView(Button(this@TemplatesActivity).apply {
+            head.addView(MaterialButton(
+                ContextThemeWrapper(this@TemplatesActivity,
+                    R.style.PL_BtnTonal)).apply {
                 text = getString(if (isAdded) R.string.templates_added
                     else R.string.templates_add)
                 textSize = 12.5f
                 isAllCaps = false
-                minHeight = 0
-                minimumHeight = 0
-                setPadding(dp(14), dp(8), dp(14), dp(8))
-                setBackgroundResource(if (isAdded) R.drawable.bg_action_ghost
-                    else R.drawable.bg_action_pill)
-                setTextColor(if (isAdded) themeOnSurfaceVariant()
-                    else themeAccentColor())
                 isEnabled = !isAdded
                 setOnClickListener { addTemplate(t) }
             })
@@ -243,7 +339,8 @@ class TemplatesActivity : LocalizedActivity() {
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 setPadding(0, dp(3), 0, 0)
             })
-            return line
+            card.addView(line)
+            return card
         }
     }
 }

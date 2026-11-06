@@ -18,10 +18,11 @@ import android.view.View
 import android.view.WindowManager
 import android.graphics.PixelFormat
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.textfield.TextInputEditText
 import android.widget.ScrollView
-import android.widget.Toast
+import com.google.android.material.snackbar.Snackbar
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
@@ -275,7 +276,7 @@ class MainActivity : AppCompatActivity() {
         // App lock: when a PIN is set, ask for it once per process.
         val pin = Store.appPin(this)
         if (pin.isNotEmpty() && !unlocked) {
-            val input = EditText(this).apply {
+            val input = TextInputEditText(this).apply {
                 inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
                 hint = "PIN"
                 setTextColor(Ui.TEXT)
@@ -362,11 +363,12 @@ class MainActivity : AppCompatActivity() {
 
     // ---------- helpers ----------
 
-    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+    private fun toast(msg: String) = Snackbar.make(findViewById(android.R.id.content), msg, Snackbar.LENGTH_LONG).show()
 
-    private fun smallBtn(text: String, action: () -> Unit) = Button(this).apply {
+    private fun smallBtn(text: String, action: () -> Unit) = MaterialButton(this).apply {
         this.text = text; textSize = 12f; isAllCaps = false
         setTextColor(Ui.TEXT)
+        backgroundTintList = null
         background = Ui.rounded(this@MainActivity, Ui.RAISED, 14, stroke = true)
         setOnClickListener { action() }
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
@@ -382,9 +384,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Compact button for dense step rows: no forced min height. */
-    private fun miniBtn(text: String, action: () -> Unit) = Button(this).apply {
+    private fun miniBtn(text: String, action: () -> Unit) = MaterialButton(this).apply {
         this.text = text; textSize = 12f; isAllCaps = false
         setTextColor(Ui.TEXT)
+        backgroundTintList = null
         background = Ui.rounded(this@MainActivity, Ui.RAISED, 12, stroke = true)
         minimumHeight = 0
         minHeight = 0
@@ -407,7 +410,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun editTextDialog(title: String, initial: String, numeric: Boolean, done: (String) -> Unit) {
-        val input = EditText(this).apply {
+        val input = TextInputEditText(this).apply {
             setText(initial)
             setTextColor(Ui.TEXT)
             inputType = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
@@ -818,7 +821,7 @@ class MainActivity : AppCompatActivity() {
         val selectedId = Store.selectedScript(this)?.id
         // Search + filter chips.
         val searchCard = Ui.card(this)
-        val searchInput = EditText(this).apply {
+        val searchInput = TextInputEditText(this).apply {
             hint = "script খোঁজো..."
             setText(scriptSearch)
             setTextColor(Ui.TEXT)
@@ -2121,7 +2124,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
         builderCard.addView(Ui.cardTitle(this, "বাংলায় লিখলেই script"))
         builderCard.addView(Ui.infoRow(this,
             "যা চাও plain ভাষায় লেখো - যেমন: Facebook স্ক্রল করো প্রতি 5 সেকেন্ডে, \"Claim\" লেখা এলে tap করো, 30 মিনিট চলুক। অ্যাপ নিজে step বানিয়ে দেবে (offline, AI সার্ভার লাগে না)।"))
-        val input = EditText(this).apply {
+        val input = TextInputEditText(this).apply {
             hint = "এখানে লেখো..."
             setTextColor(Ui.TEXT)
             setHintTextColor(Ui.MUTED)

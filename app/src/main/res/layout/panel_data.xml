@@ -32,6 +32,18 @@
                     android:id="@+id/tvStats"
                     style="@style/PL.BodySmall" />
 
+                <!-- v1.4.0: the log LINES moved to their own Log
+                     screen (LogActivity) — the stats line above
+                     keeps only the count. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOpenLog"
+                    style="@style/PL.BtnTonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/log_open"
+                    app:icon="@drawable/ic_clock" />
+
                 
 
                 <View

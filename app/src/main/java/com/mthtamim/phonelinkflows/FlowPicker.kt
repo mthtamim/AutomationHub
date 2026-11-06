@@ -7,7 +7,7 @@ import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import android.widget.EditText
+import com.google.android.material.textfield.TextInputEditText
 import android.widget.ListView
 import android.widget.TextView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -291,7 +291,7 @@ object FlowPicker {
 
     fun show(activity: Activity, kind: String, onPick: (String) -> Unit) {
         val view = activity.layoutInflater.inflate(R.layout.dialog_picker, null)
-        val etFilter = view.findViewById<EditText>(R.id.etFilter)
+        val etFilter = view.findViewById<TextInputEditText>(R.id.etFilter)
         val lv = view.findViewById<ListView>(R.id.lvItems)
         val params = lv.layoutParams
         params.height = (activity.resources.displayMetrics.heightPixels * 0.5).toInt()

@@ -66,6 +66,13 @@ object ThemeColors {
     fun secondaryContainer(ctx: Context): Int =
         resolve(ctx, MaterialR.attr.colorSecondaryContainer, R.color.md_secondaryContainer)
 
+    /** v1.4.0: selected segmented-tab text (onSecondaryContainer) —
+     *  the preview paints the selected segment SecondaryContainer,
+     *  so its text must be the matching on-colour, not the old
+     *  fixed dark tab text. */
+    fun onSecondaryContainer(ctx: Context): Int =
+        resolve(ctx, MaterialR.attr.colorOnSecondaryContainer, R.color.md_onSecondaryContainer)
+
     /** v1.2.0: text/icon colour for the sage trigger box
      *  (colorPrimaryContainer). Fallback is the night value. */
     fun onPrimaryContainer(ctx: Context): Int =

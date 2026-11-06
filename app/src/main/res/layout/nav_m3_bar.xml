@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.4.0: the preview's NavigationBar + FAB. One include replaces
+     nav_pill_bar in every main destination (activity_main id
+     bottomNav, activity_automation id autoBottomNav, Templates and
+     Log use bottomNav). The strip is 156dp tall: 56dp FAB at the
+     top-right, 20dp gap, 80dp NavigationBar at the bottom — the
+     preview's geometry (FAB bottom 104dp from the screen bottom).
+     The FAB is wired by NavBarHelper.setupFab; the bar by
+     NavBarHelper.setupBar. The old pill bar (nav_pill_bar.xml,
+     bg_nav_*.xml, ess_bar_* colors) is now unused. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="156dp">
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/navFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="@string/auto_add_action"
+        android:src="@drawable/ic_plus"
+        app:backgroundTint="?attr/colorPrimaryContainer"
+        app:tint="?attr/colorOnPrimaryContainer" />
+
+    <com.google.android.material.navigation.NavigationBarView
+        android:id="@+id/navBar"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_gravity="bottom"
+        android:background="?attr/colorSurfaceContainer"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/nav_main" />
+
+</FrameLayout>

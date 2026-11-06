@@ -7,16 +7,19 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.Button
-import android.widget.EditText
+import com.google.android.material.textfield.TextInputEditText
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
-import android.widget.Toast
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.checkbox.MaterialCheckBox
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.concurrent.thread
@@ -34,8 +37,8 @@ import kotlin.concurrent.thread
  */
 class RuleEditorActivity : LocalizedActivity() {
 
-    private lateinit var etName: EditText
-    private lateinit var etCat: EditText
+    private lateinit var etName: TextInputEditText
+    private lateinit var etCat: TextInputEditText
     private lateinit var trigContainer: LinearLayout
     private lateinit var consContainer: LinearLayout
     private lateinit var actContainer: LinearLayout
@@ -189,7 +192,7 @@ class RuleEditorActivity : LocalizedActivity() {
         }
         // v2.17.3: picker search matches the preview search box —
         // filled rounded box + leading search icon, no underline.
-        val search = EditText(this).apply {
+        val search = TextInputEditText(this).apply {
             hint = getString(R.string.picker_search_hint)
             setSingleLine()
             setBackgroundResource(R.drawable.bg_search)
@@ -242,11 +245,11 @@ class RuleEditorActivity : LocalizedActivity() {
         var type: String = type
         val root = LinearLayout(this@RuleEditorActivity)
         val chipType = TextView(this@RuleEditorActivity)
-        val etParam = EditText(this@RuleEditorActivity)
+        val etParam = TextInputEditText(this@RuleEditorActivity)
         var swNegate: SwitchMaterial? = null
         var condType: String = ""
         var chipCond: TextView? = null
-        var etCondParam: EditText? = null
+        var etCondParam: TextInputEditText? = null
         // v2.21: call_number rows get SIM chips under the number
         // field (picker, never typed). simSel is the SIM source
         // of truth; toJson composes it into the param.
@@ -339,7 +342,7 @@ class RuleEditorActivity : LocalizedActivity() {
                 }
                 chipCond = cc
                 line2.addView(cc)
-                val et = EditText(this@RuleEditorActivity).apply {
+                val et = TextInputEditText(this@RuleEditorActivity).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                         .apply { setMargins(dp(8), 0, 0, 0) }
@@ -525,7 +528,7 @@ class RuleEditorActivity : LocalizedActivity() {
             root.addView(head)
             inner.orientation = LinearLayout.VERTICAL
             root.addView(inner)
-            root.addView(Button(this@RuleEditorActivity).apply {
+            root.addView(MaterialButton(this@RuleEditorActivity).apply {
                 text = getString(R.string.auto_add_constraint)
                 setOnClickListener { addCond("", "", null) }
             })
@@ -641,7 +644,7 @@ class RuleEditorActivity : LocalizedActivity() {
             })
             box.orientation = LinearLayout.VERTICAL
             root.addView(box)
-            root.addView(Button(this@RuleEditorActivity).apply {
+            root.addView(MaterialButton(this@RuleEditorActivity).apply {
                 text = getString(
                     if (box === condBox) R.string.auto_add_constraint
                     else R.string.auto_add_action)
@@ -746,14 +749,14 @@ class RuleEditorActivity : LocalizedActivity() {
         private var dayChip: Chip? = null
         private var condType: String = ""
         private var chipCond: TextView? = null
-        private var etCondParam: EditText? = null
+        private var etCondParam: TextInputEditText? = null
         private val cmdChips = HashMap<Int, String>()
         private val durChips = HashMap<Int, Int>()
         private lateinit var cgCmd: ChipGroup
         private lateinit var cgDur: ChipGroup
         private lateinit var tvAppValue: TextView
-        private lateinit var etCustomMins: EditText
-        private lateinit var etPreset: EditText
+        private lateinit var etCustomMins: TextInputEditText
+        private lateinit var etPreset: TextInputEditText
         private lateinit var appSection: LinearLayout
         private lateinit var durSection: LinearLayout
         private lateinit var presetSection: LinearLayout
@@ -859,7 +862,7 @@ class RuleEditorActivity : LocalizedActivity() {
             }
             cgDur.addView(dayChip)
             durSection.addView(cgDur)
-            etCustomMins = EditText(this@RuleEditorActivity).apply {
+            etCustomMins = TextInputEditText(this@RuleEditorActivity).apply {
                 hint = getString(R.string.fl_custom_mins_hint)
                 textSize = 13.5f
                 setSingleLine()
@@ -873,7 +876,7 @@ class RuleEditorActivity : LocalizedActivity() {
 
             // ---- preset section ----
             presetSection = section(R.string.fl_preset_label)
-            etPreset = EditText(this@RuleEditorActivity).apply {
+            etPreset = TextInputEditText(this@RuleEditorActivity).apply {
                 textSize = 13.5f
                 setSingleLine()
                 layoutParams = LinearLayout.LayoutParams(
@@ -907,7 +910,7 @@ class RuleEditorActivity : LocalizedActivity() {
             }
             chipCond = cc
             line2.addView(cc)
-            val et = EditText(this@RuleEditorActivity).apply {
+            val et = TextInputEditText(this@RuleEditorActivity).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                     .apply { setMargins(dp(8), 0, 0, 0) }
@@ -1144,10 +1147,10 @@ class RuleEditorActivity : LocalizedActivity() {
         private var cmd: String = "start"
         private var condType: String = ""
         private var chipCond: TextView? = null
-        private var etCondParam: EditText? = null
+        private var etCondParam: TextInputEditText? = null
         private val cmdChips = HashMap<Int, String>()
         private lateinit var cgCmd: ChipGroup
-        private lateinit var etName: EditText
+        private lateinit var etName: TextInputEditText
         private lateinit var nameSection: LinearLayout
         private var syncing = false
 
@@ -1207,7 +1210,7 @@ class RuleEditorActivity : LocalizedActivity() {
 
             // ---- script name section (start only) ----
             nameSection = section(R.string.atap_name_label)
-            etName = EditText(this@RuleEditorActivity).apply {
+            etName = TextInputEditText(this@RuleEditorActivity).apply {
                 textSize = 13.5f
                 setSingleLine()
                 layoutParams = LinearLayout.LayoutParams(
@@ -1241,7 +1244,7 @@ class RuleEditorActivity : LocalizedActivity() {
             }
             chipCond = cc
             line2.addView(cc)
-            val et = EditText(this@RuleEditorActivity).apply {
+            val et = TextInputEditText(this@RuleEditorActivity).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                     .apply { setMargins(dp(8), 0, 0, 0) }
@@ -1356,17 +1359,17 @@ class RuleEditorActivity : LocalizedActivity() {
         private var simSel: String = "default"
         private var condType: String = ""
         private var chipCond: TextView? = null
-        private var etCondParam: EditText? = null
+        private var etCondParam: TextInputEditText? = null
         private val cmdChips = HashMap<Int, String>()
         private val simChips = HashMap<Int, String>()
         private lateinit var cgCmd: ChipGroup
         private lateinit var cgSim: ChipGroup
-        private lateinit var etNumber: EditText
-        private lateinit var etGap: EditText
-        private lateinit var etMax: EditText
-        private lateinit var etRing: EditText
-        private lateinit var cbSpeaker: android.widget.CheckBox
-        private lateinit var cbAlert: android.widget.CheckBox
+        private lateinit var etNumber: TextInputEditText
+        private lateinit var etGap: TextInputEditText
+        private lateinit var etMax: TextInputEditText
+        private lateinit var etRing: TextInputEditText
+        private lateinit var cbSpeaker: MaterialCheckBox
+        private lateinit var cbAlert: MaterialCheckBox
         private lateinit var cgOnanswer: ChipGroup
         private val onanswerChips = HashMap<Int, String>()
         private var onanswer: String = "stop"
@@ -1446,7 +1449,7 @@ class RuleEditorActivity : LocalizedActivity() {
                 textSize = 12.5f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
             })
-            etNumber = EditText(this@RuleEditorActivity).apply {
+            etNumber = TextInputEditText(this@RuleEditorActivity).apply {
                 textSize = 13.5f
                 setSingleLine()
                 inputType =
@@ -1499,7 +1502,7 @@ class RuleEditorActivity : LocalizedActivity() {
                 textSize = 12.5f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
             })
-            etGap = EditText(this@RuleEditorActivity).apply {
+            etGap = TextInputEditText(this@RuleEditorActivity).apply {
                 textSize = 13.5f
                 setSingleLine()
                 inputType =
@@ -1523,7 +1526,7 @@ class RuleEditorActivity : LocalizedActivity() {
                 textSize = 12.5f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
             })
-            etMax = EditText(this@RuleEditorActivity).apply {
+            etMax = TextInputEditText(this@RuleEditorActivity).apply {
                 textSize = 13.5f
                 setSingleLine()
                 inputType =
@@ -1557,7 +1560,7 @@ class RuleEditorActivity : LocalizedActivity() {
                 textSize = 12.5f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
             })
-            etRing = EditText(this@RuleEditorActivity).apply {
+            etRing = TextInputEditText(this@RuleEditorActivity).apply {
                 textSize = 13.5f
                 setSingleLine()
                 inputType =
@@ -1570,7 +1573,7 @@ class RuleEditorActivity : LocalizedActivity() {
             }
             ringBox.addView(etRing)
             ringRow.addView(ringBox)
-            cbSpeaker = android.widget.CheckBox(this@RuleEditorActivity).apply {
+            cbSpeaker = MaterialCheckBox(this@RuleEditorActivity).apply {
                 text = getString(R.string.redial_speaker_label)
                 textSize = 13.5f
                 layoutParams = LinearLayout.LayoutParams(
@@ -1581,7 +1584,7 @@ class RuleEditorActivity : LocalizedActivity() {
             ringRow.addView(cbSpeaker)
             startSection.addView(ringRow)
 
-            cbAlert = android.widget.CheckBox(this@RuleEditorActivity).apply {
+            cbAlert = MaterialCheckBox(this@RuleEditorActivity).apply {
                 text = getString(R.string.redial_alert_label)
                 textSize = 13.5f
                 layoutParams = LinearLayout.LayoutParams(
@@ -1652,7 +1655,7 @@ class RuleEditorActivity : LocalizedActivity() {
             }
             chipCond = cc
             line2.addView(cc)
-            val et = EditText(this@RuleEditorActivity).apply {
+            val et = TextInputEditText(this@RuleEditorActivity).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                     .apply { setMargins(dp(8), 0, 0, 0) }
@@ -1805,7 +1808,7 @@ class RuleEditorActivity : LocalizedActivity() {
         private lateinit var tvAppValue: TextView
         private lateinit var tvDurLabel: TextView
         private lateinit var cgDur: ChipGroup
-        private lateinit var etCustomMins: EditText
+        private lateinit var etCustomMins: TextInputEditText
         private lateinit var cgWarn: ChipGroup
         private lateinit var tvPermHint: TextView
         private var durBuiltFor: String = ""
@@ -1887,7 +1890,7 @@ class RuleEditorActivity : LocalizedActivity() {
             }
             listSection.addView(tvListValue)
             listSection.addView(
-                Button(this@RuleEditorActivity).apply {
+                MaterialButton(this@RuleEditorActivity).apply {
                     text = getString(R.string.sg_btn_manage)
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1920,7 +1923,7 @@ class RuleEditorActivity : LocalizedActivity() {
             tvDurLabel = durSection.getChildAt(0) as TextView
             cgDur = chipGroup()
             durSection.addView(cgDur)
-            etCustomMins = EditText(this@RuleEditorActivity).apply {
+            etCustomMins = TextInputEditText(this@RuleEditorActivity).apply {
                 hint = getString(R.string.fl_custom_mins_hint)
                 textSize = 13.5f
                 setSingleLine()
@@ -2236,7 +2239,7 @@ class RuleEditorActivity : LocalizedActivity() {
         private val durChips = HashMap<Int, Int>()
         private val warnChips = HashMap<Int, Int>()
         private lateinit var cgDur: ChipGroup
-        private lateinit var etCustomMins: EditText
+        private lateinit var etCustomMins: TextInputEditText
         private lateinit var cgWarn: ChipGroup
 
         init {
@@ -2284,7 +2287,7 @@ class RuleEditorActivity : LocalizedActivity() {
                 cgDur.addView(chip)
             }
             durSection.addView(cgDur)
-            etCustomMins = EditText(this@RuleEditorActivity).apply {
+            etCustomMins = TextInputEditText(this@RuleEditorActivity).apply {
                 hint = getString(R.string.fl_custom_mins_hint)
                 textSize = 13.5f
                 setSingleLine()
@@ -2427,7 +2430,7 @@ class RuleEditorActivity : LocalizedActivity() {
      *  arms it too. */
     private inner class TimeAtDaysRow {
         val root = LinearLayout(this@RuleEditorActivity)
-        private lateinit var etTime: EditText
+        private lateinit var etTime: TextInputEditText
         private lateinit var cgDays: ChipGroup
         private val dayChips = HashMap<Int, String>()
         private val dayOrder = listOf(
@@ -2471,7 +2474,7 @@ class RuleEditorActivity : LocalizedActivity() {
 
             // ---- time section ----
             val timeSection = section(R.string.redial_time_label)
-            etTime = EditText(this@RuleEditorActivity).apply {
+            etTime = TextInputEditText(this@RuleEditorActivity).apply {
                 textSize = 13.5f
                 setSingleLine()
                 inputType =
@@ -2628,8 +2631,11 @@ class RuleEditorActivity : LocalizedActivity() {
             val data = JSONObject()
                 .put("title", rule.optString("name")).put("body", "test")
             Automation.runActions(this, rule, data, 0)
-            Toast.makeText(this, getString(R.string.auto_test),
-                Toast.LENGTH_SHORT).show()
+            Snackbar.make(
+                findViewById(android.R.id.content),
+                getString(R.string.auto_test),
+                Snackbar.LENGTH_SHORT
+            ).show()
         }
         findViewById<android.widget.ImageButton>(R.id.btnEditorBack)
             .setOnClickListener { finish() }
@@ -2863,8 +2869,11 @@ class RuleEditorActivity : LocalizedActivity() {
      *  UI thread because live reads can block). */
     private fun showTrace() {
         val rule = buildRule()
-        Toast.makeText(this, getString(R.string.trace_running),
-            Toast.LENGTH_SHORT).show()
+        Snackbar.make(
+            findViewById(android.R.id.content),
+            getString(R.string.trace_running),
+            Snackbar.LENGTH_SHORT
+        ).show()
         Thread {
             val lines = Automation.traceRule(this, rule)
             runOnUiThread {
@@ -2884,8 +2893,11 @@ class RuleEditorActivity : LocalizedActivity() {
     private fun showHistory() {
         val hist = Automation.ruleHistory(this, ruleId)
         if (hist.isEmpty()) {
-            Toast.makeText(this, getString(R.string.history_empty),
-                Toast.LENGTH_SHORT).show()
+            Snackbar.make(
+                findViewById(android.R.id.content),
+                getString(R.string.history_empty),
+                Snackbar.LENGTH_SHORT
+            ).show()
             return
         }
         val fmt = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm",

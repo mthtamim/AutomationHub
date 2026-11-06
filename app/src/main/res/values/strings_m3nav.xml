@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.4.0 strings: M3 NavigationBar + FAB sheet + Home SearchBar.
+     Kept in their own file so the nav/search work does not touch
+     strings.xml. Sheet text is Bangla, matching the preview. -->
+<resources>
+    <string name="nav_templates">Templates</string>
+    <string name="sheet_new_title">নতুন তৈরি করো</string>
+    <string name="sheet_new_rule">নতুন রুল</string>
+    <string name="sheet_new_rule_sub">একটা ট্রিগার, একটা অ্যাকশন (+ exit)</string>
+    <string name="sheet_new_flow">নতুন ফ্লো</string>
+    <string name="sheet_new_flow_sub">ধাপে ধাপে সাজানো অটোমেশন</string>
+    <string name="sheet_new_template">টেমপ্লেট থেকে</string>
+    <string name="sheet_new_template_sub">৫১টা তৈরি টেমপ্লেট</string>
+    <string name="search_hint">রুল, ফ্লো বা টেমপ্লেট খোঁজো</string>
+    <string name="search_no_results">কিছু পাওয়া যায়নি</string>
+    <string name="log_open">কার্যকলাপের লগ দেখো</string>
+</resources>

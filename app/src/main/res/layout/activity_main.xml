@@ -154,12 +154,13 @@
         </FrameLayout>
     </FrameLayout>
 
-    <!-- v1.2.0: Essentials pill bottom bar (Home / DIY / Settings
-         + separate circular + button). Same id and behaviour as
-         the old BottomNavigationView. -->
+    <!-- v1.4.0: M3 NavigationBar + FAB (Home / DIY / Templates /
+         Settings + new sheet). Same id and behaviour contract as
+         the old pill bar: the bar is hidden while a sub-screen
+         is open (openSubScreen / closeSubScreen toggle it). -->
     <include
         android:id="@+id/bottomNav"
-        layout="@layout/nav_pill_bar"
+        layout="@layout/nav_m3_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 </LinearLayout>

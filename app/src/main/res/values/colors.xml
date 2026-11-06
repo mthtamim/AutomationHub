@@ -1,42 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Light palette (v2.17: clean mint-tinted neutrals, emerald primary) -->
 <resources>
-    <color name="md_primary">#10B981</color>
-    <color name="md_onPrimary">#FFFFFF</color>
-    <color name="md_primaryContainer">#D9F6E9</color>
-    <color name="md_onPrimaryContainer">#06382A</color>
-    <color name="md_secondary">#52665C</color>
-    <color name="md_onSecondary">#FFFFFF</color>
-    <color name="md_secondaryContainer">#E6EFEA</color>
-    <color name="md_onSecondaryContainer">#12241B</color>
-    <color name="md_background">#F1F6F3</color>
-    <color name="md_onBackground">#0C1F16</color>
-    <color name="md_surface">#FFFFFF</color>
-    <color name="md_onSurface">#0C1F16</color>
-    <color name="md_surfaceVariant">#E1EDE6</color>
-    <color name="md_onSurfaceVariant">#55705F</color>
-    <color name="md_surfaceContainer">#EAF3EE</color>
-    <color name="md_surfaceContainerHigh">#DCEAE2</color>
+    <color name="md_primary">#006c4f</color>
+    <color name="md_onPrimary">#ffffff</color>
+    <color name="md_primaryContainer">#8df5c9</color>
+    <color name="md_onPrimaryContainer">#002114</color>
+    <color name="md_secondary">#006c4f</color>
+    <color name="md_onSecondary">#ffffff</color>
+    <color name="md_secondaryContainer">#cfe9d8</color>
+    <color name="md_onSecondaryContainer">#0c1f16</color>
+    <color name="md_background">#f4fbf6</color>
+    <color name="md_onBackground">#101a14</color>
+    <color name="md_surface">#eaf4ec</color>
+    <color name="md_onSurface">#101a14</color>
+    <color name="md_surfaceVariant">#e0eee3</color>
+    <color name="md_onSurfaceVariant">#40493f</color>
+    <color name="md_surfaceContainer">#eaf4ec</color>
+    <color name="md_surfaceContainerHigh">#d5e7d9</color>
     <!-- v1.3.0: full M3 colour roles — the filled-card / sheet /
          dialog surfaces and the tertiary + inverse families, so
          M3 components resolve real tokens instead of the M3
          baseline defaults in every theme. -->
-    <color name="md_surfaceContainerLowest">#FFFFFF</color>
-    <color name="md_surfaceContainerLow">#F5FAF7</color>
-    <color name="md_surfaceContainerHighest">#D2E0D6</color>
-    <color name="md_surfaceDim">#DCE8DF</color>
-    <color name="md_surfaceBright">#FFFFFF</color>
-    <color name="md_tertiary">#6B5CA5</color>
-    <color name="md_onTertiary">#FFFFFF</color>
-    <color name="md_tertiaryContainer">#E7DEF8</color>
-    <color name="md_onTertiaryContainer">#241A4D</color>
-    <color name="md_inverseSurface">#12241B</color>
-    <color name="md_inverseOnSurface">#EAF4EE</color>
-    <color name="md_inversePrimary">#6EE7B7</color>
-    <color name="md_outlineVariant">#CBDCD2</color>
-    <color name="md_scrim">#000000</color>
-    <color name="md_outline">#B9CFC2</color>
-    <color name="md_error">#BA1A1A</color>
+    <color name="md_surfaceContainerLowest">#f4fbf6</color>
+    <color name="md_surfaceContainerLow">#eaf4ec</color>
+    <color name="md_surfaceContainerHighest">#C2DCC7</color>
+    <color name="md_surfaceDim">#f4fbf6</color>
+    <color name="md_surfaceBright">#d5e7d9</color>
+    <color name="md_tertiary">#006c4f</color>
+    <color name="md_onTertiary">#ffffff</color>
+    <color name="md_tertiaryContainer">#c6dcf2</color>
+    <color name="md_onTertiaryContainer">#0a1c2c</color>
+    <color name="md_inverseSurface">#2c322d</color>
+    <color name="md_inverseOnSurface">#edf2ec</color>
+    <color name="md_inversePrimary">#8df5c9</color>
+    <color name="md_outlineVariant">#404A42</color>
+    <color name="md_scrim">#52000000</color>
+    <color name="md_outline">#707970</color>
+    <color name="md_error">#ba1a1a</color>
     <color name="md_onError">#FFFFFF</color>
     <color name="md_errorContainer">#FDECEC</color>
 
@@ -44,7 +44,7 @@
     <color name="status_bad">#DC2626</color>
     <color name="pair_code">#B45309</color>
     <color name="divider">#D3E2D9</color>
-    <color name="md_btnFill">#DCEFE5</color>
+    <color name="md_btnFill">#e0eee3</color>
 
     <!-- v2.17 design tokens -->
     <color name="pl_mint">#10B981</color>
@@ -60,9 +60,9 @@
     <color name="btn_stroke_night">#338A68</color>
     <color name="tab_text_dark">#101415</color>
     <color name="tab_text_light">#EAF4EE</color>
-    <color name="nav_active">#10B981</color>
-    <color name="nav_inactive">#5C7267</color>
-    <color name="nav_indicator">#D9F6E9</color>
+    <color name="nav_active">#006c4f</color>
+    <color name="nav_inactive">#40493f</color>
+    <color name="nav_indicator">#cfe9d8</color>
     <!-- Essentials pill bottom bar (v1.2.0): fixed sage tokens —
          same in every theme, like btn_fill_night. The bar is the
          app's signature, not a theme colour. -->

@@ -7,15 +7,15 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import android.widget.CheckBox
-import android.widget.EditText
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.textfield.TextInputEditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.snackbar.Snackbar
 import kotlin.concurrent.thread
 
 /**
@@ -51,7 +51,7 @@ class AppPickerActivity : LocalizedActivity() {
 
         findViewById<View>(R.id.btnPickerBack).setOnClickListener { finish() }
 
-        findViewById<EditText>(R.id.etPickerSearch)
+        findViewById<TextInputEditText>(R.id.etPickerSearch)
             .addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
                     query = s?.toString()?.trim()?.lowercase().orEmpty()
@@ -68,7 +68,7 @@ class AppPickerActivity : LocalizedActivity() {
             }
 
         findViewById<View>(R.id.btnManualAdd).setOnClickListener {
-            val et = findViewById<EditText>(R.id.etManualPkg)
+            val et = findViewById<TextInputEditText>(R.id.etManualPkg)
             manualAdd(et.text.toString().trim())
             et.text.clear()
         }
@@ -138,7 +138,7 @@ class AppPickerActivity : LocalizedActivity() {
             val texts = line.getChildAt(1) as LinearLayout
             val labelTv = texts.getChildAt(0) as TextView
             val pkgTv = texts.getChildAt(1) as TextView
-            val check = line.getChildAt(2) as CheckBox
+            val check = line.getChildAt(2) as MaterialCheckBox
             val icon = AppLocker.appIcon(this@AppPickerActivity, e.pkg)
             if (icon != null) iv.setImageDrawable(icon)
             else iv.setImageResource(R.drawable.ic_grid)
@@ -191,11 +191,11 @@ class AppPickerActivity : LocalizedActivity() {
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })
             line.addView(texts)
-            line.addView(CheckBox(this@AppPickerActivity))
+            line.addView(MaterialCheckBox(this@AppPickerActivity))
             return line
         }
     }
 
     private fun toast(msg: String) =
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        Snackbar.make(findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show()
 }

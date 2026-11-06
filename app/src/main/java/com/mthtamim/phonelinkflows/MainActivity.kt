@@ -24,7 +24,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatDelegate
@@ -113,12 +112,18 @@ class MainActivity : LocalizedActivity() {
     // Automation Studio info line and the General version line
     private lateinit var tvA11yState: TextView
     private lateinit var tvGeneralDiag: TextView
-    // v1.2.0: the pill bottom bar (nav_pill_bar) replaces the old
-    // BottomNavigationView. v1.2.4: the SHOWN PAGE is the single
-    // source of truth — showPage() is the only tab switcher and
-    // paints the pill with the page, in the same step; navSelectedId
-    // only mirrors it. Never paint the pill from anywhere else.
+    // v1.4.0: the M3 NavigationBar (nav_m3_bar) replaces the
+    // M3 NavigationBar. v1.2.4: the SHOWN PAGE is the
+    // single source of truth — showPage() is the only tab switcher
+    // and paints the nav selection with the page, in the same step;
+    // navSelectedId only mirrors it. Never paint the bar from
+    // anywhere else.
     private var navSelectedId: Int = R.id.navHome
+
+    // v1.4.0: Home SearchBar (preview) — inline search over rules,
+    // flows and templates. Created in onCreate after pageHome is
+    // bound; Back closes it first (see wireV24).
+    private var homeSearch: HomeSearch? = null
 
 
     // v2.11 voice commands (system speech recognizer)
@@ -253,9 +258,12 @@ class MainActivity : LocalizedActivity() {
         setContentView(R.layout.activity_main)
 
         pageHome = findViewById(R.id.pageHome)
+        // v1.4.0: Home SearchBar wiring (page_home holds the bar +
+        // results box; the include is inflated at setContentView).
+        homeSearch = HomeSearch(this).also { it.setup(pageHome) }
         // v1.2.6: pageSettings is a ViewStub now — inflated on the
         // first Settings visit by ensureSettings() (from showPage).
-        // (pill bottom bar is wired in setupNavBar() below,
+        // (NavigationBar is wired in setupNavBar() below,
         //  in the navigation block; selection is re-painted
         //  in onResume too)
 
@@ -290,11 +298,12 @@ class MainActivity : LocalizedActivity() {
         // exist at cold start. (Home fields stay bound here.)
 
 
-        // ----- pill bottom bar (v1.2.0): same three destinations
-        //  as the old BottomNavigationView. DIY opens the
-        //  Automation activity (selection stays where it was,
-        //  exactly like the old listener returning false); the
-        //  bar's + button opens it too.
+        // ----- M3 NavigationBar + FAB (v1.4.0): Home / Settings
+        //  switch the page in place; DIY opens the Automation
+        //  activity and Templates opens TemplatesActivity (the
+        //  bar selection stays on the current tab for both, like
+        //  the old listener returning false); the FAB opens the
+        //  "new" bottom sheet (NavBarHelper).
         setupNavBar()
         val validTabs = setOf(R.id.navHome, R.id.navSettings)
         val startTab = savedInstanceState?.getInt("tab", R.id.navHome)
@@ -484,7 +493,7 @@ class MainActivity : LocalizedActivity() {
 
     override fun onResume() {
         super.onResume()
-        // v1.2.4: heal the pill from the SHOWN page, not from the
+        // v1.2.4: heal the nav selection from the SHOWN page, not from the
         // remembered tab — if anything ever desyncs them (a switch
         // interrupted mid-flight, a recreate), resume re-syncs
         // them instead of re-painting a stale selection.
@@ -572,7 +581,7 @@ class MainActivity : LocalizedActivity() {
 
     /** v2.17: Settings is a bottom-nav page now, not an overlay.
      *  v1.2.4: these go through showPage() like every other
-     *  switch — painting the pill alone desyncs it from the page. */
+     *  switch — painting the bar alone desyncs it from the page. */
     private fun openSettings() {
         showPage(R.id.navSettings)
     }
@@ -906,6 +915,10 @@ class MainActivity : LocalizedActivity() {
     /** Data panel: stats line, backup / import / config code. */
     private fun bindPanelData() {
         tvStats = findViewById(R.id.tvStats)
+        // v1.4.0: log lines live on their own Log screen now.
+        findViewById<Button>(R.id.btnOpenLog).setOnClickListener {
+            startActivity(Intent(this, LogActivity::class.java))
+        }
         findViewById<Button>(R.id.btnExportConfig).setOnClickListener {
             cfgExportLauncher.launch(Intent(Intent.ACTION_CREATE_DOCUMENT)
                 .addCategory(Intent.CATEGORY_OPENABLE)
@@ -970,6 +983,8 @@ class MainActivity : LocalizedActivity() {
                 override fun handleOnBackPressed() {
                     if (subScreenOpen()) {
                         closeSubScreen()
+                    } else if (homeSearch?.closeIfOpen() == true) {
+                        // Search box was open — closed it, stay.
                     } else if (navSelectedId != R.id.navHome) {
                         showPage(R.id.navHome)
                     } else {
@@ -1002,65 +1017,56 @@ class MainActivity : LocalizedActivity() {
 
     }
 
-    /** v1.2.0: wire the Essentials pill bottom bar. Home and
-     *  Settings switch the dashboard page; DIY opens the
-     *  Automation activity (selection stays, as before); the
-     *  bar's + button opens the Automation activity too. */
+    /** v1.4.0: wire the M3 NavigationBar + FAB (NavBarHelper).
+     *  Home and Settings switch the dashboard page; DIY and
+     *  Templates open their activities and the bar selection
+     *  stays on the current tab (re-asserted right after the
+     *  launch, so the user never sees it move). The FAB opens
+     *  the "new" bottom sheet. */
     private fun setupNavBar() {
-        val bar = findViewById<View>(R.id.bottomNav)
-        // v1.2.4: every tab tap goes through showPage() alone —
-        // it paints the pill with the page and no-ops when already
-        // on that tab, so a second tap mid-transition replays
-        // nothing. No separate selectNavTab() call here: painting
-        // the pill without switching the page is exactly how the
-        // pill and the page desynced.
-        bar.findViewById<View>(R.id.navTabHome).setOnClickListener {
-            showPage(R.id.navHome)
+        // The current tab's menu id, read live — the selection is
+        // re-asserted after a DIY/Templates launch, and it must be
+        // the tab the user is actually on (Settings included).
+        val currentMenuId: () -> Int = {
+            if (navSelectedId == R.id.navSettings) R.id.nav_settings
+            else R.id.nav_home
         }
-        bar.findViewById<View>(R.id.navTabAuto).setOnClickListener {
-            startActivity(Intent(this, AutomationActivity::class.java))
+        NavBarHelper.setupBar(this, R.id.bottomNav, currentMenuId()) { id ->
+            when (id) {
+                R.id.nav_home -> showPage(R.id.navHome)
+                R.id.nav_diy -> {
+                    startActivity(Intent(this, AutomationActivity::class.java))
+                    findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.bottomNav)
+                        ?.let { it.selectedItemId = currentMenuId() }
+                }
+                R.id.nav_templates -> {
+                    startActivity(Intent(this, TemplatesActivity::class.java))
+                    findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.bottomNav)
+                        ?.let { it.selectedItemId = currentMenuId() }
+                }
+                R.id.nav_settings -> showPage(R.id.navSettings)
+            }
         }
-        bar.findViewById<View>(R.id.navTabSettings).setOnClickListener {
-            showPage(R.id.navSettings)
-        }
-        bar.findViewById<View>(R.id.navAdd).setOnClickListener {
-            startActivity(Intent(this, AutomationActivity::class.java))
-        }
+        NavBarHelper.setupFab(this)
     }
 
-    /** v1.2.0: paint the pill bar — selected tab gets the dark
-     *  pill with light text+icon; the others stay sage with dark
-     *  text+icon. Fixed sage tokens (ess_bar_*) — not theme
-     *  colours — so the bar looks the same in all 8 themes. */
+    /** v1.4.0: paint the nav bar — the NavigationBarView paints
+     *  itself (M3 secondaryContainer indicator); this only sets
+     *  which item is selected. Kept the selectNavTab name so the
+     *  showPage / onResume call sites do not change. */
     private fun selectNavTab(id: Int) {
         navSelectedId = id
-        val bar = findViewById<View>(R.id.bottomNav)
-        val tabs = listOf(
-            Triple(R.id.navTabHome, R.id.navIcoHome, R.id.navTxtHome) to R.id.navHome,
-            Triple(R.id.navTabAuto, R.id.navIcoAuto, R.id.navTxtAuto) to R.id.navAutomation,
-            Triple(R.id.navTabSettings, R.id.navIcoSettings, R.id.navTxtSettings) to R.id.navSettings
-        )
-        for ((views, logical) in tabs) {
-            val (tabId, icoId, txtId) = views
-            val tab = bar.findViewById<View>(tabId)
-            val selected = logical == id
-            tab.setBackgroundResource(
-                if (selected) R.drawable.bg_nav_sel else 0)
-            val fg = androidx.core.content.ContextCompat.getColor(
-                this,
-                if (selected) R.color.ess_bar_sel_text
-                else R.color.ess_bar_text)
-            (bar.findViewById<ImageView>(icoId)).imageTintList =
-                android.content.res.ColorStateList.valueOf(fg)
-            (bar.findViewById<TextView>(txtId)).setTextColor(fg)
-        }
+        val menuId = if (id == R.id.navSettings) R.id.nav_settings
+            else R.id.nav_home
+        findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.bottomNav)
+            ?.let { if (it.selectedItemId != menuId) it.selectedItemId = menuId }
     }
 
     // v1.2.4: THE tab switcher — the only function that changes
-    // the page, and it paints the pill in the same step, so the
+    // the page, and it paints the nav bar in the same step, so the
     // two can never disagree. A repeat tap on the current tab
     // (including a second tap mid-transition) is a no-op: it only
-    // re-asserts the pill, never replays the transition.
+    // re-asserts the bar selection, never replays the transition.
     private fun showPage(itemId: Int) {
         // v1.2.6: the Settings hub inflates on first visit — before
         // anything below touches pageSettings.
@@ -1079,6 +1085,8 @@ class MainActivity : LocalizedActivity() {
         // (onCreate, before the first layout) so the first frame
         // is not animated from an unlaid-out state.
         val change = {
+            // v1.4.0: leaving Home closes the search box.
+            homeSearch?.closeIfOpen()
             settingsOpen = itemId == R.id.navSettings
             pageHome.visibility = if (itemId == R.id.navHome) View.VISIBLE else View.GONE
             // v1.2.6: pageSettings is null until its first inflate —
@@ -1107,9 +1115,9 @@ class MainActivity : LocalizedActivity() {
 
 
     /** AutomationHub: only home/settings tabs exist now. */
-    // v1.2.4: the tab extra switches the PAGE, not just the pill —
-    // painting the pill without switching the page was the proven
-    // desync (DIY Home/Settings round-trip: pill said Home while
+    // v1.2.4: the tab extra switches the PAGE, not just the bar —
+    // painting the bar without switching the page was the proven
+    // desync (DIY Home/Settings round-trip: bar said Home while
     // the page showed Settings, and vice versa).
     private fun handleTabExtra(intent: Intent?) {
         when (intent?.getStringExtra("tab")) {
@@ -1326,21 +1334,21 @@ class MainActivity : LocalizedActivity() {
 
     private fun themePreviews() = listOf(
         ThemePreview("emerald_dark", R.string.theme_name_emerald_dark,
-            "#10B981", "#101415", "#171D1F", "#EAF4EE", "#8FA79B", "#2A3336"),
+            "#4edeB4", "#0a120e", "#101a15", "#ddefe4", "#a9bcb1", "#5d6f65"),
         ThemePreview("aurora", R.string.theme_name_aurora,
-            "#E879C6", "#160B36", "#2EFFFFFF", "#FDF2FA", "#D8B4D4", "#33FFFFFF"),
+            "#a8c8ff", "#101322", "#B81E2440", "#e2e6ff", "#aab2cc", "#5f6884"),
         ThemePreview("ocean_deep", R.string.theme_name_ocean_deep,
-            "#38BDF8", "#04222F", "#2EFFFFFF", "#EFF9FF", "#9CC8D8", "#33FFFFFF"),
+            "#6fd3f7", "#071318", "#0d1e24", "#daeff7", "#a3bcc7", "#5a707b"),
         ThemePreview("midnight_sapphire", R.string.theme_name_midnight_sapphire,
-            "#8EA2FF", "#0A1130", "#2EFFFFFF", "#EEF2FF", "#A8B4D8", "#33FFFFFF"),
+            "#9db9ff", "#0a0f1e", "#111828", "#e0e6f7", "#a7b0c7", "#5c657c"),
         ThemePreview("sunset_ember", R.string.theme_name_sunset_ember,
-            "#FB923C", "#2A1008", "#2EFFFFFF", "#FFF7ED", "#E8C4A8", "#33FFFFFF"),
+            "#ffb59a", "#180d08", "#221209", "#f7e3d8", "#c7ab9c", "#7d6557"),
         ThemePreview("rose_quartz", R.string.theme_name_rose_quartz,
-            "#F9A8D4", "#2B0A1E", "#2EFFFFFF", "#FFF1F2", "#E3B8C8", "#33FFFFFF"),
+            "#ffb1c7", "#190a12", "#221019", "#f7e0e9", "#c7a9b6", "#7d5f6c"),
         ThemePreview("forest_mist", R.string.theme_name_forest_mist,
-            "#6EE7B7", "#071A12", "#2EFFFFFF", "#F0FDF4", "#A8C8B4", "#33FFFFFF"),
+            "#a5d69b", "#0d130c", "#151d14", "#e2eedb", "#aebba9", "#67725f"),
         ThemePreview("graphite_mono", R.string.theme_name_graphite_mono,
-            "#E5E7EB", "#17171A", "#2EFFFFFF", "#FAFAFA", "#A1A1AA", "#33FFFFFF")
+            "#d7d9dc", "#101214", "#0DFFFFFF", "#e8e9eb", "#b0b3b7", "#63676b")
     )
 
     private fun compositeOver(fg: Int, bg: Int): Int {
@@ -1641,5 +1649,11 @@ class MainActivity : LocalizedActivity() {
         clean to band
     } catch (_: Exception) { "" to "" }
 
-    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    /** v1.4.0: short confirmations are Snackbars now (same text,
+     *  same call sites) — every caller runs on the main thread,
+     *  so the content-view anchor is always safe here. */
+    private fun toast(msg: String) =
+        com.google.android.material.snackbar.Snackbar.make(
+            findViewById(android.R.id.content), msg,
+            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
 }
