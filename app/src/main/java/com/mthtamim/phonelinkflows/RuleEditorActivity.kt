@@ -19,6 +19,7 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.switchmaterial.SwitchMaterial
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.concurrent.thread
 
 /**
  * Visual rule editor (v2.17.2): the old Spinner pickers are gone.
@@ -2636,6 +2637,26 @@ class RuleEditorActivity : LocalizedActivity() {
         ruleId = intent.getStringExtra("rule_id") ?: ""
         val existing = Automation.rules(this)
             .firstOrNull { it.optString("id") == ruleId }
+        // v1.2.5: build the rows after the first frame — the
+        // editor chrome (name field, add buttons) draws at once,
+        // and a rule with many rows no longer blocks the open on
+        // the main thread. Row order, pickers, save/load and the
+        // exit-section logic are untouched; only the timing moves.
+        // User input cannot arrive before this runs (input is
+        // dispatched after the first frame), so save/test always
+        // see the full rows.
+        findViewById<View>(android.R.id.content).post {
+            if (isFinishing || isDestroyed) return@post
+            loadExistingRule(existing)
+        }
+        buildCategoryChips(existing?.optString("cat") ?: "")
+    }
+
+    /** v1.2.5: the existing-rule row load, run after the first
+     *  frame from onCreate (see the post there). Moved verbatim:
+     *  row order, pickers, save/load and exit-section logic are
+     *  exactly as before — only the call site changed. */
+    private fun loadExistingRule(existing: JSONObject?) {
         if (existing != null) {
             etName.setText(existing.optString("name"))
             etCat.setText(existing.optString("cat"))
@@ -2691,7 +2712,6 @@ class RuleEditorActivity : LocalizedActivity() {
             addRow("t", "time_at", "")
         if (actItems.isEmpty()) addRow("a", "notify_peer", "")
         refreshExitSection()
-        buildCategoryChips(existing?.optString("cat") ?: "")
     }
 
     /** Category chips: the categories already used by other rules,
@@ -2699,33 +2719,44 @@ class RuleEditorActivity : LocalizedActivity() {
      *  (the field itself stays the single source of truth, exactly
      *  like the old plain text box). */
     private fun buildCategoryChips(current: String) {
+        // v1.2.5: the full rules JSON is parsed off the main thread
+        // now — it used to re-parse on open, blocking the first
+        // frame. Only the Chip views are built on the main thread,
+        // posted back here. The chips' behaviour is unchanged.
         val group = findViewById<ChipGroup>(R.id.cgRuleCats)
-        val cats = Automation.rules(this)
-            .map { it.optString("cat") }.filter { it.isNotBlank() }
-            .distinct().take(6).toMutableList()
-        if (current.isNotBlank() && current !in cats) cats.add(0, current)
-        var checkedId = View.NO_ID
-        for (cat in cats) {
-            val chip = Chip(this).apply {
-                id = View.generateViewId()
-                text = cat
-                isCheckable = true
-                setOnClickListener { etCat.setText(cat) }
+        thread {
+            val cats = try {
+                Automation.rules(this@RuleEditorActivity)
+                    .map { it.optString("cat") }.filter { it.isNotBlank() }
+                    .distinct().take(6).toMutableList()
+            } catch (_: Exception) { mutableListOf() }
+            if (current.isNotBlank() && current !in cats) cats.add(0, current)
+            group.post {
+                if (isFinishing || isDestroyed) return@post
+                var checkedId = View.NO_ID
+                for (cat in cats) {
+                    val chip = Chip(this).apply {
+                        id = View.generateViewId()
+                        text = cat
+                        isCheckable = true
+                        setOnClickListener { etCat.setText(cat) }
+                    }
+                    group.addView(chip)
+                    if (cat == current) checkedId = chip.id
+                }
+                val custom = Chip(this).apply {
+                    id = View.generateViewId()
+                    text = getString(R.string.ed_custom_cat)
+                    isCheckable = true
+                    setOnClickListener {
+                        etCat.setText("")
+                        etCat.requestFocus()
+                    }
+                }
+                group.addView(custom)
+                if (checkedId != View.NO_ID) group.check(checkedId)
             }
-            group.addView(chip)
-            if (cat == current) checkedId = chip.id
         }
-        val custom = Chip(this).apply {
-            id = View.generateViewId()
-            text = getString(R.string.ed_custom_cat)
-            isCheckable = true
-            setOnClickListener {
-                etCat.setText("")
-                etCat.requestFocus()
-            }
-        }
-        group.addView(custom)
-        if (checkedId != View.NO_ID) group.check(checkedId)
     }
 
     private fun addRow(kind: String, type: String, param: String,

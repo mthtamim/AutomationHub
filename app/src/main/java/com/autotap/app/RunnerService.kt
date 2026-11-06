@@ -180,7 +180,31 @@ class RunnerService : Service() {
         worker = Thread { runLoop(script) }.apply { isDaemon = true; start() }
     }
 
+    // v1.2.5: finishRun() must be guaranteed — an exception in the
+    // loop used to kill the worker thread without it, leaving
+    // running=true, the foreground notification and the wake lock
+    // behind after the run was over.
     private fun runLoop(script: Script) {
+        try {
+            runLoopInner(script)
+        } catch (e: Exception) {
+            if (running) {
+                try { finishRun("ত্রুটির কারণে বন্ধ হয়েছে") } catch (_: Exception) { }
+            }
+        } finally {
+            // Last resort: if finishRun never ran or failed midway,
+            // never leave the notification, wake lock or running flag.
+            if (running) {
+                running = false
+                releaseWakeLock()
+                mainHandler.post { try { FloatingPanel.hide() } catch (_: Exception) { } }
+                try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) { }
+                try { stopSelf() } catch (_: Exception) { }
+            }
+        }
+    }
+
+    private fun runLoopInner(script: Script) {
         val svc = TapAccessibilityService.instance
         if (svc == null) {
             finishRun("Accessibility বন্ধ হয়ে গেছে")
@@ -965,8 +989,10 @@ class RunnerService : Service() {
                 vib?.vibrate(android.os.VibrationEffect.createOneShot(350, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
             } catch (e: Exception) { /* vibration is best-effort */ }
         }
-        postFinalNotification(reason)
-
+        // v1.2.5: no lingering "run finished" notification — the
+        // report is already saved in-app (Store.setLastReport above),
+        // so nothing is lost and no RunnerService notification stays
+        // in the shade after the run ends.
         running = false
         activeScriptName = ""
         activeScriptId = ""
@@ -978,22 +1004,6 @@ class RunnerService : Service() {
         unregisterCallPause()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
-    }
-
-    private fun postFinalNotification(reason: String) {
-        try {
-            createChannel()
-            val nm = getSystemService(NotificationManager::class.java)
-            val notif = Notification.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("AutoTap রান শেষ")
-                .setContentText("$activeScriptName - $reason, Tap: $tapCount")
-                .setAutoCancel(true)
-                .build()
-            nm.notify(FINAL_NOTIF_ID, notif)
-        } catch (e: Exception) {
-            // Final summary is best-effort.
-        }
     }
 
     /** Shake-to-stop: a hard shake of the phone stops the run (optional). */
@@ -1149,7 +1159,6 @@ class RunnerService : Service() {
         const val CMD_NEXT = "next"
         private const val CHANNEL_ID = "autotap_runner"
         private const val NOTIF_ID = 41
-        private const val FINAL_NOTIF_ID = 44
         private const val ALERT_NOTIF_ID = 45
 
         @Volatile var running = false

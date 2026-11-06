@@ -60,8 +60,11 @@ class FlowCallReceiver : BroadcastReceiver() {
                             // hook: Flow redial_control sessions are
                             // PhoneLink Redial sessions, driven by
                             // PhoneLink's own engine and receivers.
+                            // v1.2.5: pollAsync — the poll runs on
+                            // Redial's worker thread, not on the
+                            // receiver's main thread.
                             try {
-                                Redial.poll(ctx.applicationContext)
+                                Redial.pollAsync(ctx.applicationContext)
                             } catch (_: Exception) { }
                         }
                         else -> {

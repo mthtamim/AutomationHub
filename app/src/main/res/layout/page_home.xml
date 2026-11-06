@@ -25,16 +25,31 @@
             app:strokeColor="?attr/colorPrimary"
             app:strokeWidth="1dp">
 
-            <LinearLayout
+            <!-- v1.2.5: was a horizontal LinearLayout with a
+                 weight=1 text column — the weight forced a second
+                 measure pass over the whole column on every
+                 re-layout of this tree. A RelativeLayout holds
+                 the same look (phone art pinned to the end, text
+                 column filling the rest) with one measure pass. -->
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:padding="20dp">
 
+                <ImageView
+                    android:id="@+id/ivDashPhoneArt"
+                    android:layout_width="86dp"
+                    android:layout_height="150dp"
+                    android:layout_alignParentEnd="true"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_phone_art" />
+
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_alignParentStart="true"
+                    android:layout_marginEnd="8dp"
+                    android:layout_toStartOf="@id/ivDashPhoneArt"
                     android:orientation="vertical">
 
                     <TextView
@@ -96,13 +111,7 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <ImageView
-                    android:layout_width="86dp"
-                    android:layout_height="150dp"
-                    android:layout_marginStart="8dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_phone_art" />
-            </LinearLayout>
+            </RelativeLayout>
         </com.google.android.material.card.MaterialCardView>
 
 

@@ -1376,3 +1376,110 @@ time (gap 5 s -> ~5 s after the call ends) in the background
 with the app closed, version 1.2.4; with the exact-alarm grant
 off, the status line shows "exact alarm off" and redial runs
 slow on the tick.
+
+## v1.2.5 — Home scroll jank + Rules editor slowness + AutoTap run leak (not pushed yet)
+
+Why: phone verdict 23:24 — 1.2.3 felt FAST (first confirmation
+the 1.2.3 motion work landed), but 1.2.4 feels heavy again.
+Tamim narrowed it 23:29–23:30: the heaviness is WHEN SCROLLING
+ON HOME, and the Rules editor ALSO sometimes feels slow.
+
+Home scroll mechanism, proven from the code: page_home.xml is a
+ScrollView holding one big LinearLayout (441 lines) with
+FOURTEEN layout_weight uses. Nested weights force double
+measure passes, and any text change in the tree forces a full
+re-measure of it. MainActivity.refreshStatus() runs on every
+onResume and unconditionally re-set every status text (plus
+refreshDashboard() with BatteryHelper + ownWifi() Binder IPC),
+so each resume re-measured the whole Home tree even when
+nothing had changed.
+
+Home fix: (1) refreshStatus() / refreshDashboard() /
+refreshFocusGuard() / refreshSettingsHub() / refreshAutoTapCard()
+/ refreshRedialCard() now assign a TextView / ProgressBar /
+text colour ONLY when the new value differs
+(setTextIfChanged / setProgressIfChanged /
+setTextColorIfChanged in MainActivity) — a resume with no
+changes touches no view, so no re-measure happens at all.
+(2) The hero device row no longer uses a weight: the
+horizontal LinearLayout + weight=1 text column became a
+RelativeLayout (phone art pinned to the end, text column
+filling the rest) — same look, one measure pass instead of
+two. The other 13 weights are the equal-split button/field
+rows (Start/Stop, SIM chips, gap/max, ring/speaker, on-answer,
+Start/Stop): weight is the only framework way to keep the
+exact 50/50 (33/33/33) split without adding a ConstraintLayout
+dependency — GridLayout/TableLayout weights cost the same
+second pass, and fixed dp widths would break on other screen
+widths. With the changed-value guards, a re-measure now only
+happens when a value actually changes, so the remaining weight
+cost is paid rarely instead of on every resume.
+
+Rules editor mechanism, proven from the code: every
+trigger/condition/action/exit row is built programmatically
+(Row init: ~6–10 views, backgrounds, typeface) and addView-ed
+into LinearLayout containers during onCreate, all synchronously
+on the main thread — a rule with many rows blocks the open.
+Two extra costs on the same path: buildCategoryChips() called
+Automation.rules(this) — a full JSON parse of ALL rules — on
+the main thread during open; and Row.refreshChip() called
+AutoCatalog.label()+hint(), each doing a
+resources.getIdentifier() scan of the resource table, per row
+(plus refreshCondChip() for action rows).
+
+Rules editor fix: (1) the existing-rule row load moved to
+loadExistingRule(), run after the first frame via a post on
+the content view — the editor chrome draws at once, rows
+build right after; row order, pickers, save/load and the
+exit-section logic are verbatim, only the timing moves, and
+user input cannot arrive before it runs. (2)
+buildCategoryChips() parses the rules JSON on a background
+thread and posts only the Chip building back to the main
+thread. (3) AutoCatalog.label()/hint() results are cached by
+kind+type+locale (locale in the key, so an in-app language
+switch never serves stale strings) — the getIdentifier scan
+now runs once per type instead of once per row.
+
+Shared intermittent suspect, fixed: Redial.poll() is
+@Synchronized and was called on the MAIN thread by
+FlowCallReceiver's IDLE branch and by RedialReceiver (alarm),
+while the 60 s tick thread also polls — a main-thread poll
+could block behind a background poll doing call-log queries.
+Both receivers now call Redial.pollAsync(), which runs the
+same poll on one shared single-thread worker; the
+@Synchronized poll() still serialises polls with the tick.
+Exact-alarm timing is identical (the alarm still fires on
+time; only poll execution moves off the main thread), and
+the no-silent-fallback rule is untouched.
+
+NOT changed (exonerated, verified in code): the 60 s
+FlowService tick work already runs on a background thread
+(FlowService.kt tickRunnable starts a Thread for
+Automation.tick), so the tick was not touched.
+
+AutoTap run leak, reported 23:41: after a script finished, the
+app kept running in the background and a notification stayed
+visible. Two causes, proven from RunnerService.kt: (1) runLoop()
+had no try/finally — an exception in the loop killed the worker
+thread without finishRun(), leaving running=true, the foreground
+"চলছে" notification (id 41) and the wake lock behind; (2) even
+on a normal finish, finishRun() posted an "AutoTap রান শেষ"
+summary notification (id 44) that sat in the shade until tapped.
+Fix: runLoop() is now a wrapper (runLoopInner holds the old body
+verbatim) that guarantees finishRun("ত্রুটির কারণে বন্ধ হয়েছে")
+on any exception, plus a finally that force-clears the running
+flag, wake lock, floating panel and foreground notification if
+finishRun never ran or failed midway; the final summary
+notification is gone entirely (postFinalNotification and
+FINAL_NOTIF_ID removed) — the run report is already saved
+in-app via Store.setLastReport. FlowService and its "is running"
+notification (id 101) are untouched: that one stays while the
+Flows switch is ON, by Android's foreground-service rule.
+
+Version 1.2.5 (vc8). No new dependencies, no new permissions,
+no minify/R8, no MQTT UI, no forwarding/relay touched, no
+behaviour or look change beyond the fixes. Phone test pending:
+Home scrolls smooth after resume/reopen, Rules editor opens
+fast on a rule with many rows, redial timing unchanged
+(gap 5 s -> ~5 s after the call ends), no RunnerService
+notification remains after an AutoTap run ends, version 1.2.5.

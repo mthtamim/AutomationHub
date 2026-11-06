@@ -20,6 +20,7 @@ import android.widget.CompoundButton
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1025,6 +1026,25 @@ class MainActivity : LocalizedActivity() {
     }
 
 
+    // v1.2.5: changed-value guards — assigning the same text (or
+    // progress, or colour) again still requests a full re-layout
+    // of the Home ScrollView tree, and its nested weights then
+    // re-measure twice. refreshStatus() runs on every onResume,
+    // so refreshes that change nothing must not touch the views
+    // at all. Behaviour is identical: a changed value is still
+    // assigned exactly as before.
+    private fun setTextIfChanged(tv: TextView, value: String) {
+        if (tv.text.toString() != value) tv.text = value
+    }
+
+    private fun setProgressIfChanged(pb: ProgressBar, value: Int) {
+        if (pb.progress != value) pb.progress = value
+    }
+
+    private fun setTextColorIfChanged(tv: TextView, color: Int) {
+        if (tv.currentTextColor != color) tv.setTextColor(color)
+    }
+
     private fun refreshStatus() {
         // AutomationHub: no relay — the header pill shows the local
         // automation state (rules/flows counts), the hub subtitles
@@ -1036,28 +1056,28 @@ class MainActivity : LocalizedActivity() {
         val flows = FlowStore.flows(this)
         val logs = Automation.recentLog(this)
         val autoOn = Config.automationOn(this)
-        tvConnPill.text = if (autoOn) {
+        setTextIfChanged(tvConnPill, if (autoOn) {
             getString(R.string.conn_automation_on, rules.size, flows.size)
         } else {
             getString(R.string.conn_automation_off)
-        }
-        tvConnPill.setTextColor(ContextCompat.getColor(this,
+        })
+        setTextColorIfChanged(tvConnPill, ContextCompat.getColor(this,
             if (autoOn) R.color.status_ok else R.color.status_bad))
         // Smart-control / data info lines
-        tvGeoInfo.text = if (Config.geoIsSet(this)) {
+        setTextIfChanged(tvGeoInfo, if (Config.geoIsSet(this)) {
             getString(R.string.geo_set, Config.geoLat(this), Config.geoLng(this), Config.geoRadius(this))
-        } else getString(R.string.geo_not_set)
+        } else getString(R.string.geo_not_set))
         refreshFocusGuard()
-        tvStats.text = buildStatsText(rules, flows, logs)
-        tvPinInfo.text = getString(
-            if (Config.pinHash(this).isNotEmpty()) R.string.pin_state_set else R.string.pin_state_unset)
-        tvAdminInfo.text = getString(
-            if (AdminReceiver.isActive(this)) R.string.admin_state_on else R.string.admin_state_off)
+        setTextIfChanged(tvStats, buildStatsText(rules, flows, logs))
+        setTextIfChanged(tvPinInfo, getString(
+            if (Config.pinHash(this).isNotEmpty()) R.string.pin_state_set else R.string.pin_state_unset))
+        setTextIfChanged(tvAdminInfo, getString(
+            if (AdminReceiver.isActive(this)) R.string.admin_state_on else R.string.admin_state_off))
         // v2.17.4: display-only state lines for the accesses that
         // are granted in Permissions & Access (no grant path here).
-        tvA11yState.text = getString(R.string.a11y_state_fmt,
+        setTextIfChanged(tvA11yState, getString(R.string.a11y_state_fmt,
             getString(if (PermChecks.a11yEnabled(this)) R.string.state_on
-                else R.string.state_off))
+                else R.string.state_off)))
         refreshDashboard()
         refreshSettingsHub(rules, flows)
     }
@@ -1090,18 +1110,18 @@ class MainActivity : LocalizedActivity() {
         focusGuardUpdating = true
         findViewById<CompoundButton>(R.id.swFocusGuard).isChecked = on
         focusGuardUpdating = false
-        tvFocusGuardInfo.text = if (!on) {
+        setTextIfChanged(tvFocusGuardInfo, if (!on) {
             getString(R.string.focus_guard_info_off)
         } else {
             getString(R.string.focus_guard_info_on, fmt(fs), fmt(fe), pkgs.size)
-        }
-        tvFocusAppsInfo.text = if (pkgs.isEmpty()) {
+        })
+        setTextIfChanged(tvFocusAppsInfo, if (pkgs.isEmpty()) {
             getString(R.string.focus_apps_none)
         } else {
             getString(R.string.focus_apps_chosen, pkgs.size)
-        }
-        btnFocusStart.text = getString(R.string.focus_time_start, fmt(fs))
-        btnFocusEnd.text = getString(R.string.focus_time_end, fmt(fe))
+        })
+        setTextIfChanged(btnFocusStart, getString(R.string.focus_time_start, fmt(fs)))
+        setTextIfChanged(btnFocusEnd, getString(R.string.focus_time_end, fmt(fe)))
     }
 
     /** Focus Guard card: start/end time picker (24-hour). Saving the
@@ -1296,15 +1316,15 @@ class MainActivity : LocalizedActivity() {
     }
 
     private fun refreshDashboard() {
-        tvDashDevice.text = Config.deviceName(this)
-        tvDashDeviceSub.text = "${Build.MANUFACTURER} ${Build.MODEL} • Android ${Build.VERSION.RELEASE}"
+        setTextIfChanged(tvDashDevice, Config.deviceName(this))
+        setTextIfChanged(tvDashDeviceSub, "${Build.MANUFACTURER} ${Build.MODEL} • Android ${Build.VERSION.RELEASE}")
         val pct = BatteryHelper.batteryPercent(this)
-        pbDashBattery.progress = pct
-        tvDashBatteryPct.text = "$pct%"
+        setProgressIfChanged(pbDashBattery, pct)
+        setTextIfChanged(tvDashBatteryPct, "$pct%")
         val (ssid, band) = ownWifi()
-        tvDashWifi.text = if (ssid.isNotEmpty()) {
+        setTextIfChanged(tvDashWifi, if (ssid.isNotEmpty()) {
             "Wi-Fi \u2022 $ssid" + if (band.isNotEmpty()) " \u2022 $band" else ""
-        } else "Wi-Fi \u2022 \u2014"
+        } else "Wi-Fi \u2022 \u2014")
         refreshAutoTapCard()
         refreshRedialCard()
     }
@@ -1345,10 +1365,10 @@ class MainActivity : LocalizedActivity() {
      *  name field is prefilled from the remembered name only
      *  while empty, so a refresh never clobbers typed text. */
     private fun refreshAutoTapCard() {
-        tvDashAutoTapStatus.text = getString(
+        setTextIfChanged(tvDashAutoTapStatus, getString(
             if (TapAccessibilityService.isEnabled())
                 R.string.dash_autotap_a11y_on
-            else R.string.dash_autotap_a11y_off)
+            else R.string.dash_autotap_a11y_off))
         if (etDashAutoTapScript.text.toString().isEmpty())
             etDashAutoTapScript.setText(Config.autoTapScript(this))
     }
@@ -1359,7 +1379,7 @@ class MainActivity : LocalizedActivity() {
      *  empty, so a refresh never clobbers typed text. While
      *  a session runs, the SIM chips follow the session. */
     private fun refreshRedialCard() {
-        tvDashRedialStatus.text = Redial.statusText(this)
+        setTextIfChanged(tvDashRedialStatus, Redial.statusText(this))
         if (Redial.isActive(this)) {
             dashRedialSim = Redial.sessionSim(this)
             dashRedialOnanswer = Redial.sessionOnanswer(this)
@@ -1402,19 +1422,19 @@ class MainActivity : LocalizedActivity() {
 
     private fun refreshSettingsHub(rules: List<JSONObject>, flows: List<JSONObject>) {
         val missing = PermChecks.missingCount(this)
-        tvSetPill.text = if (missing == 0) getString(R.string.set_status_ok)
-            else getString(R.string.set_status_warn, missing)
-        tvHubPermsSub.text = if (missing == 0)
+        setTextIfChanged(tvSetPill, if (missing == 0) getString(R.string.set_status_ok)
+            else getString(R.string.set_status_warn, missing))
+        setTextIfChanged(tvHubPermsSub, if (missing == 0)
             getString(R.string.perm_summary_ok)
-        else getString(R.string.perm_summary_missing, missing)
-        tvHubSecSub.text = "${tvPinInfo.text} • ${tvAdminInfo.text}"
-        tvHubDataSub.text = tvStats.text
-        tvHubDiag.text = "AutomationHub v$appVersionName • " +
+        else getString(R.string.perm_summary_missing, missing))
+        setTextIfChanged(tvHubSecSub, "${tvPinInfo.text} • ${tvAdminInfo.text}")
+        setTextIfChanged(tvHubDataSub, tvStats.text.toString())
+        setTextIfChanged(tvHubDiag, "AutomationHub v$appVersionName • " +
             "${rules.size} rules • " +
-            "${flows.size} flows"
+            "${flows.size} flows")
         // v2.17.4: the same version line also lives at the bottom
         // of Appearance & General (inventory category 7).
-        tvGeneralDiag.text = tvHubDiag.text
+        setTextIfChanged(tvGeneralDiag, tvHubDiag.text.toString())
     }
 
     // One-time callers (Settings hub wiring) parse once and

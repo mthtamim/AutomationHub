@@ -141,20 +141,37 @@ object AutoCatalog {
         // like autotap_control, not the raw action picker)
         "redial_control")
 
+    // v1.2.5: getIdentifier() scans the resource table, and
+    // Row.refreshChip() called label()+hint() for EVERY row on
+    // open (plus refreshCondChip() for action rows). Cache by
+    // kind+type+locale — the locale is in the key so an in-app
+    // language switch never serves stale strings.
+    private val labelCache = HashMap<String, String>()
+    private val hintCache = HashMap<String, String>()
+    private fun localeTag(ctx: Context): String = try {
+        ctx.resources.configuration.locales[0]?.toLanguageTag() ?: ""
+    } catch (_: Exception) { "" }
+
     fun label(ctx: Context, kind: String, type: String): String {
-        val resName = when (kind) {
-            "t" -> "at_$type"; "c" -> "ac_$type"; else -> "aa_$type"
+        val key = "$kind|$type|${localeTag(ctx)}"
+        return labelCache.getOrPut(key) {
+            val resName = when (kind) {
+                "t" -> "at_$type"; "c" -> "ac_$type"; else -> "aa_$type"
+            }
+            val id = ctx.resources.getIdentifier(resName, "string", ctx.packageName)
+            if (id != 0) ctx.getString(id) else type
         }
-        val id = ctx.resources.getIdentifier(resName, "string", ctx.packageName)
-        return if (id != 0) ctx.getString(id) else type
     }
 
     fun hint(ctx: Context, kind: String, type: String): String {
-        val resName = when (kind) {
-            "t" -> "ath_$type"; "c" -> "ach_$type"; else -> "aah_$type"
+        val key = "$kind|$type|${localeTag(ctx)}"
+        return hintCache.getOrPut(key) {
+            val resName = when (kind) {
+                "t" -> "ath_$type"; "c" -> "ach_$type"; else -> "aah_$type"
+            }
+            val id = ctx.resources.getIdentifier(resName, "string", ctx.packageName)
+            if (id != 0) ctx.getString(id) else ""
         }
-        val id = ctx.resources.getIdentifier(resName, "string", ctx.packageName)
-        return if (id != 0) ctx.getString(id) else ""
     }
 }
 

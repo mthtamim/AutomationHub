@@ -10,6 +10,7 @@ import android.telephony.TelephonyManager
 import android.media.AudioManager
 import com.autotap.app.Region
 import com.autotap.app.TapAccessibilityService
+import java.util.concurrent.Executors
 
 /**
  * v2.22: "উত্তর না দেওয়া পর্যন্ত বারবার কল" — redial until
@@ -245,6 +246,22 @@ object Redial {
                 (e.message ?: "could not start call"))
             false
         }
+    }
+
+    // v1.2.5: poll() runs call-log queries while holding the
+    // Redial monitor, and the two receivers run on the main
+    // thread — a main-thread poll can stall the UI behind a
+    // background poll (tick / alarm). One shared worker runs
+    // receiver polls off the main thread; the @Synchronized
+    // poll() still serialises them with the tick. Timing is
+    // unchanged: the alarm still fires on time, only the poll
+    // execution moves off the main thread.
+    private val pollWorker = Executors.newSingleThreadExecutor()
+
+    /** Receiver entry point: same poll, off the main thread. */
+    fun pollAsync(ctx: Context) {
+        val app = ctx.applicationContext
+        pollWorker.execute { try { poll(app) } catch (_: Exception) { } }
     }
 
     /** Driven by Automation.tick (~60 s), by the redial alarm

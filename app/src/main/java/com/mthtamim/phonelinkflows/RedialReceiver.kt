@@ -12,8 +12,11 @@ import android.content.Intent
  */
 class RedialReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // v1.2.5: pollAsync — the poll runs on Redial's worker
+        // thread, not on the receiver's main thread. The alarm
+        // itself still fires on time; only execution moves.
         try {
-            Redial.poll(context.applicationContext)
+            Redial.pollAsync(context.applicationContext)
         } catch (_: Exception) { }
     }
 }
