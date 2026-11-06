@@ -381,8 +381,8 @@ class RuleEditorActivity : LocalizedActivity() {
             if (kind == "a" && type == "call_number") {
                 ensureSimGroup()
                 val parsed =
-                    Automation.parseCallParam(etParam.text.toString())
-                if (etParam.text.toString().contains("|sim="))
+                    Automation.parseCallParam(etParam.text?.toString().orEmpty())
+                if (etParam.text?.toString().orEmpty().contains("|sim=") == true)
                     etParam.setText(parsed.first)
                 simSel = parsed.second
                 val want = simChips.entries
@@ -446,7 +446,7 @@ class RuleEditorActivity : LocalizedActivity() {
         }
 
         fun toJson(): JSONObject {
-            var p = etParam.text.toString().trim()
+            var p = etParam.text?.toString().orEmpty().trim()
             // v2.21: call_number saves the SIM chip, never a
             // typed suffix — Default saves the bare number, so
             // old builds read new rules unchanged.
@@ -1089,7 +1089,7 @@ class RuleEditorActivity : LocalizedActivity() {
             if (cmd == "focus") {
                 // '|' and '=' are the param's own separators —
                 // they can never appear inside a preset name.
-                val p = etPreset.text.toString().trim()
+                val p = etPreset.text?.toString().orEmpty().trim()
                     .replace("|", " ").replace("=", " ")
                 if (p.isNotEmpty()) parts.add("preset=$p")
             }
@@ -1307,7 +1307,7 @@ class RuleEditorActivity : LocalizedActivity() {
             if (cmd == "start") {
                 // '|' and '=' are the param's own separators —
                 // they can never appear inside a script name.
-                val n = etName.text.toString().trim()
+                val n = etName.text?.toString().orEmpty().trim()
                     .replace("|", " ").replace("=", " ")
                 if (n.isNotEmpty()) parts.add("name=$n")
             }
@@ -1708,17 +1708,17 @@ class RuleEditorActivity : LocalizedActivity() {
         fun toJson(): JSONObject {
             val parts = mutableListOf("cmd=$cmd")
             if (cmd == "start") {
-                val n = etNumber.text.toString().trim()
+                val n = etNumber.text?.toString().orEmpty().trim()
                     .replace("|", " ").replace("=", " ")
                 if (n.isNotEmpty()) parts.add("number=$n")
                 parts.add("sim=$simSel")
-                val g = etGap.text.toString().trim()
+                val g = etGap.text?.toString().orEmpty().trim()
                     .toIntOrNull() ?: 30
-                val m = etMax.text.toString().trim()
+                val m = etMax.text?.toString().orEmpty().trim()
                     .toIntOrNull() ?: 20
                 parts.add("gap=$g")
                 parts.add("max=$m")
-                val r = etRing.text.toString().trim()
+                val r = etRing.text?.toString().orEmpty().trim()
                     .toIntOrNull() ?: 0
                 parts.add("ring=$r")
                 parts.add("onanswer=$onanswer")
@@ -2528,7 +2528,7 @@ class RuleEditorActivity : LocalizedActivity() {
         }
 
         fun toJson(): JSONObject {
-            val t = etTime.text.toString().trim()
+            val t = etTime.text?.toString().orEmpty().trim()
             val time = if (t.matches(
                     Regex("^([01]?[0-9]|2[0-3]):[0-5][0-9]$"))) t
                 else "09:00"
@@ -2942,7 +2942,7 @@ class RuleEditorActivity : LocalizedActivity() {
             liveTrig.add(s.toJson())
         for (d in trigDayRows) if (d.root.parent != null)
             liveTrig.add(d.toJson())
-        val name = etName.text.toString().trim().ifEmpty {
+        val name = etName.text?.toString().orEmpty().trim().ifEmpty {
             if (liveTrig.isNotEmpty())
                 AutoCatalog.label(this, "t",
                     liveTrig[0].optString("type"))
@@ -2951,7 +2951,7 @@ class RuleEditorActivity : LocalizedActivity() {
         val rule = JSONObject()
             .put("id", ruleId.ifEmpty { "r" + System.currentTimeMillis() })
             .put("name", name)
-            .put("cat", etCat.text.toString().trim())
+            .put("cat", etCat.text?.toString().orEmpty().trim())
             .put("enabled", true)
         if (liveTrig.isNotEmpty()) {
             rule.put("trigger", liveTrig[0])

@@ -105,7 +105,7 @@ object StudyGuardUi {
             setSingleLine()
             if (existing != null) {
                 setText(existing.name)
-                setSelection(text.length)
+                setSelection(text?.length ?: 0)
             }
         }
         MaterialAlertDialogBuilder(activity)
@@ -113,7 +113,7 @@ object StudyGuardUi {
                 else R.string.sg_action_rename)
             .setView(et)
             .setPositiveButton(R.string.btn_save) { _, _ ->
-                val name = et.text.toString().trim()
+                val name = et.text?.toString().orEmpty().trim()
                 if (name.isEmpty()) {
                     Snackbar.make(
                         activity.findViewById(android.R.id.content),

@@ -77,7 +77,7 @@ class FlowDialogActivity : LocalizedActivity() {
                 .setTitle(title)
                 .setView(edit)
                 .setPositiveButton(android.R.string.ok) { _, _ ->
-                    finishResult(edit.text.toString(), "ok")
+                    finishResult(edit.text?.toString().orEmpty(), "ok")
                 }
                 .setNegativeButton(android.R.string.cancel) { _, _ ->
                     finishResult(null, "cancel")

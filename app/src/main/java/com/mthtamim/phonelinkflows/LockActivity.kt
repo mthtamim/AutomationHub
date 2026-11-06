@@ -18,7 +18,7 @@ class LockActivity : LocalizedActivity() {
 
         val etPin = findViewById<TextInputEditText>(R.id.etPin)
         findViewById<Button>(R.id.btnUnlock).setOnClickListener {
-            val pin = etPin.text.toString()
+            val pin = etPin.text?.toString().orEmpty()
             // v2.11 panic mode: the panic PIN opens the decoy screen
             // and silently mutes the app until the real PIN is used.
             if (pin.isNotEmpty() && Config.panicPinHash(this).isNotEmpty() &&
@@ -34,7 +34,7 @@ class LockActivity : LocalizedActivity() {
                 proceed()
             } else {
                 toast(getString(R.string.lock_wrong_pin))
-                etPin.text.clear()
+                etPin.text?.clear()
             }
         }
         val btnBio = findViewById<Button>(R.id.btnBiometric)

@@ -188,7 +188,7 @@ class AppLockerActivity : LocalizedActivity() {
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                 .setOnClickListener {
-                    val newPin = etNew.text.toString().trim()
+                    val newPin = etNew.text?.toString().orEmpty().trim()
                     when {
                         hasPin && Crypto.pinHash(
                             etCurrent?.text?.toString()?.trim() ?: "") !=
@@ -196,7 +196,7 @@ class AppLockerActivity : LocalizedActivity() {
                             toast(getString(R.string.alk_pin_wrong_current))
                         newPin.length !in 4..6 || !newPin.all { it.isDigit() } ->
                             toast(getString(R.string.alk_pin_digits))
-                        newPin != etConfirm.text.toString().trim() ->
+                        newPin != etConfirm.text?.toString().orEmpty().trim() ->
                             toast(getString(R.string.alk_pin_mismatch))
                         else -> {
                             AppLocker.setPin(this, newPin)

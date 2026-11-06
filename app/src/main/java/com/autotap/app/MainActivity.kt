@@ -287,7 +287,7 @@ class MainActivity : AppCompatActivity() {
                 .setView(input)
                 .setCancelable(false)
                 .setPositiveButton("খোলো") { _, _ ->
-                    if (input.text.toString() == pin) {
+                    if (input.text?.toString().orEmpty() == pin) {
                         unlocked = true
                         recreate()
                     } else {
@@ -418,7 +418,7 @@ class MainActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setView(input)
-            .setPositiveButton("ঠিক আছে") { _, _ -> done(input.text.toString().trim()) }
+            .setPositiveButton("ঠিক আছে") { _, _ -> done(input.text?.toString().orEmpty().trim()) }
             .setNegativeButton("বাতিল", null)
             .show()
     }
@@ -829,7 +829,7 @@ class MainActivity : AppCompatActivity() {
         }
         searchCard.addView(searchInput)
         searchCard.addView(btnRow(
-            smallBtn("খোঁজো") { scriptSearch = searchInput.text.toString(); rebuild() },
+            smallBtn("খোঁজো") { scriptSearch = searchInput.text?.toString().orEmpty(); rebuild() },
             smallBtn(if (scriptFilter == 0) "[সব]" else "সব") { scriptFilter = 0; rebuild() },
             smallBtn(if (scriptFilter == 1) "[★ প্রিয়]" else "★ প্রিয়") { scriptFilter = 1; rebuild() },
             smallBtn(if (scriptFilter == 2) "[সময়-ঠিক]" else "সময়-ঠিক") { scriptFilter = 2; rebuild() }
@@ -2133,7 +2133,7 @@ val merged = Script.fromJson(JSONObject(script.toJson().toString()).apply {
         builderCard.addView(input)
         builderCard.addView(Ui.primaryButton(this, "Script বানাও") {
             val m = resources.displayMetrics
-            val built = Templates.fromDescription(input.text.toString(), m.widthPixels, m.heightPixels)
+            val built = Templates.fromDescription(input.text?.toString().orEmpty(), m.widthPixels, m.heightPixels)
             if (built == null) {
                 toast("বুঝতে পারিনি - 'স্ক্রল' বা \"শব্দ\" সহ আরেকটু পরিষ্কার করে লেখো")
             } else {

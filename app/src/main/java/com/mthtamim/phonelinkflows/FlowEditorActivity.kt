@@ -341,12 +341,12 @@ class FlowEditorActivity : LocalizedActivity() {
      * never created by this path. Silent: no toast.
      */
     private fun persistNameFolder() {
-        val name = etFlowName.text.toString().trim()
+        val name = etFlowName.text?.toString().orEmpty().trim()
         if (name.isEmpty()) {
             return
         }
         flow.put("name", name)
-        flow.put("folder", etFlowFolder.text.toString().trim())
+        flow.put("folder", etFlowFolder.text?.toString().orEmpty().trim())
         FlowStore.saveFlow(this, flow)
     }
 
@@ -386,12 +386,12 @@ class FlowEditorActivity : LocalizedActivity() {
     private fun showNewFolderDialog() {
         val input = TextInputEditText(this)
         input.hint = getString(R.string.flow_folder_name_hint)
-        input.setText(etFlowFolder.text.toString())
+        input.setText(etFlowFolder.text?.toString().orEmpty())
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.flow_folder_new)
             .setView(input)
             .setPositiveButton(R.string.btn_save) { _, _ ->
-                etFlowFolder.setText(input.text.toString().trim())
+                etFlowFolder.setText(input.text?.toString().orEmpty().trim())
                 persistNameFolder()
             }
             .setNegativeButton(R.string.btn_cancel, null)
@@ -780,7 +780,7 @@ class FlowEditorActivity : LocalizedActivity() {
                 node.put("immediate", cbImmediate.isChecked)
                 node.put("enabled", cbEnabled.isChecked)
                 node.put("onerror", if (cbContinueOnError.isChecked) "continue" else "stop")
-                node.put("note", etNote.text.toString())
+                node.put("note", etNote.text?.toString().orEmpty())
                 node.put("param", composeParam(type))
                 canvas.invalidate()
                 Snackbar.make(findViewById(android.R.id.content), R.string.toast_saved, Snackbar.LENGTH_SHORT).show()
@@ -1067,7 +1067,7 @@ class FlowEditorActivity : LocalizedActivity() {
     }
 
     private fun saveFlowSilent(): Boolean {
-        val name = etFlowName.text.toString().trim()
+        val name = etFlowName.text?.toString().orEmpty().trim()
         if (name.isEmpty()) {
             Snackbar.make(findViewById(android.R.id.content), R.string.toast_need_name, Snackbar.LENGTH_SHORT).show()
             return false
@@ -1077,7 +1077,7 @@ class FlowEditorActivity : LocalizedActivity() {
             return false
         }
         flow.put("name", name)
-        flow.put("folder", etFlowFolder.text.toString().trim())
+        flow.put("folder", etFlowFolder.text?.toString().orEmpty().trim())
         FlowStore.saveFlow(this, flow)
         return true
     }

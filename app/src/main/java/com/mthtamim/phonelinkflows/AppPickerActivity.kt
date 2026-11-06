@@ -69,8 +69,8 @@ class AppPickerActivity : LocalizedActivity() {
 
         findViewById<View>(R.id.btnManualAdd).setOnClickListener {
             val et = findViewById<TextInputEditText>(R.id.etManualPkg)
-            manualAdd(et.text.toString().trim())
-            et.text.clear()
+            manualAdd(et.text?.toString().orEmpty().trim())
+            et.text?.clear()
         }
 
         thread {

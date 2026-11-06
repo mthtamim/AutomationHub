@@ -59,8 +59,8 @@ class TemplatesActivity : LocalizedActivity() {
     }
 
     /** Category of a template from its real trigType (Templates.kt):
-     *  charging/battery_* -> চার্জিং, time_*/sunrise/sunset -> সময়,
-     *  geofence_*/location* -> লোকেশন, app_* -> অ্যাপ,
+     *  charging/battery_* -> চার্জিং, time_* / sunrise / sunset -> সময়,
+     *  geofence_* / location* -> লোকেশন, app_* -> অ্যাপ,
      *  focuslock -> FocusLock. Anything else (shake, boot, wifi…)
      *  has no category and shows only under সব. */
     private fun categoryOf(t: Templates.Template): String? = when {
