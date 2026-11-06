@@ -8,7 +8,7 @@ import java.io.File
 /**
  * Flow persistence for PhoneLink v2.24.0 (the Lab merge).
  * DELIBERATELY SEPARATE from PhoneLink's rule store (Automation,
- * prefs "phonelink_auto"): flows live in prefs "flows_store"
+ * prefs "phonelink_auto"): flows live in prefs "phonelink_flows"
  * plus one JSON file per flow under filesDir/flows/, with their
  * own log, variables, trigger state, per-flow logs and stats.
  * This file NEVER reads or writes rules: rule_enable/disable/run
@@ -18,7 +18,7 @@ import java.io.File
 object FlowStore {
 
     private fun prefs(ctx: Context) =
-        ctx.getSharedPreferences("flows_store", Context.MODE_PRIVATE)
+        ctx.getSharedPreferences("phonelink_flows", Context.MODE_PRIVATE)
 
     /**
      * v1.4.3 service heartbeat. FlowService writes the current time

@@ -25,5 +25,18 @@ class AdminReceiver : DeviceAdminReceiver() {
                 false
             }
         }
+
+        /** Salvaged from PhoneLink: the lock_screen automation
+         *  action calls this (Automation.kt). No relay hooks. */
+        fun lockNow(ctx: Context): Boolean {
+            return try {
+                val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE)
+                    as DevicePolicyManager
+                if (dpm.isAdminActive(ComponentName(ctx, AdminReceiver::class.java))) {
+                    dpm.lockNow()
+                    true
+                } else false
+            } catch (_: Exception) { false }
+        }
     }
 }

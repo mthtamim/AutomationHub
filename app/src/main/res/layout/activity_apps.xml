@@ -1,48 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- AutomationHub push note: this screen was removed in the rebuild. Inert placeholder — it references nothing, so it cannot break resource linking. Delete in a bulk-delete cleanup pass. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
-
-    <com.google.android.material.appbar.MaterialToolbar
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        app:title="@string/apps_title"
-        app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <TextView
-            style="@style/PL.BodySmall"
-            android:text="@string/apps_hint" />
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/swAllowlist"
-            style="@style/PL.SwitchRow"
-            android:text="@string/allowlist_label" />
-
-        <EditText
-            android:id="@+id/etAppSearch"
-            style="@style/PL.SearchBox"
-            android:layout_marginTop="8dp"
-            android:drawableStart="@drawable/ic_search"
-            android:hint="@string/hint_app_search"
-            android:inputType="text"
-            android:maxLines="1" />
-    </LinearLayout>
-
-    <ListView
-        android:id="@+id/lvApps"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:layout_weight="1"
-        android:divider="@null"
-        android:dividerHeight="0dp" />
-</LinearLayout>
+    android:orientation="vertical" />

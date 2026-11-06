@@ -8,13 +8,15 @@ import android.provider.CallLog
 import android.telecom.TelecomManager
 import android.telephony.TelephonyManager
 import android.media.AudioManager
+import com.autotap.app.Region
+import com.autotap.app.TapAccessibilityService
 
 /**
  * v2.22: "উত্তর না দেওয়া পর্যন্ত বারবার কল" — redial until
  * answered, shared by the Dashboard card (manual) and the
  * redial_control rule action. One session at a time; the
  * session lives in its own prefs so it survives a process
- * restart, and the Flows service tick (~60 s) drives it — so the
+ * restart, and Automation.tick (~20 s) drives it — so the
  * gap is approximate (the first tick after the gap), never
  * exact.
  *
@@ -55,7 +57,7 @@ object Redial {
     const val ERR_CALL_PHONE = 2
     const val ERR_CALL_LOG = 3
 
-    private const val PREFS = "flows_redial"
+    private const val PREFS = "phonelink_redial"
     private const val LOG_SETTLE_MS = 25_000L
     private const val PLACE_GUARD_MS = 10_000L
     private const val TAP_OK = 0
@@ -137,7 +139,7 @@ object Redial {
             .putBoolean("ringTapTried", false)
             .putBoolean("speakerApplied", false)
             .apply()
-        FlowStore.log(ctx, "redial: " + num + " — 1/" + max)
+        Automation.log(ctx, "redial: " + num + " — 1/" + max)
         placeCall(ctx, num, sim)
         return OK
     }
@@ -161,7 +163,7 @@ object Redial {
             .putBoolean("speakerApplied", false)
             .putString("lastResult", text)
             .apply()
-        FlowStore.log(ctx, "redial: " + text)
+        Automation.log(ctx, "redial: " + text)
     }
 
     fun placeCall(ctx: Context, number: String, sim: String) {
@@ -171,7 +173,7 @@ object Redial {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             if (sim != "default") {
                 val slot = if (sim == "sim1") 0 else 1
-                phoneAccountForSlot(ctx, slot)?.let {
+                Automation.simAccountForSlot(ctx, slot)?.let {
                     intent.putExtra(
                         TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, it)
                 }
@@ -180,27 +182,7 @@ object Redial {
         } catch (_: Exception) { }
     }
 
-
-    /** SIM slot -> PhoneAccountHandle, copied from PhoneLink's
-     *  Automation.simAccountForSlot (public APIs only). Used so
-     *  redial can still place a call on SIM 1 / SIM 2. */
-    private fun phoneAccountForSlot(ctx: Context, slot: Int):
-        android.telecom.PhoneAccountHandle? {
-        return try {
-            val tm = ctx.getSystemService(Context.TELECOM_SERVICE)
-                as android.telecom.TelecomManager
-            val sm = ctx.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
-                as android.telephony.SubscriptionManager
-            val info = sm.activeSubscriptionInfoList
-                ?.firstOrNull { it.simSlotIndex == slot } ?: return null
-            val sub = info.subscriptionId.toString()
-            val accounts = tm.callCapablePhoneAccounts
-            accounts.firstOrNull { it.id == sub }
-                ?: accounts.firstOrNull { it.id.contains(sub) }
-        } catch (_: Exception) { null }
-    }
-
-    /** Driven by the Flows service tick (~60 s). Never throws. */
+    /** Driven by Automation.tick (~20 s). Never throws. */
     fun poll(ctx: Context) {
         try {
             pollInner(ctx)
@@ -272,7 +254,7 @@ object Redial {
                             else -> ctx.getString(
                                 R.string.redial_log_ring_no_button)
                         }
-                        FlowStore.log(ctx, "redial: " + reason)
+                        Automation.log(ctx, "redial: " + reason)
                     }
                 }
             }
@@ -290,7 +272,7 @@ object Redial {
                     val max = prefs.getInt("maxAtt", 20)
                     if (prefs.getString("onanswer", "stop") ==
                         "resume") {
-                        FlowStore.log(ctx, "redial: " +
+                        Automation.log(ctx, "redial: " +
                             ctx.getString(
                                 R.string.redial_log_answered_resume,
                                 attempts, max))
@@ -326,7 +308,7 @@ object Redial {
                     .putLong("lastCallAt", now)
                     .putBoolean("ringTapTried", false)
                     .putString("state", "calling").apply()
-                FlowStore.log(ctx, "redial: " + number + " — " +
+                Automation.log(ctx, "redial: " + number + " — " +
                     (attempts + 1) + "/" + max)
                 placeCall(ctx, number, sim)
             }
@@ -344,17 +326,37 @@ object Redial {
         } catch (_: Exception) { }
     }
 
-    /** Ring-limit end-call tap, STANDALONE FLOWS VERSION:
-     *  PhoneLink's version tapped the dialer's "End call" button
-     *  through the merged AutoTap accessibility engine, which is
-     *  NOT part of this app. Without that engine there is no safe
-     *  ringing guard, so this always reports "no tap" and the
-     *  session waits for the natural end (carrier timeout,
-     *  decline, voicemail) — a live conversation is never cut
-     *  by a blind keyevent. Shizuku keyevent 6 is deliberately
-     *  NOT used here for the same reason. */
+    /** Ends the redial call via the merged AutoTap engine:
+     *  finds the dialer's "End call" button and taps it.
+     *  Returns the tap code plus the foreground package for
+     *  the log. The ringing guard is the safety: the tap
+     *  fires only while the dialer still shows Dialing,
+     *  Calling or Ringing — once answered, the in-call
+     *  screen shows a timer instead, and a missing ringing
+     *  label means "do not tap", so a live conversation is
+     *  never cut. A dialer that shows neither label falls
+     *  back to waiting for the natural end. */
     private fun attemptEndCallTap(ctx: Context): Pair<Int, String> {
-        return Pair(TAP_NO_A11Y, "")
+        val svc = TapAccessibilityService.instance
+            ?: return Pair(TAP_NO_A11Y, "")
+        val pkg = try { svc.currentPackage() }
+            catch (_: Exception) { "" }
+        val p = pkg.lowercase()
+        if (!p.contains("dialer") && !p.contains("incall"))
+            return Pair(TAP_WRONG_APP, pkg)
+        val ringing = try {
+            svc.findText("Dialing", Region.FULL) != null ||
+                svc.findText("Calling", Region.FULL) != null ||
+                svc.findText("Ringing", Region.FULL) != null
+        } catch (_: Exception) { false }
+        if (!ringing) return Pair(TAP_MAYBE_ANSWERED, pkg)
+        val pt = try { svc.findText("End call", Region.FULL) }
+            catch (_: Exception) { null }
+            ?: return Pair(TAP_NO_BUTTON, pkg)
+        val ok = try { svc.tap(pt[0], pt[1], 100L) }
+            catch (_: Exception) { false }
+        return if (ok) Pair(TAP_OK, pkg)
+            else Pair(TAP_NO_BUTTON, pkg)
     }
 
     /** Duration of the latest outgoing call to [number] in the

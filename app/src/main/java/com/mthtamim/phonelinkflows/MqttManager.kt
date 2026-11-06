@@ -15,7 +15,7 @@ import org.json.JSONObject
  *
  * Client: Eclipse Paho mqttv3 (pure Java, no native code, no
  * transitive dependencies). The connection lives here — not in a
- * second service — and LinkService drives its lifecycle through
+ * second service — and FlowService drives its lifecycle through
  * sync()/stop() alongside the other transports. While the settings
  * toggle is on and the broker config is valid the client stays
  * connected (Paho automatic reconnect + a reconnect attempt on every
@@ -40,26 +40,48 @@ object MqttManager {
         state == State.CONNECTED && (client?.isConnected == true)
 
     private fun prefs(ctx: Context) =
-        ctx.getSharedPreferences("flows_mqtt", Context.MODE_PRIVATE)
+        ctx.getSharedPreferences("phonelink_mqtt", Context.MODE_PRIVATE)
 
     /** Stable per-install client id (brokers reject duplicate ids). */
     private fun clientId(ctx: Context): String {
         var id = prefs(ctx).getString("client_id", "") ?: ""
         if (id.isEmpty()) {
-            id = "fl-" + java.util.UUID.randomUUID().toString().take(12)
+            id = "pl-" + java.util.UUID.randomUUID().toString().take(12)
             prefs(ctx).edit().putString("client_id", id).apply()
         }
         return id
     }
 
-    /** Topic filters for MQTT subscriptions. Standalone Flows
-     *  app: there are no rules, so there is nothing to subscribe
-     *  to yet — publishing (publishParam) still works, and
-     *  incoming messages are handed to FlowEngine.onEvent below.
-     *  A flow-level mqtt_message trigger topic setting can fill
-     *  this in later; until then subscribeAll is a no-op. */
+    /** Topic filters of all enabled rules that use mqtt_message. */
     private fun wantedFilters(ctx: Context): List<String> {
-        return emptyList()
+        val out = mutableListOf<String>()
+        try {
+            for (rule in Automation.rules(ctx)) {
+                if (!rule.optBoolean("enabled", true)) continue
+                for (trig in Automation.ruleTriggers(rule)) {
+                    if (trig.optString("type") != "mqtt_message") continue
+                    val f = trig.optString("param")
+                        .substringBefore("|").trim()
+                    if (f.isNotEmpty() && f !in out) out.add(f)
+                }
+            }
+        } catch (_: Exception) { }
+        // AutomationHub: Flows can also trigger on mqtt_message —
+        // scan their nodes too (v1 gap: subscribe was Rules-only).
+        try {
+            for (flow in FlowStore.flows(ctx)) {
+                if (!flow.optBoolean("enabled", true)) continue
+                val nodes = flow.optJSONArray("nodes") ?: continue
+                for (k in 0 until nodes.length()) {
+                    val n = nodes.optJSONObject(k) ?: continue
+                    if (n.optString("kind") != "t") continue
+                    if (n.optString("type") != "mqtt_message") continue
+                    val f = n.optString("param").substringBefore("|").trim()
+                    if (f.isNotEmpty() && f !in out) out.add(f)
+                }
+            }
+        } catch (_: Exception) { }
+        return out
     }
 
     /**
@@ -125,7 +147,7 @@ object MqttManager {
                         String(message?.payload ?: ByteArray(0),
                             Charsets.UTF_8)
                     } catch (e: Exception) { "" }
-                    FlowEngine.onEvent(ctx, "mqtt_message", JSONObject()
+                    Automation.onEvent(ctx, "mqtt_message", JSONObject()
                         .put("topic", topic ?: "")
                         .put("title", topic ?: "")
                         .put("body", payload)
@@ -188,7 +210,7 @@ object MqttManager {
         sync(ctx)
     }
 
-    /** Called after flow saves: subscriptions follow the flow set on
+    /** Called after rule saves: subscriptions follow the rule set on
      *  the EXISTING connection (no reconnect, no duplicate client). */
     fun refreshSubscriptions(ctx: Context) {
         val app = ctx.applicationContext

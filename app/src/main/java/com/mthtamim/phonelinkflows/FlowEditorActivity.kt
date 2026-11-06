@@ -536,7 +536,7 @@ class FlowEditorActivity : LocalizedActivity() {
                 addPanelField(inputContainer, "package", R.string.panel_package, param, InputType.TYPE_CLASS_TEXT, "com.facebook.lite")
             }
             "local_notify", "toast_local", "speak_local" -> {
-                addPanelField(inputContainer, "message", R.string.panel_message, param, InputType.TYPE_CLASS_TEXT, "PhoneLink flow")
+                addPanelField(inputContainer, "message", R.string.panel_message, param, InputType.TYPE_CLASS_TEXT, "AutomationHub flow")
             }
             "call_number" -> {
                 addPanelField(inputContainer, "number", R.string.panel_number, param.substringBefore("|"), InputType.TYPE_CLASS_PHONE, "01XXXXXXXXX")

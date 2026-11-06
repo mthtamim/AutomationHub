@@ -1290,7 +1290,7 @@ object FlowTriggers {
             try {
                 val appCtx = ctx.applicationContext
                 val session = android.media.session.MediaSession(
-                    appCtx, "flows-flow-media"
+                    appCtx, "phonelink-flow-media"
                 )
                 session.setCallback(object : android.media.session.MediaSession.Callback() {
                     override fun onMediaButtonEvent(

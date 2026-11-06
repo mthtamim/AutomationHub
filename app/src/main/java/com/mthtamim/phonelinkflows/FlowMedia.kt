@@ -40,11 +40,11 @@ object FlowMedia {
             if (video) {
                 values.put(MediaStore.Video.Media.DISPLAY_NAME, "flow_" + stamp + ".mp4")
                 values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                values.put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/PhoneLink")
+                values.put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/AutomationHub")
             } else {
                 values.put(MediaStore.Images.Media.DISPLAY_NAME, "flow_" + stamp + ".jpg")
                 values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhoneLink")
+                values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AutomationHub")
             }
             val collection = if (video) {
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI

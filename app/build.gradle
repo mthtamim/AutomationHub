@@ -38,8 +38,35 @@ android {
     }
 }
 
+// Dependency audit (2026-11-06, grep over the kept tree — every
+// keep/remove below names its evidence; see README for the table).
+// REMOVED vs PhoneLink v2.25.2:
+// - com.google.mlkit:translate — zero references in kept code.
+// - com.google.mlkit:text-recognition — zero references in kept code.
+// - com.google.android.gms:play-services-location — zero references
+//   (no LocationServices / FusedLocation anywhere in kept code;
+//   PhoneLink's comment claimed it was for Flow activity
+//   recognition, but no kept file imports it).
+// KEPT, with evidence:
+// - lifecycle-service: SnapService.kt extends LifecycleService.
+// - camera-video: SnapService.kt recordVideo() uses Recorder /
+//   VideoCapture / FileOutputOptions.
+// - camera-core/camera2/lifecycle/view: FlowScanActivity.kt
+//   (ImageAnalysis, ProcessCameraProvider, PreviewView) and
+//   FlowCameraActivity.kt (ImageCapture).
+// - mlkit barcode-scanning: FlowScanActivity.kt imports
+//   com.google.mlkit.vision.barcode.BarcodeScanning (qr_scan).
+// - zxing core: QrShow.kt uses MultiFormatWriter / BarcodeFormat.
+// - biometric: AppLocker.kt / AppLockUi.kt / LockActivity.kt.
+// - shizuku api+provider: ShizukuHelper.kt + manifest provider.
+// - paho mqtt: MqttManager.kt (mqtt_publish action).
+// ADDED:
+// - androidx.core:core-ktx: androidx.core.* is imported in ~20 kept
+//   files (ContextCompat, NotificationCompat, FileProvider); made
+//   explicit instead of relying on appcompat's transitive copy.
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
+    implementation "androidx.core:core-ktx:1.13.1"
     implementation "androidx.appcompat:appcompat:1.7.0"
     implementation "androidx.activity:activity-ktx:1.9.0"
     implementation "com.google.android.material:material:1.12.0"
@@ -51,15 +78,8 @@ dependencies {
     implementation "androidx.camera:camera-view:1.3.4"
     implementation "androidx.camera:camera-video:1.3.4"
     implementation "androidx.lifecycle:lifecycle-service:2.7.0"
-    implementation "com.google.mlkit:translate:17.0.3"
     implementation "dev.rikka.shizuku:api:13.1.5"
     implementation "dev.rikka.shizuku:provider:13.1.5"
-    implementation "com.google.mlkit:text-recognition:16.0.1"
-    // ML Kit bundled barcode scanner for the Flow qr_scan action
-    // (offline, no Play Services dependency), and Play Services
-    // location for Flow activity recognition.
     implementation "com.google.mlkit:barcode-scanning:17.3.0"
-    implementation "com.google.android.gms:play-services-location:21.0.1"
-    // MQTT client for the Flow mqtt_publish action.
     implementation "org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5"
 }

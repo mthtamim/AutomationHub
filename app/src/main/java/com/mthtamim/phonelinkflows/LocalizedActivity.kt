@@ -15,7 +15,7 @@ import java.util.Locale
 open class LocalizedActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("flows_cfg", Context.MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("phonelink_cfg", Context.MODE_PRIVATE)
 
         when (prefs.getString("theme_mode", "system")) {
             "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
@@ -44,23 +44,23 @@ open class LocalizedActivity : AppCompatActivity() {
         // Each theme style is defined in BOTH values/themes.xml and
         // values-night/themes.xml so it survives light/dark/system mode.
         try {
-            val prefs = getSharedPreferences("flows_cfg",
+            val prefs = getSharedPreferences("phonelink_cfg",
                 android.content.Context.MODE_PRIVATE)
             when (prefs.getString("app_theme", "emerald_dark")) {
-                "aurora" -> setTheme(R.style.Theme_FlowsAurora)
-                "ocean_deep" -> setTheme(R.style.Theme_FlowsOceanDeep)
-                "midnight_sapphire" -> setTheme(R.style.Theme_FlowsMidnightSapphire)
-                "sunset_ember" -> setTheme(R.style.Theme_FlowsSunsetEmber)
-                "rose_quartz" -> setTheme(R.style.Theme_FlowsRoseQuartz)
-                "forest_mist" -> setTheme(R.style.Theme_FlowsForestMist)
-                "graphite_mono" -> setTheme(R.style.Theme_FlowsGraphiteMono)
+                "aurora" -> setTheme(R.style.Theme_PhoneLinkAurora)
+                "ocean_deep" -> setTheme(R.style.Theme_PhoneLinkOceanDeep)
+                "midnight_sapphire" -> setTheme(R.style.Theme_PhoneLinkMidnightSapphire)
+                "sunset_ember" -> setTheme(R.style.Theme_PhoneLinkSunsetEmber)
+                "rose_quartz" -> setTheme(R.style.Theme_PhoneLinkRoseQuartz)
+                "forest_mist" -> setTheme(R.style.Theme_PhoneLinkForestMist)
+                "graphite_mono" -> setTheme(R.style.Theme_PhoneLinkGraphiteMono)
                 else -> {
                     // v2.11: accent colour picked in General settings
                     when (prefs.getString("accent", "emerald")) {
-                        "blue" -> setTheme(R.style.Theme_FlowsBlue)
-                        "purple" -> setTheme(R.style.Theme_FlowsPurple)
-                        "amber" -> setTheme(R.style.Theme_FlowsAmber)
-                        "rose" -> setTheme(R.style.Theme_FlowsRose)
+                        "blue" -> setTheme(R.style.Theme_PhoneLinkBlue)
+                        "purple" -> setTheme(R.style.Theme_PhoneLinkPurple)
+                        "amber" -> setTheme(R.style.Theme_PhoneLinkAmber)
+                        "rose" -> setTheme(R.style.Theme_PhoneLinkRose)
                     }
                 }
             }

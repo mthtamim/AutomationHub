@@ -16,5 +16,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Flows"
+rootProject.name = "AutomationHub"
 include ':app'

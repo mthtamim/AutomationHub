@@ -20,6 +20,21 @@ class FlowBootReceiver : BroadcastReceiver() {
                 }
             }
             FlowEngine.onEvent(ctx, "boot", JSONObject())
+            // Rules side (salvaged from PhoneLink SystemReceiver):
+            // time rules must be re-armed after reboot, and the
+            // boot event fires Rules triggers too.
+            Automation.onEvent(ctx, "boot", JSONObject())
+            Automation.scheduleTimeRules(ctx)
+            // Rules side (salvaged from PhoneLink SystemReceiver):
+            // time rules must be re-armed after reboot, and the
+            // boot event fires Rules triggers too.
+            Automation.onEvent(ctx, "boot", JSONObject())
+            Automation.scheduleTimeRules(ctx)
+            // Rules side (salvaged from PhoneLink SystemReceiver):
+            // time rules must be re-armed after reboot, and the
+            // boot event fires Rules triggers too.
+            Automation.onEvent(ctx, "boot", JSONObject())
+            Automation.scheduleTimeRules(ctx)
         }
     }
 }

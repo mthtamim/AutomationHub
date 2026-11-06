@@ -38,7 +38,7 @@ class FlowPinActivity : LocalizedActivity() {
             return
         }
         val tv = TextView(this).apply {
-            text = "Screen pinned by PhoneLink"
+            text = "Screen pinned by AutomationHub"
             textSize = 18f
             gravity = Gravity.CENTER
             setPadding(48, 48, 48, 48)

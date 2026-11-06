@@ -1,133 +1,185 @@
-# Flows — standalone automation app (SKELETON)
+# AutomationHub
 
-**Status: skeleton pushed to PhoneLink-Flows, NOT built by CI, NOT phone-proven.**
-CI is the final judge for compile errors — local validation cannot catch
-Kotlin type/API errors. The PhoneLink source tree was
-only read, never modified.
+**Automation, Rules & Flows for Android — everything from PhoneLink except phone forwarding.**
 
-## Origin
+AutomationHub is the corrected-scope rebuild of the PhoneLink-Flows skeleton
+(v1.0.0, rejected 2026-11-06 for opening empty with no Automation/Rules and
+for being bigger than PhoneLink itself). Tamim's corrected scope, confirmed
+2026-11-06: **everything except phone forwarding, same Settings, same UI.**
 
-Extracted from the PhoneLink v2.25.2 source tree
-(`~/workspace/github-push/phonelink/`, package `com.mthtamim.phonelink`),
-because PhoneLink had grown heavy and the automation side — Rules and
-Flows — was loosely coupled enough to split out:
+- **Package:** `com.mthtamim.phonelinkflows` (kept from the skeleton, so the
+  `phonelink_*` SharedPreferences keys stay compatible with its data)
+- **Version:** 1.0.0 (vc1) · `compileSdk`/`targetSdk` 34, `minSdk` 26 ·
+  arm64-v8a only · minify off
+- **Repo (for the push):** `mthtamim/PhoneLink-Flows`
+- **Status: STAGING — not pushed, no release.** This tree is the
+  ready-for-push candidate; it has NOT been swapped into
+  `~/workspace/github-push/phonelink-flows/` yet, and it has never been
+  compiled (see Validation).
 
-- The Rules engine (`AppRules.kt`, `Automation.kt`) never called
-  `FlowEngine`; only `AutomationActivity.kt`, `ThemeColors.kt` and
-  `ShizukuHelper.kt` referenced Flow code.
-- `FlowService` was already its own foreground service.
+## What it is
 
-## Identity
+- **Automation — full:** Rules engine (`Automation.kt`, triggers, conditions,
+  actions, redial, scheduling, MQTT publish/subscribe, FTP/SMTP, webhook
+  server, local camera actions) + Flows engine (visual flow editor, `.flo`
+  import/export, FlowService, 28-file merged AutoTap engine in
+  `com.autotap.app`).
+- **Settings — full:** all 8 themes (Emerald Dark default, Liquid Glass
+  Aurora, Ocean Deep, Midnight Sapphire, Sunset Ember, Rose Quartz, Forest
+  Mist, Graphite Glass Mono), permissions, security, data & backup.
+- **Dashboard** (Home) and **AppLock** (PIN/biometric, per-app lock,
+  intruder capture).
+- **No forwarding:** no SMS/notification/call/battery/app-event forwarding,
+  no ntfy relay, no pair code, no Inbox, no Remote/Command Hub.
 
-- Package / applicationId: `com.mthtamim.phonelinkflows`
-  (differs from `com.mthtamim.phonelink` and `com.mthtamim.automationlab`)
-- App label: **Flows**
-- versionCode 1, versionName 1.0.0
-- compileSdk 34, minSdk 26, targetSdk 34, arm64-v8a only (same trade-off
-  as PhoneLink: no emulator / 32-bit-only installs)
+## Keep / remove (with file counts)
 
-## Home screen
+| Area | Count |
+|---|---|
+| Kotlin files | 100 total — 72 in `com.mthtamim.phonelinkflows` + 28 in `com.autotap.app` (SnapService is the 72nd, newly ported) |
+| Layouts | 17 (was 37 in the skeleton) |
+| Drawables | 89 (was 134) |
+| Strings per locale | 1390 (was 1911 in PhoneLink; 390 dead strings deleted in this rebuild) |
+| Manifest components | 61 (activities, services, receivers, providers — all resolve) |
 
-`FlowsMainActivity` mirrors PhoneLink's Automation **Flows tab** exactly
-in behaviour: a service row (switch + live/stale/off text), flow cards
-with a toggle, a trigger summary, and pill buttons **Run now / Edit /
-Duplicate / Log / Delete**, plus a **+ FAB** that opens
-`FlowEditorActivity` for a new flow. The header has a Settings button
-and a ⋮ menu: Import, .flo import, Export, Backup, Restore, Log.
+**Removed layouts (20):** `activity_apps`, `activity_bt`, `activity_charts`,
+`activity_dark`, `activity_expenses`, `activity_gallery`, `activity_panic`,
+`activity_qr`, `activity_scan`, `activity_screen`, `activity_simple`,
+`activity_voice`, `item_app_rule`, `item_inbox`, `page_config`,
+`page_remote`, `widget_inbox_layout`, `widget_layout`,
+`widget_lock_layout`, plus `res/xml/widget_*_info.xml` (3 files).
+Each was grep-verified unreferenced by kept Kotlin before deletion.
 
-## Kept
+**Removed from the main screen:** `panelForward` (forwarding toggles),
+`panelFamily` (lost-mode / family check-in), and the relay-server, Telegram,
+offline-queue, SMS-fallback, diagnostics, peers, LAN-web-inbox and browser-
+sessions cards of `panelRelay`. `panelRelay` survives as the **MQTT & Email**
+panel (MQTT broker card, SMTP card, Shizuku status line); the Settings hub
+tile was retitled to `mqtt_smtp_title` and now opens it. `panelData` was
+restored from PhoneLink (backup/restore + full-settings backup only; stats
+reset, retention, autosave, CSV/PDF export, expenses, charts and auto-backup
+controls removed as dead).
 
-- All 32 `Flow*` Kotlin files: engine, store, IO (backup/restore),
-  `.flo` import, catalog, triggers, conditions/actions, editor, picker,
-  dialogs, service + all receivers + boot receiver.
-- Shizuku keyevent answer/end (keyevent 5/6) exactly as PhoneLink does
-  it — Shizuku first, no CallShield bridge in this app.
-- The PhoneLink dark UI language (near-black green `#101415`, mint
-  `#10B981`, dark cards `#1C2326`) with the full 8-theme system:
-  Emerald Dark, Liquid Glass Aurora, Ocean Deep, Midnight Sapphire,
-  Sunset Ember, Rose Quartz, Forest Mist, Graphite Glass Mono.
-- Working actions kept: `lock_screen` (device admin), redial, `qr_show`,
-  MQTT publish, FocusLock actions (via `Config.focusLockToken`).
-- Support files: `Config`, `ThemeColors`, `LocalizedActivity`,
-  `ShizukuHelper`, `PermChecks`, `Stats`, `QrShow`, `MqttManager`,
-  `Redial`, and a trimmed `AdminReceiver` (only `isActive()`, for the
-  `lock_screen` action — PhoneLink's forwarding-side admin hooks were
-  not copied).
+**Removed code:** `Relay`, `LinkService`, `ScreenShareService`,
+`MainAlias`, `SmsReceiver`, `CallReceiver`, `SystemReceiver`,
+`PackageReceiver`, `SecretReceiver`, `QsTileService`, Inbox/Status/Lock
+widgets, `BtActivity`, `VoiceActivity`. Zero references remain in code
+(comments excluded; 12 comment-only mentions of LinkService/Relay remain
+as documentation).
 
-## Removed
+## Dependency decisions (with grep evidence)
 
-- SMS / notification / call **forwarding and relay** (no ntfy, no peer
-  topics, no pairing). `Config`'s relay topic helpers and pair-code
-  generator were deleted, not just unused.
-- The **Rules engine and Rules UI** (`AppRules.kt`, `Automation.kt`,
-  `AutomationActivity.kt`, rule widgets).
-- **Dashboard, Command Hub, AppLock, Inbox, pairing/relay settings.**
-- The launcher-hide `.MainAlias` alias (PhoneLink's icon feature).
-- Unused widget/autotap XML files (they referenced removed providers).
+`app/build.gradle` was rewritten from the audit, not copied:
 
-## Stubbed, never faked (catalog entries kept so old flows still load)
+- **Removed:** ML Kit `translate` (0 references), ML Kit `text-recognition`
+  (0 references), Play Services `location` (0 references — no
+  `LocationServices`/`FusedLocation` anywhere).
+- **Kept, against the first draft of this task:** `lifecycle-service`
+  (SnapService extends `LifecycleService`) and CameraX `camera-video`
+  (SnapService `Recorder`/`VideoCapture`). The task text said to remove
+  both; the audit proved both are needed by a kept action.
+- **Kept:** CameraX core/camera2/lifecycle/view (FlowScanActivity
+  `ImageAnalysis`/`PreviewView`/`ProcessCameraProvider`, FlowCameraActivity
+  `ImageCapture`), ML Kit `barcode-scanning` (FlowScanActivity `qr_scan`),
+  ZXing core (QrShow `MultiFormatWriter`), biometric (AppLocker/LockActivity),
+  Shizuku api + provider, Paho MQTT (MqttManager), appcompat, activity-ktx,
+  material. **Added:** `androidx.core:core-ktx:1.13.1` (androidx.core used
+  in ~20 files; it was missing from the skeleton gradle).
+- **Ftp.kt / Smtp.kt / WebhookServer.kt — KEPT, not forwarding:** `Ftp.transfer`
+  is called by Automation.kt:2566/2570 (`ftp_upload`/`ftp_download`);
+  `Smtp.send` by Automation.kt:2144 (`send_email`); `WebhookServer.start/stop`
+  by FlowService.kt:94–130 (LAN webhook trigger). All three are automation
+  actions.
 
-- `rule_enabled` condition → always false (no Rules engine here).
-- `rule_run` / `rule_enable` / `rule_disable` → log "unavailable in the
-  standalone Flows app (Rules engine removed)".
-- `notify_peer` / `speak_peer` / `command_peer` → log unavailable
-  (relay removed).
-- `lock_app` / `unlock_app` → log unavailable (AppLock removed).
+## Port notes (real breakages found and fixed)
 
-## Known skeleton gaps (to fix before any release)
+- **SnapService ported** from PhoneLink and trimmed: `take_photo` /
+  `record_video` save locally (`Pictures/AutomationHub`,
+  `Movies/AutomationHub`) and notify locally instead of relay upload
+  (`Relay.postFile`, `LinkService.CHANNEL_SERVICE` removed). Its foreground
+  notification uses `FlowEngine.NOTIF_CHANNEL_ID` (`phonelink_flows`),
+  channel created in-service.
+- **A11yService.kt:** a half-deleted `Relay.send(...)` left dangling string
+  arguments and an unbalanced `)` — fixed with
+  `Automation.localNotify(...)` focus-guard message.
+- **AppLockerActivity.kt:** deleted Peer + Intruder binds left a dangling
+  `AppLocker.setIntruderOn(this, it)}` — Intruder bind restored (local
+  feature); Peer switch removed from `activity_applocker.xml` and its
+  strings deleted in both locales.
+- **PermissionsActivity:** Bt/Voice "Open" buttons launched removed
+  activities — they now request the permissions directly (Bluetooth 44,
+  mic 45).
+- **Update.kt:** User-Agent and APK filename rebranded; **fixed a
+  pre-existing bug** — FileProvider authority `.fileprovider` →
+  `.files` (matches the manifest; PhoneLink had the same bug). The
+  release check still points at `mthtamim/PhoneLink-Flows`.
+- **Strings:** `PhoneLink` → `AutomationHub` in referenced strings (both
+  locales); `footer_about` and `admin_explanation` rewritten (the relay /
+  remote-lock text was false for this app). `fl_token_dialog_msg` kept —
+  the FocusLock card label is out of scope.
+- **Config.kt:** SMTP setter added (`setSmtp`, in `setMqtt` style) so the
+  SMTP card's Save button works again; one unused import
+  (`kotlin.random.Random`, pre-existing in PhoneLink) removed.
+- **Prefs keys deliberately unchanged** (`phonelink_flows`,
+  `phonelink_auto`) for data compatibility; theme style names stay
+  `Theme.PhoneLink*` for the same reason. `app_name` is AutomationHub.
 
-1. **MQTT subscribe:** `MqttManager.wantedFilters()` returns empty —
-   there are no rules left to subscribe for, and publish still works.
-   A flow-level `mqtt_message` trigger topic setting is the missing
-   piece; until then `subscribeAll` is a no-op.
-2. **Redial ring-limit:** the merged AutoTap engine was NOT carried
-   over, so the ring-limit end-call tap always reports "no tap" and the
-   session waits for the natural end (carrier timeout, decline,
-   voicemail). Shizuku keyevent 6 is deliberately NOT used there —
-   without the AutoTap ringing guard a blind keyevent could cut a live
-   conversation. Redial polling is now driven by the Flows service tick
-   (every ~60 s, not PhoneLink's ~20 s Automation tick), so redial gaps
-   are approximate up to ~60 s.
-3. **Launcher icon is a placeholder:** `ic_launcher` was carried over
-   from PhoneLink. Replace it with real Flows art before any release;
-   do not ship PhoneLink's icon as final.
-4. **Permissions were carried over wholesale** from PhoneLink because
-   Flow triggers/actions still need them (SMS, call, location, camera,
-   etc.). Trim in a later pass once each trigger's permission is
-   audited on device — do not silently drop permissions triggers need.
-5. **Unused resources were carried over** (whole `res/` copied for
-   resource-resolution safety). Prune layouts/drawables/strings for
-   removed screens later; only `activity_flow_editor`,
-   `activity_flow_scan`, `bottomsheet_palette` and `dialog_picker`
-   are inflated by the kept code.
-6. **No CI workflow yet.** The repository now exists; the workflow
-   file must be added via the GitHub web UI (the GitHub App cannot push
-   `.github/workflows/*`), as with the other apps.
+## Name & logo
 
-## Data model note
+- `app_name` = **AutomationHub** in `values` and `values-bn`.
+- Launcher icon: dark `#101415` background, mint `#10B981` gear +
+  connected flow nodes (`res/drawable/ic_launcher.xml`, copied from the
+  old dir where Tamim chose it 2026-11-06). Manifest references it once.
 
-Flows live in this app's own prefs (`flows_store`, config in
-`flows_cfg`) — separate from PhoneLink's. Nothing migrates
-automatically. Bring flows over via Export/Import or `.flo` import.
+## Known gaps
 
-## Settings
+- **No auto-migration from PhoneLink.** Moving Rules/Flows across is
+  Export/Import and `.flo` files only; prefs keys are `phonelink_*` but
+  PhoneLink's data layout is not imported automatically.
+- **MQTT subscribe / redial:** carried over from PhoneLink's Automation
+  code as-is; not re-verified on a phone in this rebuild.
+- **No CI run yet.** This tree has never been compiled — see Validation.
+- **No phone test yet.** Everything below is static verification only.
+- **Placeholder-free:** the launcher icon is the real chosen icon (no
+  placeholder), but the app has never run, so the first launch is
+  unproven.
 
-`FlowsSettingsActivity` is minimal by design: the 8-theme picker
-(`Config.appTheme` + `recreate()`) and the Flows service switch with
-the same start/stop logic as PhoneLink's Flows tab. Nothing else.
+## Validation (2026-11-06, local only — no kotlinc/java available, CI is the compile judge)
 
-## Validation done locally
+| Check | Result |
+|---|---|
+| `kt_check.py` over all 100 Kotlin files | **92/100 pass.** The 8 failures are naive-counter artifacts, proven by diff against PhoneLink v2.25.2 originals: 4 byte-identical (FloatingPanel, HeatmapActivity, Model, PreflightOverlayService) and 4 with identical counts (AutoTap MainActivity/RunnerService/WidgetProvider, Automation.kt braces −2). Template-aware check on Model.kt: 0/0/0 balanced. Stray quotes: 0 in all files. Expression-body bare-return candidates: 0. |
+| Reference validation (`/tmp/validate_refs2.py`) | Manifest 61 components, **0 unresolved**; manifest @drawable/@string/@style/@xml all resolve; R.layout/R.drawable/R.string/R.color/R.menu/R.xml/R.id all resolve (after normalising XML style dots → R underscores, excluding `android.R.*`); `?attr/plBtnFill`, `plNavIndicator` exist in `attrs.xml`; other `?attr/color*` are Material3 attrs from pinned material 1.12.0. The R.style "missing" entries are the dot/underscore normalisation false positive, verified in the earlier run. |
+| Removed-code grep (comments stripped) | `Relay.` 0, `LinkService` 0, `ScreenShareService` 0, `MainAlias` 0, `com.mthtamim.phonelink` 0 in code. `SnapService` 3 hits = definition + 2 Automation.kt callers. |
+| XML well-formedness | All 127 XML files under `res/` + `AndroidManifest.xml` parse clean. |
+| Unused-import scan (edited files) | Clean after removing `kotlin.random.Random` from Config.kt. |
+| Dead strings | 390 with zero references removed from both locales (dynamic `at_`/`ac_`/`aa_` families excluded — they are resolved via `getIdentifier` in AutomationActivity.kt/FlowCatalog.kt). |
 
-- `~/workspace/tools/kt_check.py` over all 44 Kotlin files: exit 0,
-  every file balanced (braces/parens/brackets 0, stray quotes 0).
-- Zero code references to removed PhoneLink code, verified by grep
-  (`com.mthtamim.phonelink` outside the new package, `Automation.`,
-  `Relay.`, `AppLocker.`, `RuleEditorActivity`, `AutomationActivity`,
-  `LinkService`, `SnapService`, `ScreenShareService`,
-  `com.autotap.app`, MainAlias) in Kotlin, layouts, values and the
-  manifest; every manifest class resolves to a class in the tree;
-  every `R.*` reference resolves to a carried-over resource or to
-  `android.R`; no `BuildConfig` use, no `?attr/colorBackground`, no
-  `itemTextColorList`, dotted styles all carry explicit parents.
-- Historical prose comments mentioning PhoneLink remain in a few file
-  headers — those are documentation, not code references.
+## Push note (2026-11-06 — Tamim tapped "Push")
+
+The swap into `~/workspace/github-push/phonelink-flows/` is done, and this
+tree is what was pushed. The CI workflow (`.github/workflows/build-apk.yml`)
+lives only on GitHub (placed via the web UI — the GitHub App cannot touch
+workflows) and was not part of the push, so it stays untouched.
+
+**Stale files the connector cannot delete in bulk:** the snapshot push
+cannot delete files, so 67 files from the v1 skeleton remain in the repo:
+- **18 removed-screen layouts** were overwritten with inert placeholders
+  (empty `LinearLayout`, references nothing) because they referenced
+  strings/drawables that no longer exist — left as-is they would have
+  broken resource linking and failed the CI build.
+- **49 harmless dead files** remain as-is (2 Kotlin activities
+  `FlowsMainActivity`/`FlowsSettingsActivity`, 45 drawables, 2 layouts);
+  every reference in them still resolves, they are not in the manifest,
+  and they cannot break the build. They only add a little dead weight.
+- A bulk-delete cleanup pass (e.g. via github.dev multi-select, or a git
+  clone) should remove all 67 later. Until then, do not mistake the
+  placeholders for real screens.
+
+## What still blocks a release
+
+1. **CI compile:** the first CI run after this push must pass — local
+   checks cannot prove compilation.
+2. **Phone test:** first launch, Automation Rules + Flows, Settings/themes,
+   AppLock, MQTT/SMTP panel, backup/restore — all unproven until Tamim
+   runs them on his phone.

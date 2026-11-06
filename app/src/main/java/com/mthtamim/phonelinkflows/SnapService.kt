@@ -1,0 +1,166 @@
+package com.mthtamim.phonelinkflows
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.util.Size
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleService
+import java.io.File
+import kotlin.concurrent.thread
+
+/**
+ * AutomationHub port of PhoneLink's SnapService (147 lines), trimmed
+ * for the no-relay scope:
+ * - take_photo / record_video automation actions still work, but the
+ *   photo is saved locally (Pictures/AutomationHub) and announced
+ *   with a local notification instead of being uploaded to a peer
+ *   through the relay (Relay.postFile + LinkService channel are gone).
+ * - Video already saved locally in PhoneLink; only the folder name
+ *   changed (Movies/PhoneLink -> Movies/AutomationHub).
+ * - Foreground notification uses FlowEngine.NOTIF_CHANNEL_ID
+ *   ("phonelink_flows"), created here so the service never depends
+ *   on FlowService having run first.
+ * Needs androidx.lifecycle:lifecycle-service (LifecycleService) and
+ * CameraX core + video (Recorder/VideoCapture).
+ */
+class SnapService : LifecycleService() {
+
+    override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        startSnapForeground()
+        val vsecs = SessionState.videoSecs
+        if (vsecs > 0) {
+            recordVideo(vsecs)
+            Handler(Looper.getMainLooper()).postDelayed(
+                { stopSelf() }, (vsecs + 20) * 1000L)
+        } else {
+            takePhoto()
+            // Watchdog: never linger if the camera stack misbehaves.
+            Handler(Looper.getMainLooper()).postDelayed({ stopSelf() }, 20_000)
+        }
+        return START_NOT_STICKY
+    }
+
+    /** CameraX Recorder, no audio (so no mic permission is needed),
+     *  saved under Movies/AutomationHub. */
+    private fun recordVideo(secs: Int) {
+        val future = ProcessCameraProvider.getInstance(this)
+        future.addListener({
+            try {
+                val provider = future.get()
+                val recorder = androidx.camera.video.Recorder.Builder()
+                    .setQualitySelector(androidx.camera.video.QualitySelector
+                        .from(androidx.camera.video.Quality.HD))
+                    .build()
+                val videoCapture =
+                    androidx.camera.video.VideoCapture.withOutput(recorder)
+                provider.unbindAll()
+                val selector = if (SessionState.snapFront) {
+                    SessionState.snapFront = false
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                }
+                provider.bindToLifecycle(this, selector, videoCapture)
+                val dir = File(getExternalFilesDir(
+                    android.os.Environment.DIRECTORY_MOVIES), "AutomationHub")
+                dir.mkdirs()
+                val file = File(dir,
+                    "video_${System.currentTimeMillis()}.mp4")
+                val opts = androidx.camera.video.FileOutputOptions
+                    .Builder(file).build()
+                val recording = videoCapture.output
+                    .prepareRecording(this, opts)
+                    .start(ContextCompat.getMainExecutor(this)) { ev ->
+                        if (ev is androidx.camera.video
+                                .VideoRecordEvent.Finalize) {
+                            SessionState.videoSecs = 0
+                            Automation.localNotify(applicationContext,
+                                "ভিডিও সেভ হয়েছে: " + file.absolutePath)
+                            stopSelf()
+                        }
+                    }
+                Handler(Looper.getMainLooper()).postDelayed({
+                    try { recording.stop() } catch (_: Exception) { }
+                }, secs * 1000L)
+            } catch (_: Exception) {
+                SessionState.videoSecs = 0
+                stopSelf()
+            }
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun startSnapForeground() {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            nm.createNotificationChannel(NotificationChannel(
+                FlowEngine.NOTIF_CHANNEL_ID,
+                getString(R.string.svc_running),
+                NotificationManager.IMPORTANCE_LOW))
+        }
+        val notif = Notification.Builder(this, FlowEngine.NOTIF_CHANNEL_ID)
+            .setContentTitle(getString(R.string.svc_running))
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setOngoing(true)
+            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(2, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            startForeground(2, notif)
+        }
+    }
+
+    private fun takePhoto() {
+        val future = ProcessCameraProvider.getInstance(this)
+        future.addListener({
+            try {
+                val provider = future.get()
+                val capture = ImageCapture.Builder()
+                    .setTargetResolution(Size(1280, 960))
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                    .build()
+                provider.unbindAll()
+                val selector = if (SessionState.snapFront) {
+                    SessionState.snapFront = false
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                }
+                provider.bindToLifecycle(this, selector, capture)
+                // Give the sensor a moment to settle before exposing.
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val dir = File(getExternalFilesDir(
+                        android.os.Environment.DIRECTORY_PICTURES), "AutomationHub")
+                    dir.mkdirs()
+                    val file = File(dir, "snap_${System.currentTimeMillis()}.jpg")
+                    val opts = ImageCapture.OutputFileOptions.Builder(file).build()
+                    capture.takePicture(opts, ContextCompat.getMainExecutor(this),
+                        object : ImageCapture.OnImageSavedCallback {
+                            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                thread {
+                                    Automation.localNotify(applicationContext,
+                                        "ছবি সেভ হয়েছে: " + file.absolutePath)
+                                    stopSelf()
+                                }
+                            }
+                            override fun onError(exc: ImageCaptureException) { stopSelf() }
+                        })
+                }, 800)
+            } catch (_: Exception) { stopSelf() }
+        }, ContextCompat.getMainExecutor(this))
+    }
+}

@@ -54,7 +54,7 @@ object ShizukuHelper {
     }
 
     /** A harmless real command, proving the whole shell path works. */
-    fun selfTest(): Boolean = run("echo flows-ok") == "flows-ok"
+    fun selfTest(): Boolean = run("echo phonelink-ok") == "phonelink-ok"
 
     /** v2.24.0 (Lab merge): exit code of a shell command, for
      *  callers that care about success, not output (answer/end

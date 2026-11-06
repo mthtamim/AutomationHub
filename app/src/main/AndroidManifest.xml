@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- AutomationHub — manifest written from scratch for the kept set.
+     Everything forwarding is gone: no LinkService, SnapService is the
+     trimmed local-save port, no ScreenShareService, no NotifListener
+     (forwarding), no SmsReceiver/CallReceiver/SystemReceiver/
+     PackageReceiver (forwarding-side), no Inbox/Status/Lock widgets,
+     no QsTileService (sender toggle), no SecretReceiver, no MainAlias
+     launcher-hide alias. Launcher is MainActivity directly.
+     Permissions are PhoneLink's full set because the kept automation
+     actions still need them (SMS send, calls, location/geofence,
+     camera, mic, calendar, usage stats, overlay, device admin). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Carried over from PhoneLink: Flow triggers and actions need
-         these (SMS/call triggers, location/geofence, camera/QR,
-         Shizuku-adjacent shell, device admin for lock_screen).
-         The forwarding-side permissions are kept for the same
-         trigger/action set; trim in a later pass once each
-         trigger's permission is audited on device. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
@@ -32,11 +36,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -64,29 +66,346 @@
         android:maxSdkVersion="32" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_MMS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- App enumeration (AppLocker + AutoTap app lists) calls
+         queryIntentActivities at targetSdk 34: without this block it
+         returns only system apps. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Flows"
+        android:theme="@style/Theme.PhoneLink"
         android:usesCleartextTraffic="false">
 
+        <!-- Launcher: Dashboard (Home) + Settings tabs; Automation is
+             a separate activity reached from the bottom nav. -->
         <activity
-            android:name=".FlowsMainActivity"
-            android:exported="true">
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
 
         <activity
-            android:name=".FlowsSettingsActivity"
+            android:name=".PermissionsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".AppLockerActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AppPickerActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AppLockActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity="" />
+
+        <activity
+            android:name=".AutomationActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".RuleEditorActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".LockActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".PinActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <activity
+            android:name=".PromptActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Dialog.Alert" />
+
+        <activity
+            android:name=".QrShowActivity"
+            android:exported="false" />
+
+        <!-- Device admin: lock_screen action, uninstall friction -->
+        <receiver
+            android:name=".AdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Alarm-clock entry point for time_at rules -->
+        <receiver
+            android:name=".TimeRuleReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".NotifyButtonReceiver"
+            android:exported="false" />
+
+        <activity
+            android:name=".RuleWidgetConfigure"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".RuleWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_rule_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="pl_rule_widget_run" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_rule_info" />
+        </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <!-- One-shot local camera snapshot (take_photo / record_video
+             actions): saves locally, no relay upload. -->
+        <service
+            android:name=".SnapService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Optional accessibility helper (owner-enabled) -->
+        <service
+            android:name=".A11yService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/a11y_config" />
+        </service>
+
+        <!-- ===== AutoTap, merged in (v2.21) — fully qualified names,
+             so the same simple class names as AutomationHub's own
+             never collide. No LAUNCHER filter: the merged screens
+             open from the Dashboard card, widgets, tile and
+             shortcuts. No second ShizukuProvider: the entry above
+             already covers it. ===== -->
+        <activity
+            android:name="com.autotap.app.MainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AutoTap" />
+
+        <activity
+            android:name="com.autotap.app.HeatmapActivity"
+            android:exported="false" />
+
+        <activity
+            android:name="com.autotap.app.ScanActivity"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.TapAccessibilityService"
+            android:exported="true"
+            android:label="@string/autotap_accessibility_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/autotap_accessibility_config" />
+        </service>
+
+        <service
+            android:name="com.autotap.app.RunnerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Auto click and auto scroll scripts chosen and started by the user" />
+        </service>
+
+        <service
+            android:name="com.autotap.app.EditOverlayService"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.RecordOverlayService"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.ScreenCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <service
+            android:name="com.autotap.app.PreflightOverlayService"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.DockService"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.PickerOverlayService"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.CalibrateService"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.TriggerService"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.PcEditorService"
+            android:exported="false" />
+
+        <service
+            android:name="com.autotap.app.AutoTapNotificationListener"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name="com.autotap.app.AutoTapTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_autotap"
+            android:label="AutoTap"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name="com.autotap.app.ScheduleReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.autotap.app.SCHEDULE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.autotap.app.WatchReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.autotap.app.PowerReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.autotap.app.WidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/autotap_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.autotap.app.MultiWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_multi_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.autotap.app.WidgetActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.autotap.app.WIDGET_TOGGLE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.autotap.app.MultiWidgetActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.autotap.app.MULTI_WIDGET_RUN" />
+            </intent-filter>
+        </receiver>
+
+        <!-- External automation API, kept for Tasker compat: the
+             same actions the standalone app answered. Internal
+             callers use the engine directly instead. -->
+        <receiver
+            android:name="com.autotap.app.ApiReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.autotap.app.api.START" />
+                <action android:name="com.autotap.app.api.STOP" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ===== Flow editor, engine service and helpers. The Flow
+             wifi receiver is registered dynamically by FlowService
+             (not here) so wifi events arrive only while the Flows
+             switch is on. No Flow widget, QS tile, or app-lock gate
+             ships in this merge, so none is declared. ===== -->
         <activity
             android:name=".FlowEditorActivity"
             android:exported="false" />
@@ -119,40 +438,6 @@
         <activity
             android:name=".FlowPinActivity"
             android:exported="false" />
-
-        <activity
-            android:name=".QrShowActivity"
-            android:exported="false" />
-
-        <receiver
-            android:name=".AdminReceiver"
-            android:exported="false"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/device_admin" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-            </intent-filter>
-        </receiver>
-
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.files"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
-
-        <provider
-            android:name="rikka.shizuku.ShizukuProvider"
-            android:authorities="${applicationId}.shizuku"
-            android:enabled="true"
-            android:exported="true"
-            android:multiprocess="false"
-            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <service
             android:name=".FlowService"

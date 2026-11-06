@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- AutomationHub: Inbox (forwarded messages) and Remote (Command Hub
+     over the relay) were removed with forwarding. Home, Automation and
+     Settings remain; Automation opens AutomationActivity. -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/navHome"
         android:icon="@drawable/ic_home"
         android:title="@string/nav_dashboard" />
-    <item
-        android:id="@+id/navInbox"
-        android:icon="@drawable/ic_inbox"
-        android:title="@string/nav_inbox" />
-    <item
-        android:id="@+id/navRemote"
-        android:icon="@drawable/ic_nav_remote"
-        android:title="@string/nav_remote" />
     <item
         android:id="@+id/navAutomation"
         android:icon="@drawable/ic_nav_auto"

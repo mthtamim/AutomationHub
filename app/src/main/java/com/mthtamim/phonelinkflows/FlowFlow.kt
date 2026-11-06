@@ -125,7 +125,7 @@ object FlowFlow {
             "settings_changed" -> "screen_brightness"
             "audio_muted" -> "music"
             "battery_below" -> "20"
-            "local_notify", "toast_local" -> "PhoneLink flow"
+            "local_notify", "toast_local" -> "AutomationHub flow"
             "set_var" -> "x=1"
             "wait" -> "5"
             "loop_count" -> "3"

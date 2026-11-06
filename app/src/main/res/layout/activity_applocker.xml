@@ -223,14 +223,8 @@
                             android:layout_height="wrap_content" />
                     </LinearLayout>
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/swLockerPeer"
-                        style="@style/PL.SwitchRow"
-                        android:text="@string/alk_peer" />
-
-                    <TextView
-                        style="@style/PL.BodySmall"
-                        android:text="@string/alk_peer_hint" />
+                    <!-- AutomationHub: the Peer switch (relay peer
+                         lock/unlock) is gone with the relay. -->
 
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/swLockerIntruder"

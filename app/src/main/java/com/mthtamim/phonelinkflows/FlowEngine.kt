@@ -46,7 +46,7 @@ object FlowEngine {
 
     const val FOCUSLOCK_PKG = "com.focuslock.app"
     const val FOCUSLOCK_ACTION = "com.focuslock.app.AUTOMATION"
-    const val NOTIF_CHANNEL_ID = "flows_service"
+    const val NOTIF_CHANNEL_ID = "phonelink_flows"
 
     /** Deliberately empty in this merge: every action Lab
      *  dropped and later implemented is either ported (torch
@@ -1788,11 +1788,12 @@ object FlowEngine {
                     }
                 }
                 "rule_enabled" -> {
-                    // Standalone Flows app: the Rules engine was
-                    // removed with the split, so no rule is ever
-                    // enabled here. Kept as a condition so old
-                    // flows still load; it simply never matches.
-                    false
+                    // PhoneLink rules via Automation, never FlowStore.
+                    val target = Automation.rules(ctx).firstOrNull {
+                        it.optString("id") == param.trim() ||
+                            it.optString("name") == param.trim()
+                    }
+                    target?.optBoolean("enabled", true) ?: false
                 }
                 "signal_above" -> {
                     val want = param.toIntOrNull() ?: return false
@@ -2393,7 +2394,7 @@ object FlowEngine {
                 }
                 "clipboard_set" -> {
                     val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    cm.setPrimaryClip(android.content.ClipData.newPlainText("PhoneLink", param))
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("AutomationHub", param))
                 }
                 "gesture_tap" -> {
                     val svc = FlowA11yService.instance
@@ -2880,10 +2881,14 @@ object FlowEngine {
                 "rule_enable" -> setRuleEnabled(ctx, param, true)
                 "rule_disable" -> setRuleEnabled(ctx, param, false)
                 "rule_run" -> {
-                    // Standalone Flows app: running a PhoneLink rule
-                    // is not available — the Rules engine was removed
-                    // with the split. Logged, never faked.
-                    FlowStore.log(ctx, "rule_run unavailable in the standalone Flows app (Rules engine removed)")
+                    // PhoneLink rules via Automation, never FlowStore.
+                    val target = Automation.rules(ctx).firstOrNull {
+                        it.optString("id") == param.trim() ||
+                            it.optString("name") == param.trim()
+                    }
+                    if (target != null) {
+                        Automation.runActions(ctx, target, JSONObject(), 0)
+                    }
                 }
                 // ---------------- v1.3.0: variables ----------------
                 "set_local" -> {
@@ -3380,21 +3385,13 @@ object FlowEngine {
                 "ping" -> runPing(ctx, param)
                 "answer_call" -> sendCallCommand(ctx, "answer")
                 "end_call" -> sendCallCommand(ctx, "end")
-                // ---------------- v1.5.0: formerly dropped actions ----------------
-                // Standalone Flows app: the peer trio (notify/speak/
-                // command to the other phone) needed PhoneLink's
-                // relay, which was removed with the split. The
-                // catalog entries stay so old flows still load, but
-                // they only log — never faked, never sent.
-                "notify_peer" -> {
-                    FlowStore.log(ctx, "notify_peer unavailable in the standalone Flows app (relay removed)")
-                }
-                "speak_peer" -> {
-                    FlowStore.log(ctx, "speak_peer unavailable in the standalone Flows app (relay removed)")
-                }
-                "command_peer" -> {
-                    FlowStore.log(ctx, "command_peer unavailable in the standalone Flows app (relay removed)")
-                }
+                // ---------------- AutomationHub: peer trio removed ----------------
+                // The peer actions used PhoneLink's Relay (now gone
+                // with forwarding). Old flows/rules that call them
+                // log honestly instead of failing silently.
+                "notify_peer" -> FlowStore.log(ctx, "notify_peer unavailable in AutomationHub (relay removed)")
+                "speak_peer" -> FlowStore.log(ctx, "speak_peer unavailable in AutomationHub (relay removed)")
+                "command_peer" -> FlowStore.log(ctx, "command_peer unavailable in AutomationHub (relay removed)")
                 // lost_on / lost_off / autotap_control: NOT in
                 // FlowCatalog in this merge (lost-tracking not
                 // ported; AutoTap engine stays rule-side). If an
@@ -3425,15 +3422,16 @@ object FlowEngine {
                 "perm_grant" -> FlowNewActions.runPerm(ctx, param, true)
                 "perm_revoke" -> FlowNewActions.runPerm(ctx, param, false)
                 "install_app" -> FlowNewActions.runInstallApp(ctx, param)
-                // Standalone Flows app: AppLock was removed with
-                // the split, so lock/unlock only log — the lock
-                // set itself no longer exists here.
+                // PhoneLink v2.24.0: AppLocker owns the lock
+                // set AND its PIN — Lab's separate PIN gate is not
+                // ported, so lock/unlock only edit that set.
                 "lock_app" -> {
                     val pkg = param.trim()
                     if (pkg.isEmpty()) {
                         FlowStore.log(ctx, "lock_app: empty package")
                     } else {
-                        FlowStore.log(ctx, "lock_app unavailable in the standalone Flows app (AppLock removed): " + pkg)
+                        AppLocker.addLocked(ctx, pkg)
+                        FlowStore.log(ctx, "lock_app: " + pkg)
                     }
                 }
                 "unlock_app" -> {
@@ -3441,12 +3439,13 @@ object FlowEngine {
                     if (pkg.isEmpty()) {
                         FlowStore.log(ctx, "unlock_app: empty package")
                     } else {
-                        FlowStore.log(ctx, "unlock_app unavailable in the standalone Flows app (AppLock removed): " + pkg)
+                        AppLocker.removeLocked(ctx, pkg)
+                        FlowStore.log(ctx, "unlock_app: " + pkg)
                     }
                 }
                 "qr_show" -> {
-                    // QrShow + QrShowActivity (the class lives in
-                    // QrShow.kt and reads QrShow.text).
+                    // PhoneLink's QrShow + QrShowActivity (the class
+                    // lives in QrShow.kt and reads QrShow.text).
                     QrShow.text = param
                     try {
                         val i = Intent(ctx, QrShowActivity::class.java)
@@ -3666,7 +3665,7 @@ object FlowEngine {
         // call-state guarantee (the dialer may ignore the key).
         val keyCode = if (cmd == "answer") 5 else 6
         if (!ShizukuHelper.granted()) {
-            FlowStore.log(ctx, "call " + cmd + ": Shizuku not available, CallShield bridge not available in PhoneLink")
+            FlowStore.log(ctx, "call " + cmd + ": Shizuku not available, CallShield bridge not available in AutomationHub")
             return
         }
         val code = ShizukuHelper.runCode("input keyevent " + keyCode)
@@ -3682,10 +3681,16 @@ object FlowEngine {
     }
 
     private fun setRuleEnabled(ctx: Context, param: String, on: Boolean) {
-        // Standalone Flows app: no Rules engine exists here, so
-        // enabling/disabling a rule is not available. Logged,
-        // never faked.
-        FlowStore.log(ctx, "rule_enable/rule_disable unavailable in the standalone Flows app (Rules engine removed): " + param.trim())
+        // PhoneLink rules via Automation: lookup by id-or-name,
+        // then Automation.setEnabled (which itself fires the
+        // rule_toggled event to the RULE engine, never to Flow).
+        val target = Automation.rules(ctx).firstOrNull {
+            it.optString("id") == param.trim() ||
+                it.optString("name") == param.trim()
+        }
+        if (target != null) {
+            Automation.setEnabled(ctx, target.optString("id"), on)
+        }
     }
 
     // ---------------- FocusLock (contract mirror) ----------------
@@ -4141,7 +4146,7 @@ object FlowEngine {
      *  user can write there directly). Logs the path or the miss. */
     private fun screenshotViaShizuku(ctx: Context) {
         val stamp = System.currentTimeMillis().toString()
-        val path = "/sdcard/Pictures/PhoneLink/lab_shot_" + stamp + ".png"
+        val path = "/sdcard/Pictures/AutomationHub/lab_shot_" + stamp + ".png"
         val out = shRun(ctx, "mkdir -p /sdcard/Pictures/Lab && screencap -p " + path)
         if (out != null) {
             FlowStore.setVar(ctx, "screenshot_path", path)

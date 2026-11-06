@@ -24,8 +24,10 @@ import org.json.JSONObject
  * all — no silent background work. The 60-second tick and the
  * dynamic screen/wifi receivers live ONLY here; the Automation
  * screen never starts the trigger hub, and manual Run-now needs
- * no hub. Foreground notification id 101 (LinkService uses 1,
- * SnapService 2, ScreenShareService 42).
+ * no hub. Foreground notification id 101.
+ * AutomationHub: the Rules tick and the LAN webhook server are
+ * also hosted here now (LinkService, which used to host them,
+ * is gone with forwarding).
  */
 class FlowService : Service() {
 
@@ -41,11 +43,9 @@ class FlowService : Service() {
                 FlowEngine.tickForeground(this@FlowService)
                 FlowTriggers.checkForegroundApp(this@FlowService)
                 FlowTriggers.maybeArm(this@FlowService)
-                // Redial sessions used to be driven by PhoneLink's
-                // Automation tick; here the Flows service tick drives
-                // them (60 s instead of ~20 s, so gaps are coarser).
-                // poll() is a no-op when no session is active.
-                Redial.poll(this@FlowService)
+                // Rules tick, formerly driven by LinkService's
+                // heartbeat: redial polling + time/interval triggers.
+                Automation.tick(this@FlowService)
             } catch (_: Exception) {
             }
             if (running) {
@@ -89,6 +89,15 @@ class FlowService : Service() {
             FlowTriggers.start(this)
         } catch (_: Exception) {
         }
+        // LAN webhook trigger host, formerly started by
+        // LinkService: the webhook trigger still works locally.
+        try { WebhookServer.start(this) } catch (_: Exception) { }
+        // LAN webhook trigger host, formerly started by
+        // LinkService: the webhook trigger still works locally.
+        try { WebhookServer.start(this) } catch (_: Exception) { }
+        // LAN webhook trigger host, formerly started by
+        // LinkService: the webhook trigger still works locally.
+        try { WebhookServer.start(this) } catch (_: Exception) { }
         running = true
         FlowStore.setServiceLastTick(this, System.currentTimeMillis())
         handler.post(tickRunnable)
@@ -116,6 +125,9 @@ class FlowService : Service() {
             FlowTriggers.stop(this)
         } catch (_: Exception) {
         }
+        try { WebhookServer.stop() } catch (_: Exception) { }
+        try { WebhookServer.stop() } catch (_: Exception) { }
+        try { WebhookServer.stop() } catch (_: Exception) { }
         // v1.4.3: clearing the stamp is the "not running" signal;
         // a stale stamp (no tick for a while) means the same.
         FlowStore.setServiceLastTick(this, 0L)
@@ -136,7 +148,7 @@ class FlowService : Service() {
             channel.description = getString(R.string.notif_channel_desc)
             nm.createNotificationChannel(channel)
         }
-        val openIntent = Intent(this, FlowsMainActivity::class.java)
+        val openIntent = Intent(this, AutomationActivity::class.java)
         val pending = PendingIntent.getActivity(
             this, 0, openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

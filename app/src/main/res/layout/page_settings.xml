@@ -135,7 +135,7 @@
                     <TextView
                         style="@style/PL.TileTitle"
                         android:layout_marginTop="9dp"
-                        android:text="@string/set_relay"
+                        android:text="@string/mqtt_smtp_title"
                         android:textSize="15sp" />
 
                     <TextView
@@ -245,50 +245,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/tileHubForward"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="132dp"
-                    android:orientation="vertical"
-                    android:padding="15dp">
-
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="23dp"
-                            android:layout_height="23dp"
-                            android:layout_gravity="center"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_swap" />
-                    </FrameLayout>
-
-                    <TextView
-                        style="@style/PL.TileTitle"
-                        android:layout_marginTop="9dp"
-                        android:text="@string/set_forwarding"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:id="@+id/tvHubFwd"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            
         </LinearLayout>
 
         <!-- ===== Emergency / Panic (opens the Security screen) ===== -->
@@ -491,42 +448,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/tileHubFamily"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="104dp"
-                    android:orientation="vertical"
-                    android:padding="15dp">
-
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="23dp"
-                            android:layout_height="23dp"
-                            android:layout_gravity="center"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_alert" />
-                    </FrameLayout>
-
-                    <TextView
-                        style="@style/PL.TileTitle"
-                        android:layout_marginTop="9dp"
-                        android:text="@string/cat_family"
-                        android:textSize="14.5sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            
         </LinearLayout>
 
         <TextView

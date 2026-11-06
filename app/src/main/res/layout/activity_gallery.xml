@@ -1,40 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- AutomationHub push note: this screen was removed in the rebuild. Inert placeholder — it references nothing, so it cannot break resource linking. Delete in a bulk-delete cleanup pass. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/gallery_title"
-        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" />
-
-    <TextView
-        android:id="@+id/tvGalleryStatus"
-        style="@style/PL.BodySmall"
-        android:layout_marginTop="4dp" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnGalleryRefresh"
-        style="@style/PL.BtnTonal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/btn_gallery_refresh"
-        app:icon="@drawable/ic_refresh" />
-
-    <TextView
-        style="@style/PL.BodySmall"
-        android:layout_marginTop="6dp"
-        android:text="@string/gallery_hint" />
-
-    <ListView
-        android:id="@+id/lvPhotos"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:layout_weight="1" />
-</LinearLayout>
+    android:orientation="vertical" />

@@ -6,7 +6,7 @@ import org.json.JSONObject
 /** Lifetime counters for the statistics card: sent / received / commands. */
 object Stats {
     private fun prefs(ctx: Context) =
-        ctx.getSharedPreferences("flows_state", Context.MODE_PRIVATE)
+        ctx.getSharedPreferences("phonelink_state", Context.MODE_PRIVATE)
 
     private fun bump(ctx: Context, key: String, by: Int = 1) {
         prefs(ctx).edit().putLong(key, prefs(ctx).getLong(key, 0L) + by).apply()

@@ -77,7 +77,7 @@ class FlowCameraActivity : LocalizedActivity() {
                 "lab_" + System.currentTimeMillis().toString() + ".jpg"
             )
             values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhoneLink")
+            values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AutomationHub")
             val outputOptions = ImageCapture.OutputFileOptions.Builder(
                 contentResolver,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,

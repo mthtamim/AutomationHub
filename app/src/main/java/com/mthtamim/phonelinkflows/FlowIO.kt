@@ -64,13 +64,13 @@ object FlowIO {
             ).format(java.util.Date())
             val root = JSONObject()
             root.put("formatVersion", 1)
-            root.put("app", "PhoneLink")
+            root.put("app", "AutomationHub")
             val flows = JSONArray()
             for (flow in FlowStore.flows(ctx)) {
                 flows.put(flow)
             }
             root.put("flows", flows)
-            val file = File(dir, "flows_backup_" + stamp + ".json")
+            val file = File(dir, "automationhub_flow_backup_" + stamp + ".json")
             file.writeText(root.toString())
             val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", file)
             val intent = Intent(Intent.ACTION_SEND)

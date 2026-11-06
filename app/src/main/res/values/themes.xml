@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Flows" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.PhoneLink" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/md_primary</item>
         <item name="colorOnPrimary">@color/md_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_primaryContainer</item>
@@ -37,25 +37,25 @@
     </style>
 
     <!-- v2.11 accent variants (primary family only) -->
-    <style name="Theme.FlowsBlue" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkBlue" parent="Theme.PhoneLink">
         <item name="colorPrimary">#2563EB</item>
         <item name="colorPrimaryContainer">#D7E3FC</item>
         <item name="colorOnPrimaryContainer">#0B2A6B</item>
         <item name="colorSecondary">#2563EB</item>
     </style>
-    <style name="Theme.FlowsPurple" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkPurple" parent="Theme.PhoneLink">
         <item name="colorPrimary">#7C3AED</item>
         <item name="colorPrimaryContainer">#E9E0FD</item>
         <item name="colorOnPrimaryContainer">#2E1065</item>
         <item name="colorSecondary">#7C3AED</item>
     </style>
-    <style name="Theme.FlowsAmber" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkAmber" parent="Theme.PhoneLink">
         <item name="colorPrimary">#D97706</item>
         <item name="colorPrimaryContainer">#FDEBC8</item>
         <item name="colorOnPrimaryContainer">#5B3400</item>
         <item name="colorSecondary">#D97706</item>
     </style>
-    <style name="Theme.FlowsRose" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkRose" parent="Theme.PhoneLink">
         <item name="colorPrimary">#E11D48</item>
         <item name="colorPrimaryContainer">#FBDCE4</item>
         <item name="colorOnPrimaryContainer">#5F0A1E</item>
@@ -68,10 +68,10 @@
          Dark follows the light/dark palettes. Glass themes use a
          static gradient window background plus translucent surfaces
          (no live blur). -->
-    <style name="Theme.FlowsEmeraldDark" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkEmeraldDark" parent="Theme.PhoneLink">
         <!-- No overrides: exactly the pre-2.25 look. -->
     </style>
-    <style name="Theme.FlowsAurora" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkAurora" parent="Theme.PhoneLink">
         <item name="colorPrimary">#E879C6</item>
         <item name="colorOnPrimary">#2A0A22</item>
         <item name="colorPrimaryContainer">#3B1470</item>
@@ -104,7 +104,7 @@
         <item name="plNavInactive">#D8B4D4</item>
         <item name="plNavIndicator">#3B1470</item>
     </style>
-    <style name="Theme.FlowsOceanDeep" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkOceanDeep" parent="Theme.PhoneLink">
         <item name="colorPrimary">#38BDF8</item>
         <item name="colorOnPrimary">#03202E</item>
         <item name="colorPrimaryContainer">#0E4A5E</item>
@@ -137,7 +137,7 @@
         <item name="plNavInactive">#9CC8D8</item>
         <item name="plNavIndicator">#0E4A5E</item>
     </style>
-    <style name="Theme.FlowsMidnightSapphire" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkMidnightSapphire" parent="Theme.PhoneLink">
         <item name="colorPrimary">#8EA2FF</item>
         <item name="colorOnPrimary">#0A1230</item>
         <item name="colorPrimaryContainer">#1E3A8A</item>
@@ -170,7 +170,7 @@
         <item name="plNavInactive">#A8B4D8</item>
         <item name="plNavIndicator">#1E3A8A</item>
     </style>
-    <style name="Theme.FlowsSunsetEmber" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkSunsetEmber" parent="Theme.PhoneLink">
         <item name="colorPrimary">#FB923C</item>
         <item name="colorOnPrimary">#2A1200</item>
         <item name="colorPrimaryContainer">#7C2D12</item>
@@ -203,7 +203,7 @@
         <item name="plNavInactive">#E8C4A8</item>
         <item name="plNavIndicator">#7C2D12</item>
     </style>
-    <style name="Theme.FlowsRoseQuartz" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkRoseQuartz" parent="Theme.PhoneLink">
         <item name="colorPrimary">#F9A8D4</item>
         <item name="colorOnPrimary">#2B0A1E</item>
         <item name="colorPrimaryContainer">#500724</item>
@@ -236,7 +236,7 @@
         <item name="plNavInactive">#E3B8C8</item>
         <item name="plNavIndicator">#500724</item>
     </style>
-    <style name="Theme.FlowsForestMist" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkForestMist" parent="Theme.PhoneLink">
         <item name="colorPrimary">#6EE7B7</item>
         <item name="colorOnPrimary">#06281A</item>
         <item name="colorPrimaryContainer">#14532D</item>
@@ -269,7 +269,7 @@
         <item name="plNavInactive">#A8C8B4</item>
         <item name="plNavIndicator">#14532D</item>
     </style>
-    <style name="Theme.FlowsGraphiteMono" parent="Theme.Flows">
+    <style name="Theme.PhoneLinkGraphiteMono" parent="Theme.PhoneLink">
         <item name="colorPrimary">#E5E7EB</item>
         <item name="colorOnPrimary">#111827</item>
         <item name="colorPrimaryContainer">#3F3F46</item>
