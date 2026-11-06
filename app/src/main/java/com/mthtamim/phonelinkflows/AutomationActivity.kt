@@ -1074,7 +1074,7 @@ class AutomationActivity : LocalizedActivity() {
             if (theme.resolveAttribute(
                     android.R.attr.selectableItemBackground, rippleOut, true)) {
                 foreground = androidx.core.content.ContextCompat
-                    .getDrawable(this, rippleOut.resourceId)
+                    .getDrawable(this@AutomationActivity, rippleOut.resourceId)
             }
         }
         val nameView = TextView(this).apply {

@@ -1057,6 +1057,20 @@ as `⏴ <name> (exit: <event>)`, so the Log explains them.
 
 ## v1.2.2 — Material 3 motion + smoothness (not pushed yet)
 
+**CI fix (run #16 failed, 9 compile errors):** window transitions
+require framework `android.transition.Transition` — the Material
+(AndroidX) classes cannot be assigned to a window, so the
+container transform is now a framework ChangeBounds + Fade
+(bounds morph + content fade, 450 ms, emphasized easing) and the
+default window transition is a framework Fade (300 ms, emphasized
+easing); the Material colour morph does not apply to windows.
+View-level shared-axis still uses MaterialSharedAxis. Also fixed:
+`TimeInterpolator` import (android.animation, not
+android.view.animation) and a `getDrawable(this)` inside a
+LinearLayout apply block that passed the layout instead of the
+Activity (AutomationActivity.kt:1077). `ThemeColors.surface()` /
+`background()` removed (now unused).
+
 Motion reference: the real Essentials app (Jetpack Compose +
 Material 3 Expressive) as Tamim showed it in a screen recording
 on 2026-11-06. Correction the same evening: the target is the
@@ -1070,8 +1084,8 @@ which is real risk, not free.
 What changed (code-inspection findings; on-phone confirmation
 still needed — no frame-rate numbers were measured, none are
 claimed):
-- Container transform (MaterialContainerTransform, 450 ms,
-  emphasized easing cubic-bezier(0.2, 0, 0, 1)): tapping a rule
+- Shared-element morph (framework ChangeBounds + Fade, 450 ms,
+  emphasized easing): tapping a rule
   or flow card morphs into its editor (RuleEditorActivity /
   FlowEditorActivity) — the card is the shared element, unique
   transition name per card (rule_card_<id> / flow_card_<id>),
@@ -1081,17 +1095,14 @@ claimed):
   (PLMotion.setupEditorTransform, right after setContentView) and
   postpones the enter transition until the first frame is laid
   out, so a heavy editor open never drops frames mid-morph.
-  Enter colour: card surface (or FAB primary) -> window
-  background; return: reversed. Caveat: on glass themes the
-  window background is a gradient drawable, so the morph's end
-  colour is the flat colorBackground and the gradient fades in
-  behind it via the fade-through — phone check needed.
+  (Framework, not MaterialContainerTransform — see the CI fix
+  note above; no colour morph on windows.)
 - Shared axis (MaterialSharedAxis X, 300 ms, emphasized easing):
   Rules <-> Flows tab switch (the inner column — tab row,
   status/FocusLock cards, list — moves as one), and Home <->
   Settings in MainActivity (showPage, skipped on the very first
   call before the first layout).
-- Fade through (MaterialFadeThrough, 300 ms, emphasized easing):
+- Fade through (framework Fade, 300 ms, emphasized easing):
   the default window transition for EVERY activity, installed in
   code from LocalizedActivity.onCreate (PLMotion.
   applyDefaultWindowTransitions). This replaces the generic
@@ -1106,9 +1117,10 @@ claimed):
 - Easing + durations: everything uses the M3 emphasized easing
   (PathInterpolator 0.2, 0, 0, 1) and the M3 scale — medium
   300 ms, large 450 ms. One helper owns it all: PLMotion.kt
-  (new file) — fadeThrough(), sharedAxisX(), containerTransform(),
-  openWithTransform(), setupEditorTransform(),
-  beginSharedAxisX(), applyDefaultWindowTransitions().
+  (new file) — sharedAxisX(), openWithTransform(),
+  setupEditorTransform(), beginSharedAxisX(),
+  applyDefaultWindowTransitions() (frameworkFade() /
+  frameworkMorph() are private helpers inside it).
 - Switches: the two code-built platform Switch widgets
   (rule/flow card toggle, Flows service row) are SwitchMaterial
   now — the M3 switch morphs thumb/track instead of flipping
