@@ -10,7 +10,10 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
+import android.net.wifi.WifiInfo
 import android.os.BatteryManager
 import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
@@ -4131,9 +4134,28 @@ object Automation {
     }
 
     private fun currentSsid(ctx: Context): String {
-        val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-        @Suppress("DEPRECATION")
-        return wm.connectionInfo?.ssid?.trim('"') ?: ""
+        // Modern path first: the live network's WifiInfo. The
+        // deprecated connectionInfo.ssid below can return
+        // "<unknown ssid>" (location off, Android 10+) — that
+        // used to poison last_ssid and never match a real SSID
+        // again, so unknown/empty always normalizes to "".
+        try {
+            val cm = ctx.applicationContext
+                .getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+            val info = caps?.transportInfo as? WifiInfo
+            val modern = info?.ssid?.removeSurrounding("\"") ?: ""
+            if (modern.isNotEmpty() && modern != "<unknown ssid>") return modern
+        } catch (_: Exception) {
+        }
+        return try {
+            val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            @Suppress("DEPRECATION")
+            val legacy = wm.connectionInfo?.ssid?.removeSurrounding("\"") ?: ""
+            if (legacy.isEmpty() || legacy == "<unknown ssid>") "" else legacy
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     fun foregroundPkg(ctx: Context): String {

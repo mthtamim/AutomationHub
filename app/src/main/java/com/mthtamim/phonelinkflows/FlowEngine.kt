@@ -4,6 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
@@ -1826,11 +1829,24 @@ object FlowEngine {
     }
 
     private fun currentSsid(ctx: Context): String {
+        // Same normalization as Automation.currentSsid: the
+        // modern WifiInfo path first, "<unknown ssid>"/empty
+        // always becomes "" so a bad read never matches.
+        try {
+            val cm = ctx.applicationContext
+                .getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+            val info = caps?.transportInfo as? WifiInfo
+            val modern = info?.ssid?.removeSurrounding("\"") ?: ""
+            if (modern.isNotEmpty() && modern != "<unknown ssid>") return modern
+        } catch (_: Exception) {
+        }
         return try {
             val wm = ctx.applicationContext
                 .getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-            val ssid = wm.connectionInfo?.ssid ?: ""
-            ssid.removeSurrounding("\"")
+            @Suppress("DEPRECATION")
+            val legacy = wm.connectionInfo?.ssid?.removeSurrounding("\"") ?: ""
+            if (legacy.isEmpty() || legacy == "<unknown ssid>") "" else legacy
         } catch (_: Exception) {
             ""
         }

@@ -9,6 +9,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.net.wifi.WifiInfo
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -38,14 +43,23 @@ class FlowService : Service() {
         override fun run() {
             try {
                 // v1.4.3 heartbeat: stamp every tick so Home can
-                // tell a live service from a killed one.
+                // tell a live service from a killed one. Stamped
+                // here, on time, before the work leaves the main
+                // thread. 2026-11-06: the tick work itself runs
+                // on a background thread — it used to run on the
+                // main looper and jank the UI every 60 s.
                 FlowStore.setServiceLastTick(this@FlowService, System.currentTimeMillis())
-                FlowEngine.tickForeground(this@FlowService)
-                FlowTriggers.checkForegroundApp(this@FlowService)
-                FlowTriggers.maybeArm(this@FlowService)
-                // Rules tick, formerly driven by LinkService's
-                // heartbeat: redial polling + time/interval triggers.
-                Automation.tick(this@FlowService)
+                Thread {
+                    try {
+                        FlowEngine.tickForeground(this@FlowService)
+                        FlowTriggers.checkForegroundApp(this@FlowService)
+                        FlowTriggers.maybeArm(this@FlowService)
+                        // Rules tick, formerly driven by LinkService's
+                        // heartbeat: redial polling + time/interval triggers.
+                        Automation.tick(this@FlowService)
+                    } catch (_: Exception) {
+                    }
+                }.start()
             } catch (_: Exception) {
             }
             if (running) {
@@ -71,6 +85,66 @@ class FlowService : Service() {
 
     private val wifiReceiver = FlowWifiReceiver()
 
+    // Live battery path (2026-11-06): Automation.onBatteryChanged
+    // used to be called by LinkService's ACTION_BATTERY_CHANGED
+    // receiver — LinkService is gone, so nothing called it and
+    // charging_on/off only came from the 60 s poll. This dynamic
+    // receiver (sticky intent: delivered at once, then on every
+    // battery change) restores the live path while the service
+    // runs. The 60 s poll stays as fallback.
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent?) {
+            try {
+                Automation.onBatteryChanged(ctx)
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    // Live WiFi path (2026-11-06): Rules only polled the SSID
+    // every 60 s, and the Flow wifi receiver only sees
+    // CONNECTIVITY_ACTION. A NetworkCallback fires the moment
+    // WiFi connects or drops, to BOTH engines, carrying the
+    // SSID. The 60 s poll + FlowWifiReceiver stay as fallback.
+    private val wifiCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            try {
+                val ssid = currentWifiSsid(this@FlowService)
+                if (ssid.isNotEmpty()) {
+                    FlowEngine.onEvent(this@FlowService, "wifi_connected",
+                        JSONObject().put("ssid", ssid).put("title", ssid))
+                    Automation.onEvent(this@FlowService, "wifi_connected",
+                        JSONObject().put("ssid", ssid).put("title", ssid))
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        override fun onLost(network: Network) {
+            try {
+                FlowEngine.onEvent(this@FlowService, "wifi_disconnected", JSONObject())
+                Automation.onEvent(this@FlowService, "wifi_disconnected", JSONObject())
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private var wifiCallbackRegistered = false
+
+    // SSID from the live network, never "<unknown ssid>".
+    private fun currentWifiSsid(ctx: Context): String {
+        return try {
+            val cm = ctx.applicationContext
+                .getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+            val info = caps?.transportInfo as? WifiInfo
+            val ssid = info?.ssid?.removeSurrounding("\"") ?: ""
+            if (ssid.isEmpty() || ssid == "<unknown ssid>") "" else ssid
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         startForeground(101, buildNotification())
@@ -83,6 +157,22 @@ class FlowService : Service() {
         wifiFilter.addAction(android.net.wifi.WifiManager.WIFI_STATE_CHANGED_ACTION)
         wifiFilter.addAction(android.net.ConnectivityManager.CONNECTIVITY_ACTION)
         registerReceiver(wifiReceiver, wifiFilter)
+        // Live battery receiver (see batteryReceiver above).
+        try {
+            registerReceiver(batteryReceiver,
+                IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        } catch (_: Exception) {
+        }
+        // Live WiFi callback (see wifiCallback above).
+        try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val req = NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .build()
+            cm.registerNetworkCallback(req, wifiCallback)
+            wifiCallbackRegistered = true
+        } catch (_: Exception) {
+        }
         // v1.4.0: the trigger hub (sensors, observers, callbacks)
         // runs while the service runs.
         try {
@@ -120,6 +210,18 @@ class FlowService : Service() {
         try {
             unregisterReceiver(wifiReceiver)
         } catch (_: Exception) {
+        }
+        try {
+            unregisterReceiver(batteryReceiver)
+        } catch (_: Exception) {
+        }
+        if (wifiCallbackRegistered) {
+            try {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                cm.unregisterNetworkCallback(wifiCallback)
+            } catch (_: Exception) {
+            }
+            wifiCallbackRegistered = false
         }
         try {
             FlowTriggers.stop(this)

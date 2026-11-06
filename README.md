@@ -9,7 +9,7 @@ for being bigger than PhoneLink itself). Tamim's corrected scope, confirmed
 
 - **Package:** `com.mthtamim.phonelinkflows` (kept from the skeleton, so the
   `phonelink_*` SharedPreferences keys stay compatible with its data)
-- **Version:** 1.0.0 (vc1) · `compileSdk`/`targetSdk` 34, `minSdk` 26 ·
+- **Version:** 1.1.0 (vc2) · `compileSdk`/`targetSdk` 34, `minSdk` 26 ·
   arm64-v8a only · minify off
 - **Repo (for the push):** `mthtamim/PhoneLink-Flows`
 - **Status: STAGING — not pushed, no release.** This tree is the
@@ -496,8 +496,9 @@ removed). MQTT stays removed — no MQTT UI was restored anywhere.
   shows the dark look.
 
 ### G. Release groundwork (code only)
-- Version: `versionName "1.0.0"`, `versionCode 1` — already
-  1.0.0, so NO version change and NO versionCode bump.
+- Version: `versionName "1.0.0"`, `versionCode 1` at the time of
+  this pass — bumped to 1.1.0/vc2 in the 2026-11-06 sensor/speed
+  pass (see below).
 - `release` build type now has `minifyEnabled true` +
   `shrinkResources true` (debug build untouched — CI builds
   debug). `app/proguard-rules.pro` (was empty) now keeps:
@@ -692,6 +693,58 @@ actual dispatch and param parsing in `Automation.kt` (rules) and
   `StatusBarManager.requestAddTileService` (user confirms in the system panel);
   on older Android, or if the request is declined, the toast says
   to add it manually from the QS panel's Edit screen.
+
+## Live sensor paths + rule-card pills + speed (2026-11-06)
+
+### 1. WiFi / charging now fire live, not only on the 60 s poll
+- `FlowService` registers a dynamic `ACTION_BATTERY_CHANGED`
+  receiver in `onCreate` (unregistered in `onDestroy`) that calls
+  `Automation.onBatteryChanged` on every battery change. That
+  function had zero callers since LinkService went away, so
+  charging_on/off only came from the 60 s poll.
+- `FlowService` also registers a `ConnectivityManager.NetworkCallback`
+  (WiFi transport): `onAvailable` fires `wifi_connected` with the
+  SSID to BOTH engines (`FlowEngine.onEvent` + `Automation.onEvent`),
+  `onLost` fires `wifi_disconnected` to both. The 60 s poll and
+  `FlowWifiReceiver` stay as fallback. Everything is wrapped in
+  try/catch — the service never crashes on this.
+- `Automation.currentSsid` (and the identical `FlowEngine.currentSsid`)
+  now read the SSID from the live network's `WifiInfo` first and
+  fall back to the deprecated `connectionInfo.ssid`; null, empty and
+  `"<unknown ssid>"` all normalize to `""`, so a bad read can no
+  longer poison `last_ssid` or rule matching. Note: with location
+  off, Android 10+ still reports no SSID — the triggers then wait
+  for the next live event instead of matching a wrong name.
+
+### 2. Rule cards match the flow cards
+- Rule cards in `AutomationActivity.render()` now have the same six
+  pills as flow cards, in the same order: Test, Edit, Duplicate,
+  Share, Log, Delete (same `pillButton` style). Duplicate deep-copies
+  the rule JSON with a new `r<millis>` id and the same ` (copy)`
+  suffix the flow cards use (`flow_dup_suffix`); Share sends the
+  rule as a one-element JSON array, because `Automation.importJson`
+  only accepts arrays — a bare rule object would fail to import
+  back; Log shows the per-rule lines from `Automation.recentLog`
+  (rule runs log as `▶ <name> (<event>)`), with the same empty
+  state as the flow log dialog. All pill labels reuse the existing
+  flow strings (`flow_card_dup` / `flow_card_share` /
+  `flow_card_log`, `flow_log_empty`) — no new strings.
+
+### 3. Speed: tick off the main thread, one parse per refresh
+- `FlowService`'s 60 s tick (`tickForeground`, `checkForegroundApp`,
+  `maybeArm`, `Automation.tick`) now runs on a background thread;
+  only the `serviceLastTick` heartbeat stamp stays on the main
+  looper, on time. The debug build is unchanged (minify still off
+  — reflection risk) and the log caps (50 rule / 300 flow lines)
+  were already fine.
+- `MainActivity.refreshStatus` now parses rules/flows/log ONCE per
+  refresh and passes them to `buildStatsText` and
+  `refreshSettingsHub`, which used to re-parse the same JSON a
+  second and third time. No behavior change.
+
+### 4. Version bump
+- `versionName "1.1.0"`, `versionCode 2` — the version Tamim saw
+  ("1.00") had never been bumped since 1.0.0/vc1.
 
 ### Validation (both trees)
 49 templates parsed (25 rules + 24 flows); every template trigger,

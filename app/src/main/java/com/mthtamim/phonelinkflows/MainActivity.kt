@@ -898,12 +898,14 @@ class MainActivity : LocalizedActivity() {
     }
 
     /** AutomationHub: rules/flows/automation-log counts (no relay stats). */
-    private fun buildStatsText(): String {
-        val rules = Automation.rules(this).size
-        val flows = FlowStore.flows(this).size
-        val logs = Automation.recentLog(this).size
-        return getString(R.string.stats_rules_flows, rules, flows) +
-            " • " + getString(R.string.stats_log_lines, logs)
+    // 2026-11-06: takes the pre-parsed lists — refreshStatus
+    // parses rules/flows/log ONCE per refresh and passes them
+    // down, instead of every helper re-parsing them.
+    private fun buildStatsText(
+        rules: List<JSONObject>, flows: List<JSONObject>, logs: List<String>
+    ): String {
+        return getString(R.string.stats_rules_flows, rules.size, flows.size) +
+            " • " + getString(R.string.stats_log_lines, logs.size)
     }
 
 
@@ -911,8 +913,12 @@ class MainActivity : LocalizedActivity() {
         // AutomationHub: no relay — the header pill shows the local
         // automation state (rules/flows counts), the hub subtitles
         // show local device/automation status.
+        // 2026-11-06: parse rules/flows/log ONCE per refresh and
+        // pass them down — buildStatsText and refreshSettingsHub
+        // used to re-parse the same JSON a second and third time.
         val rules = Automation.rules(this)
         val flows = FlowStore.flows(this)
+        val logs = Automation.recentLog(this)
         val autoOn = Config.automationOn(this)
         tvConnPill.text = if (autoOn) {
             getString(R.string.conn_automation_on, rules.size, flows.size)
@@ -926,7 +932,7 @@ class MainActivity : LocalizedActivity() {
             getString(R.string.geo_set, Config.geoLat(this), Config.geoLng(this), Config.geoRadius(this))
         } else getString(R.string.geo_not_set)
         refreshFocusGuard()
-        tvStats.text = buildStatsText()
+        tvStats.text = buildStatsText(rules, flows, logs)
         tvPinInfo.text = getString(
             if (Config.pinHash(this).isNotEmpty()) R.string.pin_state_set else R.string.pin_state_unset)
         tvAdminInfo.text = getString(
@@ -937,7 +943,7 @@ class MainActivity : LocalizedActivity() {
             getString(if (PermChecks.a11yEnabled(this)) R.string.state_on
                 else R.string.state_off))
         refreshDashboard()
-        refreshSettingsHub()
+        refreshSettingsHub(rules, flows)
     }
 
 
@@ -1279,7 +1285,7 @@ class MainActivity : LocalizedActivity() {
     }
 
 
-    private fun refreshSettingsHub() {
+    private fun refreshSettingsHub(rules: List<JSONObject>, flows: List<JSONObject>) {
         val missing = PermChecks.missingCount(this)
         tvSetPill.text = if (missing == 0) getString(R.string.set_status_ok)
             else getString(R.string.set_status_warn, missing)
@@ -1292,11 +1298,17 @@ class MainActivity : LocalizedActivity() {
             packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
         } catch (_: Exception) { "?" }
         tvHubDiag.text = "AutomationHub v$ver • " +
-            "${Automation.rules(this).size} rules • " +
-            "${FlowStore.flows(this).size} flows"
+            "${rules.size} rules • " +
+            "${flows.size} flows"
         // v2.17.4: the same version line also lives at the bottom
         // of Appearance & General (inventory category 7).
         tvGeneralDiag.text = tvHubDiag.text
+    }
+
+    // One-time callers (Settings hub wiring) parse once and
+    // delegate; the per-refresh path passes pre-parsed data.
+    private fun refreshSettingsHub() {
+        refreshSettingsHub(Automation.rules(this), FlowStore.flows(this))
     }
 
 

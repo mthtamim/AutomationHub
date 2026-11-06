@@ -1015,23 +1015,65 @@ class AutomationActivity : LocalizedActivity() {
                     ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { setMargins(8, 0, 0, 0) }
             }
+            buttons.addView(pillButton(R.string.auto_test, true).apply {
+                setOnClickListener {
+                    val data = JSONObject()
+                        .put("title", rule.optString("name")).put("body", "test")
+                    Automation.runActions(this@AutomationActivity, rule, data, 0)
+                }
+            })
             buttons.addView(pillButton(R.string.btn_edit, false).apply {
                 setOnClickListener {
                     startActivity(Intent(this@AutomationActivity, RuleEditorActivity::class.java)
                         .putExtra("rule_id", rule.optString("id")))
                 }
             })
+            buttons.addView(pillButton(R.string.flow_card_dup, false).apply {
+                setOnClickListener {
+                    // Same duplicate as the flow cards: deep-copy,
+                    // new id, " (copy)" suffix, save, re-render.
+                    val copy = JSONObject(rule.toString())
+                    copy.put("id", "r" + System.currentTimeMillis().toString())
+                    copy.put("name", rule.optString("name") + getString(R.string.flow_dup_suffix))
+                    Automation.upsert(this@AutomationActivity, copy)
+                    render()
+                }
+            })
+            buttons.addView(pillButton(R.string.flow_card_share, false).apply {
+                setOnClickListener {
+                    // Single-rule share, mirroring the flow share
+                    // pill — but as a one-element JSON array: the
+                    // rule import (Automation.importJson) only
+                    // accepts arrays, so a bare rule object would
+                    // fail to import back. This round-trips.
+                    val arr = org.json.JSONArray()
+                        .put(JSONObject(rule.toString()))
+                    val send = Intent(Intent.ACTION_SEND).setType("application/json")
+                        .putExtra(Intent.EXTRA_TEXT, arr.toString())
+                    startActivity(Intent.createChooser(send, rule.optString("name")))
+                }
+            })
+            buttons.addView(pillButton(R.string.flow_card_log, false).apply {
+                setOnClickListener {
+                    // Same per-item log dialog as the flow cards,
+                    // filtered to lines that mention this rule —
+                    // rule runs log "▶ <name> (<event>)".
+                    val name = rule.optString("name")
+                    val lines = if (name.isEmpty()) emptyList()
+                    else Automation.recentLog(this@AutomationActivity)
+                        .filter { it.contains(name) }
+                    AlertDialog.Builder(this@AutomationActivity)
+                        .setTitle(rule.optString("name"))
+                        .setMessage(if (lines.isEmpty()) getString(R.string.flow_log_empty)
+                            else lines.joinToString("\n"))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            })
             buttons.addView(pillButton(R.string.btn_delete, false).apply {
                 setOnClickListener {
                     Automation.delete(this@AutomationActivity, rule.optString("id"))
                     render()
-                }
-            })
-            buttons.addView(pillButton(R.string.auto_test, true).apply {
-                setOnClickListener {
-                    val data = JSONObject()
-                        .put("title", rule.optString("name")).put("body", "test")
-                    Automation.runActions(this@AutomationActivity, rule, data, 0)
                 }
             })
             row.addView(buttons)
