@@ -1484,21 +1484,27 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
-### Release signing (wired 2026-11-07 — keystore via GitHub Secrets, never in the repo)
+### Release signing (wired 2026-11-07 — keystore encrypted in repo, passphrase via GitHub Secrets)
 
 - `app/build.gradle` now has `signingConfigs.release`: PKCS12
   keystore, alias `automationhub`, cert SHA-256 fingerprint
   `A6:D7:8B:FF:A5:93:3D:62:93:DF:CA:6B:2D:3D:27:AB:BC:F7:45:CD:06:C7:33:82:92:7D:82:74:FA:C2:C0:5D`
   (fingerprint only — no password, no keystore content, lives
   anywhere in the repo).
-- The release keystore itself is NEVER committed to this public
-  repo. It reaches CI only as GitHub Secrets:
-  `RELEASE_KEYSTORE_B64` (base64 of the keystore),
-  `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
-  `RELEASE_KEY_PASSWORD`. The workflow decodes the secret into
-  `app/release.keystore` and runs `assembleRelease` with
-  `RELEASE_KEYSTORE_PATH=app/release.keystore` (+ the other three
-  env vars). The build resolves that path against the repo root
+- The release keystore itself is NEVER committed in the clear to this public
+  repo. It is stored ENCRYPTED as `app/release.keystore.enc.b64`
+  (AES-256-CBC, PBKDF2; ciphertext only — useless without the passphrase).
+  CI decrypts it with the short passphrase from the
+  `RELEASE_KEYSTORE_PASSPHRASE` GitHub Secret. (History: the first attempt
+  passed the whole base64 keystore as a `RELEASE_KEYSTORE_B64` secret, but
+  the 3584-char value kept getting mangled on paste — runs #23/#25 both
+  failed with `base64: invalid input` — so the long paste was replaced by
+  this encrypted blob + short passphrase. The obsolete secret may stay;
+  nothing reads it anymore.) The other three secrets
+  (`RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
+  `RELEASE_KEY_PASSWORD`) still hold the keystore passwords/alias. The
+  workflow decodes the blob and runs `assembleRelease` with
+  `RELEASE_KEYSTORE_PATH=app/release.keystore` (+ the other env vars). The build resolves that path against the repo root
   first (a bare `file()` in the app module would look for
   `app/app/release.keystore`); with no env, it falls back to a
   `release.keystore` next to `build.gradle` for local builds.
