@@ -33,6 +33,13 @@
     <!-- v2.24.1: filled tab colors — fixed in both modes so the
          segmented control reads the same in light and dark. -->
     <color name="btn_fill_night">#27313A</color>
+    <!-- v1.2.5: default definition for the night-only stroke color —
+         lintVitalRelease (release builds only) requires every color
+         referenced from values-night to exist in the default folder
+         too; same value as the night definition, same pattern as
+         btn_fill_night above. Day themes never read it (they use
+         md_outline / #33FFFFFF for plBtnStroke). -->
+    <color name="btn_stroke_night">#338A68</color>
     <color name="tab_text_dark">#101415</color>
     <color name="tab_text_light">#EAF4EE</color>
     <color name="nav_active">#10B981</color>
