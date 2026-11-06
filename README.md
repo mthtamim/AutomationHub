@@ -1492,6 +1492,14 @@ visible stack trace. This version adds `CrashHandler.kt`: a default
 uncaught-exception handler installed first in `LocalizedActivity.onCreate`
 that writes the full stack trace to `Downloads/AutomationHub-crash.txt`
 before the process dies. No UI or behaviour change otherwise.
+The catcher's first report (2026-11-07 03:08, from the 1.4.0 build)
+named the real cause: `nav_m3_bar.xml` used the abstract
+`NavigationBarView` as an XML tag, which has no
+`(Context, AttributeSet)` constructor, so inflation threw
+`NoSuchMethodException` before any Kotlin code ran. Fixed by using
+the concrete `BottomNavigationView` instead; the Kotlin
+`findViewById<NavigationBarView>` lookups are unchanged and correct,
+since `BottomNavigationView` is its subclass.
 
 ## v1.4.0 — preview deltas: palettes, nav bar + FAB, SearchBar, Templates + Log screens, Snackbars (not pushed yet)
 
