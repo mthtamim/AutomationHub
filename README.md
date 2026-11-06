@@ -1484,6 +1484,24 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.2 — pill bar back, Settings crash fixed, FocusLock card to Settings
+
+Why: Tamim's verdict on 1.4.1 (2026-11-07 03:20) — "Almost okay",
+plus three orders. (1) Settings crash: tapping Settings threw
+`StackOverflowError` — `selectNavTab`'s programmatic
+`setSelectedItemId` re-fired the `OnItemSelectedListener`, whose
+stale captured `selectedId` called `showPage` again, forever.
+Fixed by construction: the M3 NavigationBar is gone, the Essentials
+pill bar (v1.2.0) is back, selection is painted manually in
+`NavBarHelper` and no `setSelectedItemId` exists anywhere now.
+(2) FocusLock token card moved from the DIY Rules list into the
+Smart settings panel (after Focus Guard), same ids/strings, bound
+in `MainActivity.bindPanelSmart` + refreshed in `refreshStatus`.
+(3) Nav bar is the old Essentials pill bar again on all three
+destinations (Main, Automation, Templates): Home / DIY / Settings
++ the + button (Main/Templates: the "new" sheet; Automation: the
+editor for the current tab). `CrashHandler` stays in.
+
 ## v1.4.1 — crash catcher (diagnostic for the launch crash)
 
 Why: v1.4.0 (run #37) still crashes on launch on Tamim's phone — the

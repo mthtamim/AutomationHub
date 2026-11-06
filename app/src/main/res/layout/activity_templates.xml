@@ -126,7 +126,7 @@
 
     <include
         android:id="@+id/bottomNav"
-        layout="@layout/nav_m3_bar"
+        layout="@layout/nav_pill_bar"
         android:layout_width="match_parent"
-        android:layout_height="156dp" />
+        android:layout_height="wrap_content" />
 </LinearLayout>

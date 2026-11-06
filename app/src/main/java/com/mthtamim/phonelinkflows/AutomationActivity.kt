@@ -383,18 +383,6 @@ class AutomationActivity : LocalizedActivity() {
             detail.visibility = if (open) View.VISIBLE else View.GONE
             findViewById<TextView>(R.id.tvStatusChev).text = if (open) "⌃" else "⌄"
         }
-        findViewById<Button>(R.id.btnFlToken).setOnClickListener {
-            showFocusLockTokenDialog()
-        }
-        findViewById<Button>(R.id.btnFlOpen).setOnClickListener {
-            val launch = packageManager.getLaunchIntentForPackage(
-                Automation.FOCUSLOCK_PKG)
-            if (launch != null) startActivity(launch)
-            else com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
-                getString(R.string.fl_not_installed_toast),
-                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
-        }
-        renderFocusLock()
         val btnRest = findViewById<Button>(R.id.btnRestTime)
         btnRest.text = Automation.restSeconds(this).toString() + "s"
         btnRest.setOnClickListener {
@@ -422,60 +410,15 @@ class AutomationActivity : LocalizedActivity() {
 
     override fun onResume() {
         super.onResume()
-        // v1.2.0: re-paint the pill bar selection (the old
-        // applyGlassNavTint call is gone with the BottomNavigationView).
+        // v1.4.2: re-paint the pill bar selection.
         selectNavTab(R.id.navAutomation)
         renderHealth()
-        renderFocusLock()
         if (flowTab) renderFlows() else render()
     }
 
-    /** v2.20: FocusLock card status — install state from the
-     *  PackageManager, token state from Config. The token itself
-     *  is NEVER shown; the status only carries the •••• marker. */
     // v1.2.0: dp helper for the DIY card builders (the rest of
     // this file uses raw pixels; the new card code uses dp).
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-    private fun renderFocusLock() {
-        val installed = Automation.focusLockInstalled(this)
-        val hasToken = Config.focusLockToken(this).isNotEmpty()
-        findViewById<TextView>(R.id.tvFlStatus).text =
-            getString(if (installed) R.string.fl_status_connected
-                else R.string.fl_status_missing) + " • " +
-            getString(if (hasToken) R.string.fl_status_token_set
-                else R.string.fl_status_token_unset)
-        findViewById<Button>(R.id.btnFlToken).text =
-            getString(if (hasToken) R.string.fl_btn_token_change
-                else R.string.fl_btn_token_set)
-    }
-
-    /** v2.20: one-time token save. The field always starts EMPTY
-     *  (the saved token is never displayed anywhere); saving an
-     *  empty field clears the token. */
-    private fun showFocusLockTokenDialog() {
-        val input = EditText(this).apply {
-            hint = getString(R.string.fl_token_hint)
-            setSingleLine()
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.fl_token_dialog_title))
-            .setMessage(getString(R.string.fl_token_dialog_msg))
-            .setView(input)
-            .setPositiveButton(getString(R.string.btn_save)) { _, _ ->
-                val v = input.text.toString().trim()
-                Config.setFocusLockToken(this, v)
-                com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
-                    getString(if (v.isEmpty()) R.string.fl_token_cleared
-                        else R.string.fl_token_saved),
-                    com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
-                renderFocusLock()
-            }
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .show()
-    }
 
     /** v2.14.1: trigger health — several trigger families silently do
      *  nothing while a system access is off. Show each one's live
@@ -627,15 +570,11 @@ class AutomationActivity : LocalizedActivity() {
      *  the flow FAB, and renders flow cards into the same
      *  container. Token setup stays where it was — the FocusLock
      *  card on the Rules tab and relay settings — never in Flow. */
-    /** v1.2.0: wire the Essentials pill bottom bar — same bar as
-     *  MainActivity. Home/Settings hand over to MainActivity with
-     *  a tab extra and finish; DIY is this screen; the bar's +
-     *  button adds a rule (Rules tab) or a flow (Flows tab),
-     *  replacing the two old FABs. */
-    /** v1.4.0: the M3 NavigationBar + FAB (NavBarHelper). The
-     *  FAB opens the "new" bottom sheet now (new rule / new flow /
-     *  from template) instead of opening the editor for the
-     *  current tab directly. */
+    /** v1.4.2: the Essentials pill bottom bar is back (v1.2.0) —
+     *  same bar as MainActivity. Home/Settings hand over to
+     *  MainActivity with a tab extra and finish; DIY is this
+     *  screen; the bar's + button adds a rule (Rules tab) or a
+     *  flow (Flows tab) directly, as before v1.4.0. */
     private fun setupNavBar() {
         val goMain = { tab: String ->
             startActivity(Intent(this, MainActivity::class.java)
@@ -644,16 +583,25 @@ class AutomationActivity : LocalizedActivity() {
                     Intent.FLAG_ACTIVITY_SINGLE_TOP))
             finish()
         }
-        NavBarHelper.setupBar(this, R.id.autoBottomNav, R.id.nav_diy) { id ->
-            when (id) {
-                R.id.nav_home -> goMain("home")
-                R.id.nav_diy -> selectNavTab(R.id.navAutomation)
-                R.id.nav_templates -> startActivity(
-                    Intent(this, TemplatesActivity::class.java))
-                R.id.nav_settings -> goMain("settings")
-            }
-        }
-        NavBarHelper.setupFab(this)
+        NavBarHelper.setupPillBar(this, R.id.autoBottomNav, R.id.navAutomation,
+            onSelect = { id ->
+                when (id) {
+                    R.id.navHome -> goMain("home")
+                    R.id.navAutomation -> selectNavTab(R.id.navAutomation)
+                    R.id.navSettings -> goMain("settings")
+                }
+            },
+            onAdd = { anchor ->
+                if (flowTab) {
+                    PLMotion.openWithTransform(this,
+                        Intent(this, FlowEditorActivity::class.java),
+                        anchor, "nav_add_flow", ThemeColors.primary(this))
+                } else {
+                    PLMotion.openWithTransform(this,
+                        Intent(this, RuleEditorActivity::class.java),
+                        anchor, "nav_add_rule", ThemeColors.primary(this))
+                }
+            })
         selectNavTab(R.id.navAutomation)
     }
 
@@ -676,17 +624,12 @@ class AutomationActivity : LocalizedActivity() {
             sharedView, "flow_card_" + flow.optString("id"))
     }
 
-    /** v1.4.0: the NavigationBarView paints itself (M3
-     *  secondaryContainer indicator); this only sets which item
-     *  is selected. DIY is the selected tab on this screen. */
+    /** v1.4.2: paint the pill bar — NavBarHelper paints the
+     *  selection manually (no setSelectedItemId anywhere, so the
+     *  v1.4.1 StackOverflowError cannot recur). DIY is the
+     *  selected tab on this screen. */
     private fun selectNavTab(id: Int) {
-        val menuId = when (id) {
-            R.id.navAutomation -> R.id.nav_diy
-            R.id.navSettings -> R.id.nav_settings
-            else -> R.id.nav_home
-        }
-        findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.navBar)
-            ?.let { if (it.selectedItemId != menuId) it.selectedItemId = menuId }
+        NavBarHelper.paintPillBar(this, R.id.autoBottomNav, id)
     }
 
     // ---- Essentials DIY routine card (v1.2.0) ----
@@ -938,8 +881,6 @@ class AutomationActivity : LocalizedActivity() {
         findViewById<MaterialButtonToggleGroup>(R.id.tabGroup)
             .check(if (flows) R.id.tabFlows else R.id.tabRules)
         findViewById<View>(R.id.statusCard).visibility =
-            if (flows) View.GONE else View.VISIBLE
-        findViewById<View>(R.id.flCard).visibility =
             if (flows) View.GONE else View.VISIBLE
         // Premium feel (v1.2.1): each tab keeps its own adapter
         // (and its own list), so switching tabs never rebuilds

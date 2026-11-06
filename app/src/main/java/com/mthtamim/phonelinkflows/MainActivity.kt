@@ -870,6 +870,21 @@ class MainActivity : LocalizedActivity() {
                 }
                 .show()
         }
+        // ----- FocusLock card (moved from the DIY Rules list,
+        // v1.4.2): one-time token save + install/token status +
+        // open-FocusLock. Same ids and strings as before. -----
+        findViewById<Button>(R.id.btnFlToken).setOnClickListener {
+            showFocusLockTokenDialog()
+        }
+        findViewById<Button>(R.id.btnFlOpen).setOnClickListener {
+            val launch = packageManager.getLaunchIntentForPackage(
+                Automation.FOCUSLOCK_PKG)
+            if (launch != null) startActivity(launch)
+            else com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
+                getString(R.string.fl_not_installed_toast),
+                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
+        }
+        renderFocusLock()
         refreshFocusGuard()
     }
 
@@ -1017,49 +1032,33 @@ class MainActivity : LocalizedActivity() {
 
     }
 
-    /** v1.4.0: wire the M3 NavigationBar + FAB (NavBarHelper).
-     *  Home and Settings switch the dashboard page; DIY and
-     *  Templates open their activities and the bar selection
-     *  stays on the current tab (re-asserted right after the
-     *  launch, so the user never sees it move). The FAB opens
-     *  the "new" bottom sheet. */
+    /** v1.4.2: wire the Essentials pill bottom bar (NavBarHelper).
+     *  Home and Settings switch the dashboard page; DIY opens the
+     *  Automation activity and the pill selection stays on the
+     *  current tab. The + button opens the "new" sheet. */
     private fun setupNavBar() {
-        // The current tab's menu id, read live — the selection is
-        // re-asserted after a DIY/Templates launch, and it must be
-        // the tab the user is actually on (Settings included).
-        val currentMenuId: () -> Int = {
-            if (navSelectedId == R.id.navSettings) R.id.nav_settings
-            else R.id.nav_home
-        }
-        NavBarHelper.setupBar(this, R.id.bottomNav, currentMenuId()) { id ->
-            when (id) {
-                R.id.nav_home -> showPage(R.id.navHome)
-                R.id.nav_diy -> {
-                    startActivity(Intent(this, AutomationActivity::class.java))
-                    findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.navBar)
-                        ?.let { it.selectedItemId = currentMenuId() }
+        NavBarHelper.setupPillBar(this, R.id.bottomNav,
+            if (navSelectedId == R.id.navSettings) R.id.navSettings
+            else R.id.navHome,
+            onSelect = { id ->
+                when (id) {
+                    R.id.navHome -> showPage(R.id.navHome)
+                    R.id.navAutomation ->
+                        startActivity(Intent(this, AutomationActivity::class.java))
+                    R.id.navSettings -> showPage(R.id.navSettings)
                 }
-                R.id.nav_templates -> {
-                    startActivity(Intent(this, TemplatesActivity::class.java))
-                    findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.navBar)
-                        ?.let { it.selectedItemId = currentMenuId() }
-                }
-                R.id.nav_settings -> showPage(R.id.navSettings)
-            }
-        }
-        NavBarHelper.setupFab(this)
+            },
+            onAdd = { anchor -> NavBarHelper.showNewSheet(this, anchor) })
     }
 
-    /** v1.4.0: paint the nav bar — the NavigationBarView paints
-     *  itself (M3 secondaryContainer indicator); this only sets
-     *  which item is selected. Kept the selectNavTab name so the
-     *  showPage / onResume call sites do not change. */
+    /** v1.4.2: paint the pill bar — NavBarHelper paints the
+     *  selection manually (no setSelectedItemId anywhere, so the
+     *  v1.4.1 StackOverflowError cannot recur). Kept the
+     *  selectNavTab name so the showPage / onResume call sites
+     *  do not change. */
     private fun selectNavTab(id: Int) {
         navSelectedId = id
-        val menuId = if (id == R.id.navSettings) R.id.nav_settings
-            else R.id.nav_home
-        findViewById<com.google.android.material.navigation.NavigationBarView>(R.id.navBar)
-            ?.let { if (it.selectedItemId != menuId) it.selectedItemId = menuId }
+        NavBarHelper.paintPillBar(this, R.id.bottomNav, id)
     }
 
     // v1.2.4: THE tab switcher — the only function that changes
@@ -1236,6 +1235,7 @@ class MainActivity : LocalizedActivity() {
                 getString(R.string.geo_set, Config.geoLat(this), Config.geoLng(this), Config.geoRadius(this))
             } else getString(R.string.geo_not_set))
             refreshFocusGuard()
+            renderFocusLock()
         }
         if (isPanelReady(R.id.panelData)) {
             setTextIfChanged(tvStats, buildStatsText(rules, flows, logs))
@@ -1285,6 +1285,51 @@ class MainActivity : LocalizedActivity() {
         })
         setTextIfChanged(btnFocusStart, getString(R.string.focus_time_start, fmt(fs)))
         setTextIfChanged(btnFocusEnd, getString(R.string.focus_time_end, fmt(fe)))
+    }
+
+    /** v1.4.2: FocusLock card — moved from the DIY Rules list into
+     *  the Smart panel (Tamim, 2026-11-07). Install state from the
+     *  PackageManager, token state from Config. The token itself
+     *  is NEVER shown; the status only carries the •••• marker. */
+    private fun renderFocusLock() {
+        if (!isPanelReady(R.id.panelSmart)) return
+        val installed = Automation.focusLockInstalled(this)
+        val hasToken = Config.focusLockToken(this).isNotEmpty()
+        setTextIfChanged(findViewById<TextView>(R.id.tvFlStatus),
+            getString(if (installed) R.string.fl_status_connected
+                else R.string.fl_status_missing) + " • " +
+            getString(if (hasToken) R.string.fl_status_token_set
+                else R.string.fl_status_token_unset))
+        findViewById<Button>(R.id.btnFlToken).text =
+            getString(if (hasToken) R.string.fl_btn_token_change
+                else R.string.fl_btn_token_set)
+    }
+
+    /** v1.4.2: one-time token save (moved with the card). The field
+     *  always starts EMPTY (the saved token is never displayed
+     *  anywhere); saving an empty field clears the token. */
+    private fun showFocusLockTokenDialog() {
+        val input = EditText(this).apply {
+            hint = getString(R.string.fl_token_hint)
+            setSingleLine()
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.fl_token_dialog_title))
+            .setMessage(getString(R.string.fl_token_dialog_msg))
+            .setView(input)
+            .setPositiveButton(getString(R.string.btn_save)) { _, _ ->
+                val v = input.text.toString().trim()
+                Config.setFocusLockToken(this, v)
+                com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content),
+                    getString(if (v.isEmpty()) R.string.fl_token_cleared
+                        else R.string.fl_token_saved),
+                    com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
+                renderFocusLock()
+            }
+            .setNegativeButton(getString(R.string.btn_cancel), null)
+            .show()
     }
 
     /** Focus Guard card: start/end time picker (24-hour). Saving the

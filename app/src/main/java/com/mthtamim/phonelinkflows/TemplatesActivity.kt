@@ -141,31 +141,33 @@ class TemplatesActivity : LocalizedActivity() {
                 findViewById<EditText>(R.id.etTemplatesSearch).setText(q)
         }
 
-        // v1.4.0: M3 nav bar + FAB (this is a main destination now).
-        // Back chip above still serves the ⋮-menu entry path.
-        NavBarHelper.setupBar(this, R.id.bottomNav, R.id.nav_templates) { id ->
-            when (id) {
-                R.id.nav_home -> {
-                    startActivity(Intent(this, MainActivity::class.java)
-                        .putExtra("tab", "home")
-                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP))
-                    finish()
+        // v1.4.2: Essentials pill bar (DIY selected — Templates is
+        // an automation destination). Back chip above still serves
+        // the ⋮-menu entry path.
+        NavBarHelper.setupPillBar(this, R.id.bottomNav, R.id.navAutomation,
+            onSelect = { id ->
+                when (id) {
+                    R.id.navHome -> {
+                        startActivity(Intent(this, MainActivity::class.java)
+                            .putExtra("tab", "home")
+                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                        finish()
+                    }
+                    R.id.navAutomation -> {
+                        startActivity(Intent(this, AutomationActivity::class.java))
+                        finish()
+                    }
+                    R.id.navSettings -> {
+                        startActivity(Intent(this, MainActivity::class.java)
+                            .putExtra("tab", "settings")
+                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                        finish()
+                    }
                 }
-                R.id.nav_diy -> {
-                    startActivity(Intent(this, AutomationActivity::class.java))
-                    finish()
-                }
-                R.id.nav_settings -> {
-                    startActivity(Intent(this, MainActivity::class.java)
-                        .putExtra("tab", "settings")
-                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP))
-                    finish()
-                }
-            }
-        }
-        NavBarHelper.setupFab(this)
+            },
+            onAdd = { anchor -> NavBarHelper.showNewSheet(this, anchor) })
     }
 
     private fun summaryFor(t: Templates.Template): String {

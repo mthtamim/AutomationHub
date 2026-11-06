@@ -221,83 +221,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- v2.20: FocusLock connection card — fixed above the list
-             now, not scrolling with it: the list is a RecyclerView
-             and headers stay outside it. Same ids and wiring in
-             AutomationActivity. One-time token save + install/token
-             status + open-FocusLock. -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/flCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/fl_card_title"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvFlStatus"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="10dp"
-                                android:layout_weight="1"
-                                android:gravity="end"
-                                android:textColor="?attr/colorPrimary"
-                                android:textSize="13.5sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <TextView
-                            style="@style/PL.BodySmall"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@string/fl_card_sub" />
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
-                            android:orientation="horizontal">
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnFlToken"
-                                style="@style/PL.BtnChip"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginEnd="3dp"
-                                android:layout_weight="1"
-                                android:maxLines="1"
-                                android:text="@string/fl_btn_token_set" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnFlOpen"
-                                style="@style/PL.BtnChip"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="3dp"
-                                android:layout_weight="1"
-                                android:maxLines="1"
-                                android:text="@string/fl_btn_open" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
 
         <!-- Premium feel (v1.2.1): the rule/flow cards are a
              RecyclerView now — only visible rows are bound and
@@ -314,11 +237,11 @@
             android:scrollbars="vertical" />
     </LinearLayout>
 
-    <!-- v1.4.0: M3 NavigationBar + FAB (see NavBarHelper). The
-         FAB opens the "new" sheet; the old pill bar is gone. -->
+    <!-- v1.4.2: Essentials pill bottom bar is back (see NavBarHelper).
+         The + button adds a rule (Rules tab) or a flow (Flows tab). -->
     <include
         android:id="@+id/autoBottomNav"
-        layout="@layout/nav_m3_bar"
+        layout="@layout/nav_pill_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 </LinearLayout>
