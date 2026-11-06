@@ -47,7 +47,7 @@ jobs:
           retention-days: 90
 
       - name: Decode release keystore
-        run: echo "${{ secrets.RELEASE_KEYSTORE_B64 }}" | tr -d '[:space:]' | base64 -d > release.keystore
+        run: base64 -d app/release.keystore.enc.b64 | openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"${{ secrets.RELEASE_KEYSTORE_PASSPHRASE }}" > release.keystore
       - name: Build release APK
         env:
           RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
