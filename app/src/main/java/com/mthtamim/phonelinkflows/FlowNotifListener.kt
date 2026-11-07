@@ -245,6 +245,7 @@ class FlowNotifListener : NotificationListenerService() {
             for ((_, sbn) in active) {
                 // v1.4.8: shared match — package, app name, title, body.
                 if (!notifMatches(sbn, match)) continue
+                val n = sbn.notification ?: continue
                 val actions = n.actions ?: continue
                 for (action in actions) {
                     val inputs = action.remoteInputs ?: continue
