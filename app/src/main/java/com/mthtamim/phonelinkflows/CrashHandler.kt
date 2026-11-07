@@ -48,7 +48,7 @@ object CrashHandler {
         val text = buildString {
             append("AutomationHub crash report\n")
             append("time: ").append(stamp).append('\n')
-            append("app: 1.4.8 (vc19)\n")
+            append("app: 1.4.9 (vc20)\n")
             append("android: ").append(Build.VERSION.RELEASE)
                 .append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n")
             append("device: ").append(Build.MANUFACTURER).append(' ')

@@ -3557,19 +3557,50 @@ object Automation {
         }.start()
     }
 
-    /** Fires wifi_connected / wifi_disconnected when the SSID changes. */
+    /** v1.4.9: the live Wi-Fi callback records the state pollWifi
+     *  reads, so the 60 s poll doesn't re-fire a transition the
+     *  callback already delivered. */
+    fun noteWifiLive(ctx: Context, connected: Boolean, ssid: String) {
+        try {
+            prefs(ctx).edit().putBoolean("last_wifi_conn", connected)
+                .putString("last_ssid", ssid).apply()
+        } catch (_: Exception) { }
+    }
+
+    private fun isWifiTransport(ctx: Context): Boolean {
+        return try {
+            val cm = ctx.applicationContext
+                .getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+            caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+        } catch (_: Exception) { false }
+    }
+
+    /** Fires wifi_connected / wifi_disconnected on Wi-Fi transport
+     *  change, and on SSID change while staying connected (network
+     *  switch). v1.4.9: was SSID-only, so with Location off the
+     *  SSID is always "" and the poll never fired anything — the
+     *  live callback was the only path, and the poll couldn't
+     *  back it up. Transport needs no SSID, so blank-param rules
+     *  now fire even with Location off. */
     fun pollWifi(ctx: Context) {
         try {
             val ssid = currentSsid(ctx)
-            val prev = prefs(ctx).getString("last_ssid", "") ?: ""
-            if (ssid != prev) {
-                prefs(ctx).edit().putString("last_ssid", ssid).apply()
-                if (prev.isNotEmpty() && ssid.isEmpty()) {
-                    onEvent(ctx, "wifi_disconnected", JSONObject())
-                } else if (ssid.isNotEmpty()) {
+            val conn = isWifiTransport(ctx)
+            val prevConn = prefs(ctx).getBoolean("last_wifi_conn", false)
+            val prevSsid = prefs(ctx).getString("last_ssid", "") ?: ""
+            prefs(ctx).edit().putBoolean("last_wifi_conn", conn)
+                .putString("last_ssid", ssid).apply()
+            if (conn != prevConn) {
+                if (conn) {
                     onEvent(ctx, "wifi_connected",
                         JSONObject().put("ssid", ssid).put("title", ssid))
+                } else {
+                    onEvent(ctx, "wifi_disconnected", JSONObject())
                 }
+            } else if (conn && ssid.isNotEmpty() && ssid != prevSsid) {
+                onEvent(ctx, "wifi_connected",
+                    JSONObject().put("ssid", ssid).put("title", ssid))
             }
         } catch (e: Exception) { }
     }

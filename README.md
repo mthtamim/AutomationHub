@@ -1484,6 +1484,32 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.9 — Wi-Fi on/off triggers fixed (transport-based detection)
+
+Why: Tamim 2026-11-07 — "আগে ওয়াইফাই অন অফ এর ট্রিগার গুলো কাজ
+করতো, এখন মোবাইল ডেটা সাথে এটাও কাজ করতেছে না।" Wi-Fi detection
+was SSID-only in both fallback paths, and on this phone the SSID
+is "" whenever Location is off (Android 10+ masks it) — so those
+paths never fired anything.
+- Rules 60 s poll (pollWifi): was SSID-change only. Now it watches
+  the Wi-Fi TRANSPORT (activeNetwork has TRANSPORT_WIFI) — fires
+  wifi_connected / wifi_disconnected on transport change, plus on
+  SSID change while staying connected (network switch). Blank-param
+  rules now fire even with Location off.
+- Live callback records its state (Automation.noteWifiLive) so the
+  poll doesn't re-fire a transition the callback already delivered.
+- FlowWifiReceiver (flows): was SSID-only too — it fired
+  wifi_disconnected on EVERY connectivity broadcast with Location
+  off, even while Wi-Fi was connected, and never wifi_connected.
+  Now transport-based, and it fires only on a real change.
+- Honest limit: a rule whose word field names a SPECIFIC Wi-Fi
+  network still needs Location on — Android hides the SSID
+  otherwise, so no code can match it. Blank word field = any
+  network, works with Location off.
+- Mobile data: the v1.4.8 fix (TelephonyManager.isDataEnabled)
+  stands; detection is via the 60 s tick, so a toggle can take up
+  to a minute to register.
+
 ## v1.4.8 — snooze match fix, mobile-data detection, Flow Editor pan
 
 Why: Tamim 2026-11-07 — three reports from phone testing v1.4.7.

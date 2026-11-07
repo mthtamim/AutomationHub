@@ -116,6 +116,9 @@ class FlowService : Service() {
                 // here used to make wifi_connected never fire at
                 // all with Location off.
                 val ssid = currentWifiSsid(this@FlowService)
+                // v1.4.9: record the state so the 60 s poll doesn't
+                // re-fire this same transition.
+                Automation.noteWifiLive(this@FlowService, true, ssid)
                 FlowEngine.onEvent(this@FlowService, "wifi_connected",
                     JSONObject().put("ssid", ssid).put("title", ssid))
                 Automation.onEvent(this@FlowService, "wifi_connected",
@@ -126,6 +129,9 @@ class FlowService : Service() {
 
         override fun onLost(network: Network) {
             try {
+                // v1.4.9: record the state so the 60 s poll doesn't
+                // re-fire this same transition.
+                Automation.noteWifiLive(this@FlowService, false, "")
                 FlowEngine.onEvent(this@FlowService, "wifi_disconnected", JSONObject())
                 Automation.onEvent(this@FlowService, "wifi_disconnected", JSONObject())
             } catch (_: Exception) {
