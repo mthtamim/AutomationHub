@@ -1484,6 +1484,25 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.5 — music triggers, event-driven
+
+Why: Tamim 2026-11-07 — music_started/stopped "ঠিকভাবে কাজ করে
+না". They came only from the 60 s tick (`AudioManager.
+isMusicActive`): detection was up to a minute late, and a short
+play between two ticks was invisible to both engines.
+Fix: `FlowTriggers.mediaPlayback` — a `MediaSessionManager.
+OnActiveSessionsChangedListener` (registered for the
+`FlowNotifListener` component, which is an enabled notification
+listener) + a `MediaController.Callback` per active session, so a
+play/pause reaches both engines the moment it happens. The event
+path syncs the 60 s poll/tick edge states first (`Automation.
+setMusicPollState` for rules; the per-node `music_` state keys
+for flows), so a start/stop never fires twice. The 60 s poll
+stays as a fallback — if notification access is off, listener
+registration throws and is logged once. Baseline: music already
+playing at service start sets the starting state without firing
+(edge semantics, like the tick).
+
 ## v1.4.4 — wait in seconds
 
 Why: Tamim wants wait in seconds. Two gaps found: (1) the flow

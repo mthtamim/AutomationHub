@@ -3810,6 +3810,13 @@ object Automation {
     fun musicActive(ctx: Context): Boolean =
         (ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).isMusicActive
 
+    /** v1.4.5: the MediaSession event path keeps the 60 s poll's
+     *  edge state in sync, so a music start/stop doesn't fire
+     *  twice — once from the event, once from the next tick. */
+    fun setMusicPollState(ctx: Context, playing: Boolean) {
+        try { prefs(ctx).edit().putBoolean("poll_music", playing).apply() } catch (_: Exception) { }
+    }
+
     fun isVpnOn(ctx: Context): Boolean {
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE)
             as android.net.ConnectivityManager

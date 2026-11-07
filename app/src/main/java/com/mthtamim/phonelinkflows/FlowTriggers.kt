@@ -92,6 +92,10 @@ object FlowTriggers {
             registerAccountSync(ctx)
         } catch (_: Exception) {
         }
+        try {
+            mediaPlayback.start(ctx)
+        } catch (_: Exception) {
+        }
         maybeArm(ctx)
     }
 
@@ -130,6 +134,10 @@ object FlowTriggers {
         }
         try {
             unregisterAccountSync(ctx)
+        } catch (_: Exception) {
+        }
+        try {
+            mediaPlayback.stop()
         } catch (_: Exception) {
         }
         stopArmed(ctx)
@@ -1275,6 +1283,121 @@ object FlowTriggers {
         } catch (_: Exception) {
         }
         syncHandle = null
+    }
+
+    // ---------------- v1.4.5: music playback, event-driven ----------------
+    // music_started/stopped used to come only from the 60 s tick
+    // (AudioManager.isMusicActive), so a short play between two
+    // ticks was invisible and every detection was up to a minute
+    // late. MediaSessionManager reports the moment any app's
+    // playback state changes — but only to an enabled
+    // notification-listener component, which FlowNotifListener
+    // is. The 60 s poll stays as a fallback when notification
+    // access is off (registration then throws and is logged).
+    private object mediaPlayback {
+        @Volatile private var musicPlaying = false
+        private var manager: android.media.session.MediaSessionManager? = null
+        private var listener: android.media.session.MediaSessionManager.OnActiveSessionsChangedListener? = null
+        private val tracked = mutableListOf<Pair<android.media.session.MediaController, android.media.session.MediaController.Callback>>()
+
+        fun start(ctx: Context) {
+            val app = ctx.applicationContext
+            try {
+                val msm = app.getSystemService(Context.MEDIA_SESSION_SERVICE)
+                    as android.media.session.MediaSessionManager
+                val component = android.content.ComponentName(app, FlowNotifListener::class.java)
+                val l = android.media.session.MediaSessionManager.OnActiveSessionsChangedListener { sessions ->
+                    try { onSessionsChanged(app, sessions) } catch (_: Exception) { }
+                }
+                msm.addOnActiveSessionsChangedListener(
+                    l, component, android.os.Handler(android.os.Looper.getMainLooper()))
+                manager = msm
+                listener = l
+                // Baseline without firing: whatever is already
+                // playing just sets the starting state (edge
+                // semantics — a rule added mid-song fires on the
+                // next full stop/start cycle, like the tick did).
+                try {
+                    val initial = msm.getActiveSessions(component) ?: emptyList()
+                    musicPlaying = initial.any { c ->
+                        try { c.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING } catch (_: Exception) { false }
+                    }
+                    onSessionsChanged(app, initial)
+                } catch (_: Exception) { }
+            } catch (e: Exception) {
+                try { FlowStore.log(ctx, "music sessions unavailable: " + (e.message ?: "?")) } catch (_: Exception) { }
+            }
+        }
+
+        fun stop() {
+            try {
+                val msm = manager
+                val l = listener
+                if (msm != null && l != null) {
+                    msm.removeOnActiveSessionsChangedListener(l)
+                }
+            } catch (_: Exception) { }
+            for ((c, cb) in tracked) {
+                try { c.unregisterCallback(cb) } catch (_: Exception) { }
+            }
+            tracked.clear()
+            manager = null
+            listener = null
+            musicPlaying = false
+        }
+
+        private fun onSessionsChanged(ctx: Context, sessions: List<android.media.session.MediaController>?) {
+            val list = sessions ?: emptyList()
+            for ((c, cb) in tracked) {
+                try { c.unregisterCallback(cb) } catch (_: Exception) { }
+            }
+            tracked.clear()
+            for (c in list) {
+                val cb = object : android.media.session.MediaController.Callback() {
+                    override fun onPlaybackStateChanged(state: android.media.session.PlaybackState?) {
+                        try { evaluate(ctx) } catch (_: Exception) { }
+                    }
+                }
+                try {
+                    c.registerCallback(cb, android.os.Handler(android.os.Looper.getMainLooper()))
+                } catch (_: Exception) { continue }
+                tracked.add(c to cb)
+            }
+            evaluate(ctx)
+        }
+
+        private fun evaluate(ctx: Context) {
+            val playing = tracked.any { (c, _) ->
+                try { c.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING } catch (_: Exception) { false }
+            }
+            onState(ctx, playing)
+        }
+
+        private fun onState(ctx: Context, playing: Boolean) {
+            // Sync the 60 s poll/tick edge states FIRST, so the
+            // tick doesn't re-fire what the event just fired.
+            try { Automation.setMusicPollState(ctx, playing) } catch (_: Exception) { }
+            try {
+                val cur = if (playing) "on" else "off"
+                for (flow in FlowStore.flows(ctx)) {
+                    if (!flow.optBoolean("enabled", true)) continue
+                    val nodes = flow.optJSONArray("nodes") ?: continue
+                    for (k in 0 until nodes.length()) {
+                        val n = nodes.optJSONObject(k) ?: continue
+                        if (n.optString("kind") != "t") continue
+                        val t = n.optString("type")
+                        if (t != "music_started" && t != "music_stopped") continue
+                        val ns = "flow_" + flow.optString("id") + "_" + n.optString("id")
+                        FlowStore.setStateStr(ctx, "music_" + ns, cur)
+                    }
+                }
+            } catch (_: Exception) { }
+            if (playing == musicPlaying) return
+            musicPlaying = playing
+            val ev = if (playing) "music_started" else "music_stopped"
+            try { Automation.onEvent(ctx, ev, JSONObject()) } catch (_: Exception) { }
+            try { FlowEngine.onEvent(ctx, ev, JSONObject()) } catch (_: Exception) { }
+        }
     }
 
     // ---------------- armed: MediaSession ----------------
