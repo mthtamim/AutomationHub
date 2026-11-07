@@ -120,6 +120,7 @@ object AutoCatalog {
         "call_number", "ussd_run", "whatsapp_msg", "telegram_msg",
         "notif_reply", "rich_notify", "type_text", "font_scale",
         "night_light", "torch_level", "ftp_upload", "ftp_download",
+        "ftps_upload", "ftps_download", "sftp_upload", "sftp_download",
         "image_resize", "file_encrypt", "file_decrypt", "json_get",
         "http_to_var", "regex_op", "date_calc", "loop_start", "loop_end",
         "break", "else", "end_if", "shell_cmd", "screen_pin", "unpin",

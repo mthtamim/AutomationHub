@@ -31,3 +31,9 @@
     *** newProcess(...);
 }
 -keep class rikka.shizuku.ShizukuProvider
+
+# v1.4.12: JSch (SFTP) loads algorithm classes by name.
+-keep class com.github.mwiede.jsch.** {
+    *;
+}
+-dontwarn com.github.mwiede.jsch.**

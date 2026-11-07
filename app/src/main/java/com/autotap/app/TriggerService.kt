@@ -15,8 +15,9 @@ import android.os.IBinder
 
 /**
  * Hosts the v5 environment triggers (WiFi / battery / headset / screen-on)
- * for scripts that configured them. Started from MainActivity and at boot;
- * best-effort - Android may kill it, reopening the app restarts it.
+ * for scripts that configured them. Started from MainActivity and at
+ * boot (BootReceiver, v1.4.12); best-effort - Android may kill it,
+ * reopening the app restarts it.
  * Every trigger is debounced and never fires while a script is running.
  */
 class TriggerService : Service() {

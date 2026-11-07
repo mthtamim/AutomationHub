@@ -36,8 +36,49 @@ import org.json.JSONObject
  */
 class FlowService : Service() {
 
+    companion object {
+        // v1.4.12: the service notification gets its OWN channel at
+        // IMPORTANCE_MIN — no status-bar icon, no sound, collapsed
+        // at the bottom of the shade. It used to share the
+        // "phonelink_flows" user-notification channel at LOW, so
+        // the persistent "AutomationHub is running" row sat in the
+        // shade. A foreground service must still post a
+        // notification; fully invisible is impossible while it
+        // runs. User notifications (local_notify / restore) stay on
+        // "phonelink_flows" at DEFAULT.
+        const val SERVICE_CHANNEL_ID = "phonelink_service"
+    }
+
     private val handler = Handler(Looper.getMainLooper())
     private var running = false
+
+    // v1.4.12: Study Guard used to run only on the 60 s tick, so
+    // a blocked app could keep running for up to a minute past its
+    // limit. This loop re-checks Study Guard alone every 15 s (a
+    // cheap UsageStats read, on a background thread); the global
+    // 60 s tick is untouched. pollStudyGuard is idempotent — warn
+    // once per session, fire once per session/day — so the extra
+    // calls only improve timeliness, never double-fire.
+    private val sgRunnable = object : Runnable {
+        override fun run() {
+            try {
+                if (running && Config.automationOn(this@FlowService)) {
+                    Thread {
+                        try {
+                            val list = Automation.rules(this@FlowService)
+                                .filter { it.optBoolean("enabled", true) }
+                            Automation.pollStudyGuard(this@FlowService, list)
+                        } catch (_: Exception) {
+                        }
+                    }.start()
+                }
+            } catch (_: Exception) {
+            }
+            if (running) {
+                handler.postDelayed(this, 15_000L)
+            }
+        }
+    }
 
     private val tickRunnable = object : Runnable {
         override fun run() {
@@ -207,6 +248,7 @@ class FlowService : Service() {
         running = true
         FlowStore.setServiceLastTick(this, System.currentTimeMillis())
         handler.post(tickRunnable)
+        handler.post(sgRunnable)
         FlowStore.log(this, getString(R.string.flow_service_started))
     }
 
@@ -219,6 +261,7 @@ class FlowService : Service() {
     override fun onDestroy() {
         running = false
         handler.removeCallbacks(tickRunnable)
+        handler.removeCallbacks(sgRunnable)
         try {
             unregisterReceiver(screenReceiver)
         } catch (_: Exception) {
@@ -259,11 +302,11 @@ class FlowService : Service() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= 26) {
             val channel = NotificationChannel(
-                FlowEngine.NOTIF_CHANNEL_ID,
-                getString(R.string.notif_channel),
-                NotificationManager.IMPORTANCE_LOW
+                SERVICE_CHANNEL_ID,
+                getString(R.string.service_channel),
+                NotificationManager.IMPORTANCE_MIN
             )
-            channel.description = getString(R.string.notif_channel_desc)
+            channel.description = getString(R.string.service_channel_desc)
             nm.createNotificationChannel(channel)
         }
         val openIntent = Intent(this, AutomationActivity::class.java)
@@ -272,7 +315,7 @@ class FlowService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val builder = if (Build.VERSION.SDK_INT >= 26) {
-            Notification.Builder(this, FlowEngine.NOTIF_CHANNEL_ID)
+            Notification.Builder(this, SERVICE_CHANNEL_ID)
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)

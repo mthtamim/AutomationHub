@@ -2947,6 +2947,23 @@ object Automation {
                     if (!Ftp.transfer(ctx, param, false))
                         localNotify(ctx, "FTP ডাউনলোড ব্যর্থ হয়েছে।")
                 }.start()
+                // v1.4.12: explicit FTPS + SFTP (same param format).
+                "ftps_upload" -> Thread {
+                    if (!Ftp.transferSecure(ctx, param, true))
+                        localNotify(ctx, "FTPS আপলোড ব্যর্থ হয়েছে।")
+                }.start()
+                "ftps_download" -> Thread {
+                    if (!Ftp.transferSecure(ctx, param, false))
+                        localNotify(ctx, "FTPS ডাউনলোড ব্যর্থ হয়েছে।")
+                }.start()
+                "sftp_upload" -> Thread {
+                    if (!Sftp.transfer(ctx, param, true))
+                        localNotify(ctx, "SFTP আপলোড ব্যর্থ হয়েছে।")
+                }.start()
+                "sftp_download" -> Thread {
+                    if (!Sftp.transfer(ctx, param, false))
+                        localNotify(ctx, "SFTP ডাউনলোড ব্যর্থ হয়েছে।")
+                }.start()
                 "image_resize" -> Thread { imageResize(ctx, param) }.start()
                 "file_encrypt" -> fileCrypt(param, true)
                 "file_decrypt" -> fileCrypt(param, false)
@@ -5204,10 +5221,13 @@ object Automation {
     }
 
     /** Study Guard evaluation, hooked into tick() next to
-     *  pollAppUsage — the existing ~20-second cadence from
-     *  LinkService's poll loop (plus heartbeat ticks). No new
-     *  service, no new timer. Minute-level by design: battery
-     *  savers can delay a tick, and the manual says so. */
+     *  pollAppUsage — and, since v1.4.12, into FlowService's
+     *  dedicated 15-second Study Guard loop, so a blocked app is
+     *  caught within ~15 s of its limit instead of up to a minute
+     *  (the old comment claimed a ~20-second cadence from
+     *  LinkService's poll loop; LinkService is gone and the tick
+     *  is 60 s). Battery savers can still delay either loop, and
+     *  the manual says so. */
     fun pollStudyGuard(ctx: Context, list: List<JSONObject>) {
         try {
             val cont = mutableListOf<Pair<JSONObject, JSONObject>>()
@@ -5289,7 +5309,7 @@ object Automation {
     }
 
     /** v2.21: screen-rest evaluation, hooked into tick() next to
-     *  pollStudyGuard — the same ~20-second cadence, no new
+     *  pollStudyGuard — the same 60-second tick cadence, no new
      *  service, no new timer, no Usage Access. The session clock
      *  lives in the tick itself (Study Guard's continuous
      *  pattern): each tick, \"using\" means the screen is

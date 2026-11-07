@@ -9,9 +9,15 @@ import android.content.Context
  * Flow tile/widget ships in this merge) and lost_on + lost_off +
  * autotap_control actions (lost-tracking is not ported; the
  * AutoTap engine is not wired into Flow — it stays rule-side).
- * Result: 186 triggers / 43 conditions / 175 actions. Everything
- * else is Lab's catalog verbatim, so Lab flows import unchanged
- * except for the excluded types, which import reports as unmapped.
+ * Result: 186 triggers / 43 conditions / 170 actions (v1.4.12:
+ * the 10 control/toggle actions FlowEngine never implemented
+ * — if_var, if_else, loop_start, loop_end, break, else, end_if,
+ * gps_toggle, nfc_toggle, wait_until — were removed from this
+ * catalog; the Flow picker no longer offers actions that silently
+ * do nothing. Rules keep them. FTPS/SFTP actions were added.)
+ * Everything else is Lab's catalog verbatim, so Lab flows import
+ * unchanged except for the excluded types, which import reports
+ * as unmapped.
  */
 object FlowCatalog {
     val triggers = listOf(
@@ -96,8 +102,8 @@ object FlowCatalog {
         "snooze_notif", "restore_notif", "run_js",
         "send_sms", "torch", "torch_on",
         "torch_off", "torch_toggle", "ringer", "open_app",
-        "http", "write_file", "set_var", "if_var",
-        "if_else", "wait", "mode_set", "tap_text", "media_control", "volume_set",
+        "http", "write_file", "set_var",
+        "wait", "mode_set", "tap_text", "media_control", "volume_set",
         "brightness_set", "screen_timeout_set", "auto_rotate_set", "bt_toggle",
         "dnd_set", "vibrate", "play_sound", "record_audio",
         "take_photo", "open_url", "share_text", "kill_app",
@@ -111,10 +117,11 @@ object FlowCatalog {
         "keep_awake", "brightness_auto", "flash_pattern", "call_number",
         "ussd_run", "whatsapp_msg", "telegram_msg", "notif_reply",
         "rich_notify", "type_text", "font_scale", "night_light",
-        "torch_level", "ftp_upload", "ftp_download", "image_resize",
+        "torch_level", "ftp_upload", "ftp_download",
+        "ftps_upload", "ftps_download", "sftp_upload", "sftp_download",
+        "image_resize",
         "file_encrypt", "file_decrypt", "json_get", "http_to_var",
-        "regex_op", "date_calc", "loop_start", "loop_end",
-        "break", "else", "end_if", "shell_cmd",
+        "regex_op", "date_calc", "shell_cmd",
         "screen_pin", "unpin", "private_dns", "install_app",
         "uninstall_app", "aod_toggle", "sqlite_query", "reboot_device",
         "airplane_toggle", "mobile_data_toggle", "wifi_toggle", "shell_screenshot",
@@ -123,9 +130,9 @@ object FlowCatalog {
         "wm_density", "wm_size", "anim_scale", "stay_on",
         "set_time", "set_locale", "shell_tap", "shell_swipe",
         "shell_input", "shell_key", "shell_to_var", "hotspot_toggle",
-        "dark_theme", "battery_saver", "gps_toggle", "nfc_toggle",
+        "dark_theme", "battery_saver",
         "record_video", "qr_show", "read_file", "clipboard_set",
-        "delete_var", "calc_var", "wait_until", "mqtt_publish",
+        "delete_var", "calc_var", "mqtt_publish",
         "lock_app", "unlock_app", "focuslock_control",
         "redial_control",
         // v1.2.0 flow-control blocks (Flow category in the picker).

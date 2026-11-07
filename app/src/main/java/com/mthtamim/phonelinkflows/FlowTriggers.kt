@@ -182,7 +182,9 @@ object FlowTriggers {
     @Suppress("DEPRECATION")
     private fun syncFileObservers(ctx: Context) {
         val wanted = HashSet<String>()
-        for (trig in flowTriggerNodes(ctx)) {
+        // v1.4.12: enabled flows only — a disabled flow's file
+        // observer used to keep watching (same bug as #1).
+        for (trig in enabledFlowTriggerNodes(ctx)) {
             if (trig.optString("type") == "file_changed") {
                 val p = trig.optString("param").trim()
                 if (p.isNotEmpty()) {
@@ -261,6 +263,10 @@ object FlowTriggers {
             stopFileObservers()
         } catch (_: Exception) {
         }
+        try {
+            stopGeofences(ctx)
+        } catch (_: Exception) {
+        }
     }
 
     /** Trigger nodes of every saved flow (kind "t"), in file
@@ -306,10 +312,17 @@ object FlowTriggers {
         return out
     }
 
+    // v1.4.12: ENABLED flows only. maybeArm() arms the microphone
+    // sampler, media session, logcat watcher and activity
+    // recognition from this set — using every flow (incl. disabled
+    // ones) kept the microphone recording after the only
+    // sound_level flow was disabled. Disabled flows never fire
+    // (FlowEngine dispatch skips them), so arming for them was
+    // pure privacy + battery cost.
     fun usedTriggerTypes(ctx: Context): Set<String> {
         val out = HashSet<String>()
         try {
-            for (trig in flowTriggerNodes(ctx)) {
+            for (trig in enabledFlowTriggerNodes(ctx)) {
                 out.add(trig.optString("type"))
             }
         } catch (_: Exception) {
@@ -1682,12 +1695,20 @@ object FlowTriggers {
 
     // ---------------- armed: geofence proximity alerts ----------------
 
+    // v1.4.12: geofence lifecycle. geofenceSync used to only
+    // ADD proximity alerts — from every flow, disabled and deleted
+    // ones included — and removeProximityAlert appeared nowhere, so
+    // stale geofences fired forever. Now: enabled flows only, and
+    // every sync first removes alerts whose key is no longer wanted
+    // (tracked in FlowStore state "geo_keys", so pruning survives
+    // a service restart). stopGeofences() drops them all when the
+    // trigger hub stops.
     private fun geofenceSync(ctx: Context) {
         try {
             val lm = ctx.getSystemService(Context.LOCATION_SERVICE)
                 as android.location.LocationManager
-            val seen = HashSet<String>()
-            for (trig in flowTriggerNodes(ctx)) {
+            val wanted = HashSet<String>()
+            for (trig in enabledFlowTriggerNodes(ctx)) {
                     val type = trig.optString("type")
                     if (type != "geofence_in" && type != "geofence_out") {
                         continue
@@ -1699,29 +1720,97 @@ object FlowTriggers {
                     val lat = parts[0].toDoubleOrNull() ?: continue
                     val lon = parts[1].toDoubleOrNull() ?: continue
                     val radius = parts[2].toFloatOrNull() ?: continue
-                    val key = lat.toString() + "|" + lon.toString() + "|" +
-                        radius.toString()
-                    if (seen.contains(key)) {
-                        continue
-                    }
-                    seen.add(key)
+                    wanted.add(lat.toString() + "|" + lon.toString() +
+                        "|" + radius.toString())
+            }
+            // Prune alerts registered earlier that are no longer wanted
+            // (flow disabled, deleted, or its geofence edited).
+            val stored = FlowStore.stateStr(ctx, "geo_keys")
+                .split("\n").filter { it.isNotEmpty() }.toHashSet()
+            for (key in stored) {
+                if (key in wanted) continue
+                try {
+                    val parts = key.split("|")
+                    val lat = parts[0].toDoubleOrNull() ?: continue
+                    val lon = parts[1].toDoubleOrNull() ?: continue
                     val intent = Intent(ctx.applicationContext, FlowSystemReceiver::class.java)
                     intent.action = "flow_proximity"
                     intent.putExtra("lat", lat)
                     intent.putExtra("lon", lon)
-                    val code = key.hashCode()
                     val pending = android.app.PendingIntent.getBroadcast(
-                        ctx.applicationContext, code, intent,
-                        android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                        ctx.applicationContext, key.hashCode(), intent,
+                        android.app.PendingIntent.FLAG_NO_CREATE or
                             android.app.PendingIntent.FLAG_IMMUTABLE
-                    )
+                    ) ?: continue
                     try {
-                        lm.addProximityAlert(lat, lon, radius, -1L, pending)
-                    } catch (e: SecurityException) {
-                        FlowStore.log(ctx, "geofence needs location permission")
+                        lm.removeProximityAlert(pending)
                     } catch (_: Exception) {
                     }
+                } catch (_: Exception) {
+                }
             }
+            val seen = HashSet<String>()
+            for (key in wanted) {
+                if (seen.contains(key)) continue
+                seen.add(key)
+                val parts = key.split("|")
+                val lat = parts[0].toDouble() 
+                val lon = parts[1].toDouble()
+                val radius = parts[2].toFloat()
+                val intent = Intent(ctx.applicationContext, FlowSystemReceiver::class.java)
+                intent.action = "flow_proximity"
+                intent.putExtra("lat", lat)
+                intent.putExtra("lon", lon)
+                val code = key.hashCode()
+                val pending = android.app.PendingIntent.getBroadcast(
+                    ctx.applicationContext, code, intent,
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                        android.app.PendingIntent.FLAG_IMMUTABLE
+                )
+                try {
+                    lm.addProximityAlert(lat, lon, radius, -1L, pending)
+                } catch (e: SecurityException) {
+                    FlowStore.log(ctx, "geofence needs location permission")
+                } catch (_: Exception) {
+                }
+            }
+            FlowStore.setStateStr(ctx, "geo_keys",
+                wanted.joinToString("\n"))
+        } catch (_: Exception) {
+        }
+    }
+
+    /** Drop every proximity alert this hub registered (service
+     *  stop). The stored key set is cleared so a later start
+     *  re-adds only what enabled flows want. */
+    private fun stopGeofences(ctx: Context) {
+        try {
+            val lm = ctx.getSystemService(Context.LOCATION_SERVICE)
+                as android.location.LocationManager
+            val stored = FlowStore.stateStr(ctx, "geo_keys")
+                .split("\n").filter { it.isNotEmpty() }
+            for (key in stored) {
+                try {
+                    val parts = key.split("|")
+                    val lat = parts[0].toDoubleOrNull() ?: continue
+                    val lon = parts[1].toDoubleOrNull() ?: continue
+                    val intent = Intent(ctx.applicationContext, FlowSystemReceiver::class.java)
+                    intent.action = "flow_proximity"
+                    intent.putExtra("lat", lat)
+                    intent.putExtra("lon", lon)
+                    val pending = android.app.PendingIntent.getBroadcast(
+                        ctx.applicationContext, key.hashCode(), intent,
+                        android.app.PendingIntent.FLAG_NO_CREATE or
+                            android.app.PendingIntent.FLAG_IMMUTABLE
+                    ) ?: continue
+                    try {
+                        lm.removeProximityAlert(pending)
+                    } catch (_: Exception) {
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            FlowStore.setStateStr(ctx, "geo_keys", "")
         } catch (_: Exception) {
         }
     }

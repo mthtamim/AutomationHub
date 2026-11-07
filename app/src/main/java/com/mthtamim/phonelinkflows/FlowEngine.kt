@@ -3516,6 +3516,36 @@ object FlowEngine {
                         ftpTransfer(ctx, false, parts[0].trim(), parts[1], parts[2], parts[3].trim(), parts[4].trim())
                     }
                 }
+                // v1.4.12: explicit FTPS (same param, TLS) + SFTP.
+                // Same parts order as the ftp_* branches above.
+                "ftps_upload" -> {
+                    val parts = param.split("|")
+                    if (parts.size == 5) {
+                        ftpTransfer(ctx, true, parts[0].trim(), parts[1], parts[2], parts[3].trim(), parts[4].trim(), true)
+                    }
+                }
+                "ftps_download" -> {
+                    val parts = param.split("|")
+                    if (parts.size == 5) {
+                        ftpTransfer(ctx, false, parts[0].trim(), parts[1], parts[2], parts[3].trim(), parts[4].trim(), true)
+                    }
+                }
+                "sftp_upload" -> {
+                    val parts = param.split("|")
+                    if (parts.size == 5) {
+                        val local = resolveFlowFile(ctx, parts[3].trim()).absolutePath
+                        val ok = Sftp.transferParts(parts[0].trim(), parts[1], parts[2], parts[4].trim(), local, true)
+                        FlowStore.log(ctx, if (ok) "sftp uploaded: " + parts[3].trim() + " -> " + parts[4].trim() else "sftp upload failed")
+                    }
+                }
+                "sftp_download" -> {
+                    val parts = param.split("|")
+                    if (parts.size == 5) {
+                        val local = resolveFlowFile(ctx, parts[3].trim()).absolutePath
+                        val ok = Sftp.transferParts(parts[0].trim(), parts[1], parts[2], parts[4].trim(), local, false)
+                        FlowStore.log(ctx, if (ok) "sftp downloaded: " + parts[4].trim() + " -> " + parts[3].trim() else "sftp download failed")
+                    }
+                }
                 "focuslock_control" -> runFocusLock(ctx, param)
                 // ---------------- v1.4.3: QR scan, WoL, ping, CallShield bridge ----------------
                 "qr_scan" -> runQrScan(ctx, param)
@@ -4584,6 +4614,9 @@ object FlowEngine {
      * any protocol surprise is logged, never hidden. Upload reads a
      * lab file; download writes one. 15s socket timeouts.
      */
+    // v1.4.12: secure=true upgrades the control connection to
+    // explicit FTPS (AUTH TLS before login, PBSZ 0 / PROT P) and
+    // wraps the data connection in TLS too. Plain FTP is unchanged.
     private fun ftpTransfer(
         ctx: Context,
         upload: Boolean,
@@ -4591,7 +4624,8 @@ object FlowEngine {
         user: String,
         pass: String,
         local: String,
-        remote: String
+        remote: String,
+        secure: Boolean = false
     ) {
         var ctrl: java.net.Socket? = null
         var data: java.net.Socket? = null
@@ -4599,8 +4633,8 @@ object FlowEngine {
             ctrl = java.net.Socket()
             ctrl.soTimeout = 15000
             ctrl.connect(java.net.InetSocketAddress(host, 21), 15000)
-            val reader = java.io.BufferedReader(java.io.InputStreamReader(ctrl.getInputStream()))
-            val writer = java.io.BufferedWriter(java.io.OutputStreamWriter(ctrl.getOutputStream()))
+            var reader = java.io.BufferedReader(java.io.InputStreamReader(ctrl.getInputStream()))
+            var writer = java.io.BufferedWriter(java.io.OutputStreamWriter(ctrl.getOutputStream()))
             fun readReply(): String {
                 var line = reader.readLine() ?: ""
                 var last = line
@@ -4616,6 +4650,19 @@ object FlowEngine {
                 return readReply()
             }
             readReply() // server greeting on connect (read, never answered)
+            if (secure) {
+                val auth = cmd("AUTH TLS")
+                if (!auth.startsWith("234")) {
+                    FlowStore.log(ctx, "ftps AUTH TLS refused: " + auth)
+                    return
+                }
+                val ssl = javax.net.ssl.SSLSocketFactory.getDefault()
+                    .createSocket(ctrl, host, 21, true) as javax.net.ssl.SSLSocket
+                ssl.startHandshake()
+                ctrl = ssl
+                reader = java.io.BufferedReader(java.io.InputStreamReader(ctrl.getInputStream()))
+                writer = java.io.BufferedWriter(java.io.OutputStreamWriter(ctrl.getOutputStream()))
+            }
             val userResp = cmd("USER " + user)
             if (!userResp.startsWith("2") && !userResp.startsWith("3")) {
                 FlowStore.log(ctx, "ftp login failed: " + userResp)
@@ -4627,6 +4674,10 @@ object FlowEngine {
                     FlowStore.log(ctx, "ftp login failed: " + passResp)
                     return
                 }
+            }
+            if (secure) {
+                cmd("PBSZ 0")
+                cmd("PROT P")
             }
             cmd("TYPE I")
             val pasv = cmd("PASV")
@@ -4640,6 +4691,12 @@ object FlowEngine {
             data = java.net.Socket()
             data.soTimeout = 15000
             data.connect(java.net.InetSocketAddress(dataHost, dataPort), 15000)
+            if (secure) {
+                val sslData = javax.net.ssl.SSLSocketFactory.getDefault()
+                    .createSocket(data, dataHost, dataPort, true) as javax.net.ssl.SSLSocket
+                sslData.startHandshake()
+                data = sslData
+            }
             if (upload) {
                 val bytes = resolveFlowFile(ctx, local).readBytes()
                 val stor = cmd("STOR " + remote)

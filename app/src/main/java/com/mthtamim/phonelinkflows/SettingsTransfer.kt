@@ -14,6 +14,9 @@ import org.json.JSONObject
  * PIN secrets never leave the phone: the app-lock hash, command PIN
  * digest, panic PIN hash, web PIN and per-device command PINs are
  * excluded from the backup and must be set again after a restore.
+ * v1.4.12: passwords and tokens are excluded too (SMTP/MQTT
+ * passwords, hotspot AP password, FocusLock token, webhook token) —
+ * restoring an old backup no longer restores them.
  * The older v2.4 format (cfg + rules) still imports.
  */
 object SettingsTransfer {
@@ -118,8 +121,16 @@ object SettingsTransfer {
         }
     }
 
+    // v1.4.12: passwords and tokens never leave the phone in a
+    // backup. smtp_pass / mqtt_pass used to go into the backup JSON
+    // as plaintext (both live in phonelink_cfg). The same goes for
+    // any other *_pass / *_password / *_secret / *_token key — that
+    // includes the FocusLock token and the LAN webhook token, which
+    // must be re-entered (or are regenerated) after a restore.
     private fun secret(k: String): Boolean =
-        k in skipExact || k.startsWith("peer_pin_")
+        k in skipExact || k.startsWith("peer_pin_") ||
+            k.endsWith("_pass") || k.endsWith("_password") ||
+            k.endsWith("_secret") || k.endsWith("_token")
 
     fun export(ctx: Context): String {
         val root = JSONObject()
@@ -127,8 +138,8 @@ object SettingsTransfer {
         root.put("kind", "full-backup")
         root.put("v", 3)
         root.put("cfg", dump(ctx, "phonelink_cfg", true))
-        root.put("auto", dump(ctx, "phonelink_auto", false))
-        root.put("flows", dump(ctx, "phonelink_flows", false))
+        root.put("auto", dump(ctx, "phonelink_auto", true))
+        root.put("flows", dump(ctx, "phonelink_flows", true))
         return root.toString()
     }
 
@@ -167,9 +178,9 @@ object SettingsTransfer {
         val cfgObj = root.optJSONObject("cfg") ?: return false
         restore(ctx, "phonelink_cfg", cfgObj, true)
         root.optJSONObject("auto")?.let {
-            restore(ctx, "phonelink_auto", it, false) }
+            restore(ctx, "phonelink_auto", it, true) }
         root.optJSONObject("flows")?.let {
-            restore(ctx, "phonelink_flows", it, false) }
+            restore(ctx, "phonelink_flows", it, true) }
         // Re-hook rule watchers, exact alarms and sync from the
         // restored rule set.
         try { Automation.saveAll(ctx, Automation.rules(ctx)) }

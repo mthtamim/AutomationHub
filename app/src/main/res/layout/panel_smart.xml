@@ -294,6 +294,73 @@
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
+        <!-- v1.4.12: LAN webhook token card — the webhook endpoint
+             needs a token now, so the token must be visible and
+             copyable here (unlike the FocusLock token, which is
+             never shown). -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/webhookCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/webhook_card_title"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            style="@style/PL.BodySmall"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/webhook_card_sub" />
+
+                        <TextView
+                            android:id="@+id/tvWebhookToken"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textIsSelectable="true"
+                            android:textSize="13sp"
+                            android:typeface="monospace" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnWebhookCopy"
+                                style="@style/PL.BtnChip"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="3dp"
+                                android:layout_weight="1"
+                                android:maxLines="1"
+                                android:text="@string/webhook_token_copy" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnWebhookRegen"
+                                style="@style/PL.BtnChip"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="3dp"
+                                android:layout_weight="1"
+                                android:maxLines="1"
+                                android:text="@string/webhook_token_regen" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
 
 <!-- ===== Automation card: engine master switch only

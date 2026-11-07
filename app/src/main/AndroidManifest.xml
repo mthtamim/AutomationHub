@@ -411,6 +411,17 @@
             </intent-filter>
         </receiver>
 
+        <!-- v1.4.12: restart AutoTap triggers after reboot (was
+             MainActivity-only, so triggers stayed dead until the
+             app was opened). -->
+        <receiver
+            android:name="com.autotap.app.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name="com.autotap.app.WidgetProvider"
             android:exported="false">

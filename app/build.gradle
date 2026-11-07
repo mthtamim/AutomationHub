@@ -16,8 +16,8 @@ android {
         applicationId "com.mthtamim.phonelinkflows"
         minSdk 26
         targetSdk 34
-        versionCode 22
-        versionName "1.4.11"
+        versionCode 23
+        versionName "1.4.12"
         // Same arm64-only trade-off as PhoneLink: the APK does not
         // install on emulators or 32-bit-only phones.
         ndk {
@@ -170,6 +170,8 @@ dependencies {
     implementation "org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5"
     // v1.4.7: JavaScript action (Rhino, interpreter mode).
     implementation "org.mozilla:rhino:1.8.0"
+    // v1.4.12: SFTP actions (mwiede JSch fork, Maven Central).
+    implementation "com.github.mwiede:jsch:0.2.21"
     // v1.2.6: consume the baseline profile produced by the
     // :baselineprofile module (none exists yet — the release build
     // simply ships without a profile until one is generated).

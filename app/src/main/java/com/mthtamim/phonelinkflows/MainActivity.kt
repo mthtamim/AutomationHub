@@ -927,6 +927,21 @@ class MainActivity : LocalizedActivity() {
                 com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
         }
         renderFocusLock()
+        // ----- Webhook token card (v1.4.12): the LAN webhook
+        // needs a token now — show it (copyable) + regenerate.
+        // Unlike the FocusLock token, this one MUST be visible:
+        // the caller has to put it in the webhook URL/header.
+        findViewById<TextView>(R.id.tvWebhookToken).text =
+            WebhookServer.token(this)
+        findViewById<Button>(R.id.btnWebhookCopy).setOnClickListener {
+            copyToClipboard(WebhookServer.token(this))
+            toast(getString(R.string.webhook_token_copied))
+        }
+        findViewById<Button>(R.id.btnWebhookRegen).setOnClickListener {
+            findViewById<TextView>(R.id.tvWebhookToken).text =
+                WebhookServer.regenerateToken(this)
+            toast(getString(R.string.webhook_token_regen_done))
+        }
         refreshFocusGuard()
     }
 

@@ -491,6 +491,14 @@
     <string name="aah_ftp_upload">host|user|pass|remotePath|localPath</string>
     <string name="aa_ftp_download">FTP download</string>
     <string name="aah_ftp_download">host|user|pass|remotePath|localPath</string>
+    <string name="aa_ftps_upload">FTPS upload</string>
+    <string name="aah_ftps_upload">host|user|pass|remotePath|localPath</string>
+    <string name="aa_ftps_download">FTPS download</string>
+    <string name="aah_ftps_download">host|user|pass|remotePath|localPath</string>
+    <string name="aa_sftp_upload">SFTP upload</string>
+    <string name="aah_sftp_upload">host|user|pass|remotePath|localPath</string>
+    <string name="aa_sftp_download">SFTP download</string>
+    <string name="aah_sftp_download">host|user|pass|remotePath|localPath</string>
     <string name="aa_image_resize">Resize an image</string>
     <string name="aah_image_resize">src|dst|widthPx</string>
     <string name="aa_file_encrypt">Encrypt a file</string>
@@ -964,6 +972,12 @@
     <string name="fl_token_hint">Token</string>
     <string name="fl_token_saved">Token saved</string>
     <string name="fl_token_cleared">Token cleared</string>
+    <string name="webhook_card_title">LAN webhook token</string>
+    <string name="webhook_card_sub">Calls to http://&lt;phone-ip&gt;:37544/hook/&lt;name&gt; need this token — add ?token=… to the URL or send the X-Webhook-Token header. Without it the call is rejected.</string>
+    <string name="webhook_token_copy">Copy token</string>
+    <string name="webhook_token_regen">New token</string>
+    <string name="webhook_token_copied">Webhook token copied</string>
+    <string name="webhook_token_regen_done">New webhook token created — update your callers</string>
     <string name="fl_not_installed_toast">FocusLock is not installed on this phone</string>
     <string name="fl_cmd_block_app">Block app</string>
     <string name="fl_cmd_lock_full">Lock whole phone</string>
@@ -1226,6 +1240,8 @@
     <string name="flow_video_saved">video saved: %1$s</string>
     <string name="notif_channel">AutomationHub</string>
     <string name="notif_channel_desc">Rule and flow notifications</string>
+    <string name="service_channel">AutomationHub service</string>
+    <string name="service_channel_desc">Keeps rules and flows running while the app is closed</string>
     <string name="palette_sheet_title">Add node</string>
     <string name="panel_archive">Archive</string>
     <string name="panel_command">Command</string>

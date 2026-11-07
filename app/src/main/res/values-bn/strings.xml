@@ -481,6 +481,14 @@
     <string name="aah_ftp_upload">host|user|pass|remotePath|localPath</string>
     <string name="aa_ftp_download">FTP ডাউনলোড</string>
     <string name="aah_ftp_download">host|user|pass|remotePath|localPath</string>
+    <string name="aa_ftps_upload">FTPS আপলোড</string>
+    <string name="aah_ftps_upload">host|user|pass|remotePath|localPath</string>
+    <string name="aa_ftps_download">FTPS ডাউনলোড</string>
+    <string name="aah_ftps_download">host|user|pass|remotePath|localPath</string>
+    <string name="aa_sftp_upload">SFTP আপলোড</string>
+    <string name="aah_sftp_upload">host|user|pass|remotePath|localPath</string>
+    <string name="aa_sftp_download">SFTP ডাউনলোড</string>
+    <string name="aah_sftp_download">host|user|pass|remotePath|localPath</string>
     <string name="aa_image_resize">ছবি রিসাইজ করো</string>
     <string name="aah_image_resize">উৎস|গন্তব্য|প্রস্থ(px)</string>
     <string name="aa_file_encrypt">ফাইল এনক্রিপ্ট করো</string>
@@ -949,6 +957,12 @@
     <string name="fl_token_hint">টোকেন</string>
     <string name="fl_token_saved">টোকেন সেভ হয়েছে</string>
     <string name="fl_token_cleared">টোকেন মোছা হয়েছে</string>
+    <string name="webhook_card_title">LAN ওয়েবহুক টোকেন</string>
+    <string name="webhook_card_sub">http://&lt;phone-ip&gt;:37544/hook/&lt;নাম&gt; ডাকতে এই টোকেন লাগবে — URL-এ ?token=… যোগ করো বা X-Webhook-Token হেডার পাঠাও। টোকেন ছাড়া ডাক ফিরিয়ে দেওয়া হবে।</string>
+    <string name="webhook_token_copy">টোকেন কপি করো</string>
+    <string name="webhook_token_regen">নতুন টোকেন</string>
+    <string name="webhook_token_copied">ওয়েবহুক টোকেন কপি হয়েছে</string>
+    <string name="webhook_token_regen_done">নতুন ওয়েবহুক টোকেন বানানো হয়েছে — যারা ডাকে তাদের আপডেট করো</string>
     <string name="fl_not_installed_toast">এই ফোনে FocusLock ইনস্টল করা নেই</string>
     <string name="fl_cmd_block_app">অ্যাপ ব্লক</string>
     <string name="fl_cmd_lock_full">পুরো ফোন লক</string>
@@ -1211,6 +1225,8 @@
     <string name="flow_video_saved">ভিডিও সংরক্ষিত: %1$s</string>
     <string name="notif_channel">AutomationHub</string>
     <string name="notif_channel_desc">নিয়ম আর ফ্লোর নোটিফিকেশন</string>
+    <string name="service_channel">AutomationHub সার্ভিস</string>
+    <string name="service_channel_desc">অ্যাপ বন্ধ থাকলেও নিয়ম আর ফ্লো চালু রাখে</string>
     <string name="palette_sheet_title">নোড যোগ করো</string>
     <string name="panel_archive">আর্কাইভ</string>
     <string name="panel_command">কমান্ড</string>
