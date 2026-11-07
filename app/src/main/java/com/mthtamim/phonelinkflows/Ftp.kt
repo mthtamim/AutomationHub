@@ -56,7 +56,7 @@ object Ftp {
                 // connection to TLS before any credential is sent.
                 val auth = cmd("AUTH TLS")
                 if (!auth.startsWith("234")) return false
-                val ssl = SSLSocketFactory.getDefault()
+                val ssl = (SSLSocketFactory.getDefault() as SSLSocketFactory)
                     .createSocket(ctrl, host, 21, true) as javax.net.ssl.SSLSocket
                 ssl.startHandshake()
                 ctrl = ssl
@@ -78,7 +78,7 @@ object Ftp {
             var data: Socket = Socket(dHost, dPort)
             data.soTimeout = 20000
             if (secure) {
-                val sslData = SSLSocketFactory.getDefault()
+                val sslData = (SSLSocketFactory.getDefault() as SSLSocketFactory)
                     .createSocket(data, dHost, dPort, true) as javax.net.ssl.SSLSocket
                 sslData.startHandshake()
                 data = sslData

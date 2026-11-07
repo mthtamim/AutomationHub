@@ -4656,7 +4656,7 @@ object FlowEngine {
                     FlowStore.log(ctx, "ftps AUTH TLS refused: " + auth)
                     return
                 }
-                val ssl = javax.net.ssl.SSLSocketFactory.getDefault()
+                val ssl = (javax.net.ssl.SSLSocketFactory.getDefault() as javax.net.ssl.SSLSocketFactory)
                     .createSocket(ctrl, host, 21, true) as javax.net.ssl.SSLSocket
                 ssl.startHandshake()
                 ctrl = ssl
@@ -4692,7 +4692,7 @@ object FlowEngine {
             data.soTimeout = 15000
             data.connect(java.net.InetSocketAddress(dataHost, dataPort), 15000)
             if (secure) {
-                val sslData = javax.net.ssl.SSLSocketFactory.getDefault()
+                val sslData = (javax.net.ssl.SSLSocketFactory.getDefault() as javax.net.ssl.SSLSocketFactory)
                     .createSocket(data, dataHost, dataPort, true) as javax.net.ssl.SSLSocket
                 sslData.startHandshake()
                 data = sslData
