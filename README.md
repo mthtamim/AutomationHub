@@ -62,6 +62,7 @@ Open the project in Android Studio and build the `app` module. CI builds the deb
 
 | Version | What's new |
 | --- | --- |
+| 1.4.13 | In-app auto-update no longer reports a false success: the Shizuku install is now verified by pm exit code and by re-reading the installed versionCode; a failed install reports pm's real reason, and a signature mismatch explains the one-time uninstall first |
 | 1.4.12 | Security + reliability fixes: disabled flows no longer keep the microphone, geofence or file observers armed; LAN webhook now needs a token; FTPS and SFTP actions added (plain FTP kept); backup no longer contains SMTP/MQTT passwords; boot event no longer fires three times; stale geofences are unregistered; Flow picker no longer offers actions that silently do nothing; AutoTap triggers survive reboot; Study Guard reacts within ~15 seconds; the service notification is hidden from the status bar (own minimal channel) |
 | 1.4.11 | In-app updates: "Check for updates" now downloads and installs inside the app instead of opening the browser; the update check uses the renamed repo (mthtamim/AutomationHub); a failed check no longer blocks retry for 24 hours; if the one-time "install unknown apps" grant is missing, the app points you straight to that setting |
 | 1.4.10 | Snoozed notifications now come back instead of being re-snoozed in a loop |

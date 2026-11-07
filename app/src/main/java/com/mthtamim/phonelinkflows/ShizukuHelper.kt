@@ -85,6 +85,39 @@ object ShizukuHelper {
         }
     }
 
+    /** v1.4.13: exit code AND stdout of a shell command, for
+     *  callers that must tell success from failure (Update's
+     *  pm install: a failed install prints "Failure [...]" on
+     *  stdout and exits non-zero without throwing, so run()
+     *  alone cannot see it). -1 when ungranted, timed out, or
+     *  failed; lastError explains why. run()/runCode() are
+     *  unchanged. */
+    fun runCodeOut(command: String): Pair<Int, String> {
+        lastError = null
+        if (!granted()) {
+            lastError = "not granted"
+            return -1 to ""
+        }
+        return try {
+            val proc = newProcess(arrayOf("sh", "-c", command))
+            val out = proc.inputStream.bufferedReader().readText()
+            val finished = proc.waitFor(60, TimeUnit.SECONDS)
+            if (!finished) {
+                proc.destroyForcibly()
+                lastError = "timeout"
+                -1 to ""
+            } else {
+                proc.exitValue() to out.trim()
+            }
+        } catch (t: Throwable) {
+            val cause = (t as? java.lang.reflect.InvocationTargetException)
+                ?.targetException ?: t
+            lastError = cause.javaClass.simpleName + ": " +
+                (cause.message ?: "").take(120)
+            -1 to ""
+        }
+    }
+
     /** v2.24.0 (Lab merge): streaming shell process for the Flow
      *  logcat watcher (run() buffers all output, which never ends
      *  for logcat). Null when Shizuku is not granted. Logic copied

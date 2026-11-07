@@ -595,6 +595,11 @@
     <string name="btn_download_install">ডাউনলোড ও ইনস্টল করো</string>
     <string name="update_downloading">আপডেট ডাউনলোড হচ্ছে…</string>
     <string name="update_latest">তুমি সর্বশেষ সংস্করণেই আছো (অথবা রিলিজের তথ্য পাওয়া যায়নি)।</string>
+    <string name="update_install_failed_title">⬆️ আপডেট ইনস্টল হয়নি</string>
+    <string name="update_install_failed_text">v%1$s ইনস্টল করা যায়নি: %2$s</string>
+    <string name="update_install_incompatible_title">⬆️ এই অ্যাপের উপর আপডেট ইনস্টল করা যাবে না</string>
+    <string name="update_install_incompatible_text">v%1$s ইনস্টল করা অ্যাপের চেয়ে আলাদা key দিয়ে সাইন করা। একবার অ্যাপটি আনইনস্টল করো (আগে rules আর flows এক্সপোর্ট করে নাও), তারপর রিলিজ APK নতুন করে ইনস্টল করো।</string>
+    <string name="update_install_unverified_reason">ইনস্টল হওয়া সংস্করণ যাচাই করা যায়নি</string>
     <string name="accent_emerald">এমারল্ড (ডিফল্ট)</string>
     <string name="accent_blue">নীল</string>
     <string name="accent_purple">বেগুনি</string>

@@ -27,6 +27,24 @@ object Update {
         ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "0.0.0"
     } catch (_: Exception) { "0.0.0" }
 
+    /** v1.4.13: versionCode of the installed app, or null.
+     *  Int versionCode (not longVersionCode) because minSdk is 26. */
+    private fun installedVersionCode(ctx: Context): Int? = try {
+        @Suppress("DEPRECATION")
+        ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionCode
+    } catch (_: Exception) { null }
+
+    /** v1.4.13: versionCode baked into a downloaded APK, or null. */
+    private fun apkVersionCode(ctx: Context, file: java.io.File): Int? = try {
+        @Suppress("DEPRECATION")
+        ctx.packageManager.getPackageArchiveInfo(file.absolutePath, 0)?.versionCode
+    } catch (_: Exception) { null }
+
+    /** v1.4.13: the "Failure [...]" line pm prints, or null. */
+    private fun failureLine(output: String): String? =
+        output.lines().firstOrNull { it.contains("Failure", ignoreCase = true) }
+            ?.trim()?.take(160)
+
     private fun cmp(a: String, b: String): Int {
         val pa = a.split(".").map { it.toIntOrNull() ?: 0 }
         val pb = b.split(".").map { it.toIntOrNull() ?: 0 }
@@ -124,13 +142,55 @@ object Update {
                     return@thread
                 }
                 if (ShizukuHelper.granted()) {
-                    ShizukuHelper.run("pm install -r '" +
-                        file.absolutePath.replace("'", "") + "'")
-                    if (ShizukuHelper.lastError == null) {
+                    // v1.4.13: the old code only checked
+                    // lastError == null — but run() never sees
+                    // a failed pm install: pm prints
+                    // "Failure [...]" on stdout and exits
+                    // non-zero without throwing, so a failed
+                    // install used to report itself as done.
+                    // Now success needs BOTH: exit code 0 AND
+                    // the installed versionCode matching the
+                    // APK's. Nothing claims success unverified.
+                    val targetCode = apkVersionCode(ctx, file)
+                    val (exit, output) = ShizukuHelper.runCodeOut(
+                        "pm install -r '" +
+                            file.absolutePath.replace("'", "") + "'")
+                    var installed: Int? = null
+                    if (exit == 0) {
+                        // The package manager can lag a beat
+                        // behind pm's exit; retry briefly.
+                        for (i in 0 until 3) {
+                            installed = installedVersionCode(ctx)
+                            if (installed != null) break
+                            try { Thread.sleep(300) } catch (_: Exception) { }
+                        }
+                    }
+                    if (exit == 0 && targetCode != null &&
+                        installed != null && installed == targetCode) {
                         notifyUpdate(ctx, "⬆️ AutomationHub আপডেট হয়ে গেছে",
                             "v$version নিজে নিজে ইনস্টল হয়েছে।", null)
                         return@thread
                     }
+                    // v1.4.13: tell the truth instead. A
+                    // signature mismatch can never install over
+                    // the app — it needs a one-time uninstall
+                    // first (rules/flows exported beforehand).
+                    if (output.contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE") ||
+                        output.contains("signatures do not match", ignoreCase = true)) {
+                        notifyUpdate(ctx,
+                            ctx.getString(R.string.update_install_incompatible_title),
+                            ctx.getString(R.string.update_install_incompatible_text, version),
+                            null)
+                    } else {
+                        val reason = failureLine(output)
+                            ?: ShizukuHelper.lastError
+                            ?: ctx.getString(R.string.update_install_unverified_reason)
+                        notifyUpdate(ctx,
+                            ctx.getString(R.string.update_install_failed_title),
+                            ctx.getString(R.string.update_install_failed_text, version, reason),
+                            null)
+                    }
+                    return@thread
                 }
                 // v1.4.11: without the one-time "install unknown
                 // apps" grant the system installer would just
