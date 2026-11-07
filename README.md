@@ -1502,6 +1502,12 @@ Why: Tamim 2026-11-07 — three reports from phone testing v1.4.7.
   (both directions, after the 8dp tap threshold); pan is clamped
   so at least a quarter of the content stays visible — the canvas
   can't be lost. Pinch zoom unchanged.
+- Notification triggers never reached rules: the rule picker
+  offers "Notification arrives" / "Notification cleared", but the
+  listener only dispatched them to flows — a RULE with either
+  trigger could never fire. Both now go to Automation.onEvent as
+  well (notif_interacted stays flows-only; it is not in the rule
+  picker).
 
 ## v1.4.7 — notification snooze / cooldown / undo + JavaScript action
 

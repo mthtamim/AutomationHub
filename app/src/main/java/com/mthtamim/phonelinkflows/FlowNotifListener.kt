@@ -323,6 +323,13 @@ class FlowNotifListener : NotificationListenerService() {
                 data.put("app", sbn.packageName)
                 data.put("pkg", sbn.packageName)
                 FlowEngine.onEvent(ctx, "notif_received", data)
+                // v1.4.8: rules get it too — the rule picker offers
+                // "Notification arrives", but the listener only ever
+                // told flows, so a RULE with this trigger could
+                // never fire (Tamim 2026-11-07: snooze rule with
+                // notif_received never ran, even with the exact
+                // package "com.whatsapp" as the match).
+                Automation.onEvent(ctx, "notif_received", data)
             } catch (_: Exception) {
             }
         }
@@ -367,6 +374,11 @@ class FlowNotifListener : NotificationListenerService() {
                 data.put("app", sbn.packageName)
                 data.put("pkg", sbn.packageName)
                 FlowEngine.onEvent(ctx, "notif_cleared", data)
+                // v1.4.8: rules get it too — same reason as above
+                // (notif_cleared is in the rule picker; the
+                // notif_interacted event below stays flows-only,
+                // it is not offered to rules).
+                Automation.onEvent(ctx, "notif_cleared", data)
                 if (reason == NotificationListenerService.REASON_CLICK) {
                     FlowEngine.onEvent(ctx, "notif_interacted", data)
                 }
