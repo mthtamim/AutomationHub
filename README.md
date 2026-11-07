@@ -1484,6 +1484,40 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.7 — notification snooze / cooldown / undo + JavaScript action
+
+Why: Tamim 2026-11-07 — the remaining two of the three comparison
+gaps he chose. Three new actions in BOTH engines (rules +
+flows): snooze_notif, restore_notif, run_js — plus a
+notif_cooldown rule constraint / flow condition.
+- snooze_notif "match|minutes": snoozes the newest notification
+  matching a package or title/body text (blank = most recent; a
+  bare number = minutes for the most recent; default 15 min) via
+  the notification listener's snoozeNotification — it comes back
+  on its own. False when the listener is off or nothing matches.
+- restore_notif (undo): the listener stashes the last 10
+  dismissed notifications (user swipe, app cancel, listener
+  cancel — NOT snoozes/timeouts); the action re-posts the most
+  recent as an AutomationHub notification, tap opens the source
+  app. Android cannot re-post another app's notification, so
+  this is a copy, not the original.
+- notif_cooldown "pkg|minutes" (default 30): a rule/flow with
+  this constraint/condition fires at most once per window per
+  app. Enforced at dispatch (onEvent/dispatchFlow, where the
+  rule/flow id is known); the constraint evaluator returns true
+  for it so trace/negate cannot misreport it.
+- run_js (Rhino 1.8.0, interpreter mode): scripts see a `hub`
+  object — hub.getVar/setVar/log. No Android Context is exposed.
+  5 s instruction-count timeout stops runaway scripts. The
+  result (last expression value) is stored as variable
+  `js_result` — flows can use it as ${js_result} in later
+  actions; rules read it via if_var / later scripts. Templates
+  155 → 159 (r4_snooze_night, r4_js_var, f4_notif_cooldown,
+  f4_qs_restore). Defaults chosen by Donkey (Tamim said "build
+  the remaining two" with no scope word): snooze by match|minutes,
+  cooldown as a constraint/condition, undo restores the most
+  recent copy, Rhino for JS.
+
 ## v1.4.6 — QS tile / widget tap triggers
 
 Why: Tamim 2026-11-07 — the first of the three comparison gaps he

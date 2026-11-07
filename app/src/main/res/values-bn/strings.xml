@@ -293,6 +293,12 @@
     <string name="aa_end_call">চলমান কল কেটে দাও</string>
     <string name="aa_set_wallpaper">ওয়ালপেপার সেট করো</string>
     <string name="aa_clear_notif">নোটিফিকেশন পরিষ্কার করো</string>
+    <string name="aa_snooze_notif">নোটিফিকেশন স্নুজ করো</string>
+    <string name="aah_snooze_notif">match|মিনিট — মিলে যাওয়া নতুন নোটিফিকেশন স্নুজ করবে</string>
+    <string name="aa_restore_notif">মোছা নোটিফিকেশন ফেরাও</string>
+    <string name="aah_restore_notif">সবশেষে মোছা নোটিফিকেশন আবার দেখাবে</string>
+    <string name="aa_run_js">JavaScript চালাও</string>
+    <string name="aah_run_js">JavaScript — hub.getVar/setVar/log; ফলাফল js_result-এ; ৫ সেকেন্ড সীমা</string>
     <string name="aa_global_key">Home/Back/Recents চাপো</string>
     <string name="aa_stopwatch_start">স্টপওয়াচ শুরু করো</string>
     <string name="aa_stopwatch_stop">স্টপওয়াচ থামাও</string>
@@ -616,6 +622,8 @@
     <string name="at_call_active">কল সক্রিয় হলে</string>
     <string name="ath_call_active">কল ধরা বা শুরু হলে</string>
     <string name="ac_notif_present">নোটিফিকেশন আছে</string>
+    <string name="ac_notif_cooldown">নোটিফিকেশন কুলডাউন</string>
+    <string name="ach_notif_cooldown">pkg|মিনিট — এক অ্যাপে এই সময়ে একবারের বেশি চলবে না</string>
     <string name="ach_notif_present">অ্যাপের প্যাকেজ (খালি = যেকোনো)</string>
     <string name="ac_gps_state">GPS অবস্থা</string>
     <string name="ach_gps_state">on বা off</string>

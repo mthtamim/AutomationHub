@@ -880,6 +880,13 @@ object Automation {
                             ") — " + verdictSummary(ctx, rule))
                         continue
                     }
+                    // v1.4.7: notif_cooldown — at most one fire per
+                    // window per app (see notifCooldownFire).
+                    if (!notifCooldownFire(ctx, rule, data)) {
+                        log(ctx, "⏭ " + rule.optString("name") + " (" + event +
+                            ") — cooldown")
+                        continue
+                    }
                     markFired(ctx, rule.optString("id"), now)
                     ruleNameHint = rule.optString("name")
                     log(ctx, "▶ " + rule.optString("name") + " (" + event +
@@ -1047,6 +1054,43 @@ object Automation {
     }
 
     // ---------------- constraints ----------------
+    /** v1.4.7: notif_cooldown — find the param, descending into
+     *  GROUP constraint nodes. */
+    private fun findCooldownParam(arr: JSONArray): String? {
+        for (i in 0 until arr.length()) {
+            val c = arr.optJSONObject(i) ?: continue
+            if (c.optString("type") == "group") {
+                val g = try { JSONObject(c.optString("param")) } catch (_: Exception) { null }
+                val items = g?.optJSONArray("items")
+                if (items != null) {
+                    findCooldownParam(items)?.let { return it }
+                }
+                continue
+            }
+            if (c.optString("type") == "notif_cooldown") return c.optString("param")
+        }
+        return null
+    }
+
+    /** v1.4.7: cooldown check + record, keyed per rule + app.
+     *  Param "pkg|minutes" (pkg blank = the event's app) or just
+     *  "minutes" (default 30). {app} in the param is filled from
+     *  the event data first. */
+    private fun notifCooldownFire(ctx: Context, rule: JSONObject, data: JSONObject): Boolean {
+        val arr = rule.optJSONArray("constraints") ?: return true
+        val raw = findCooldownParam(arr) ?: return true
+        val filled = fill(raw, data)
+        val parts = filled.split("|")
+        val minutes = (if (parts.size > 1) parts[1].trim() else parts[0].trim()).toLongOrNull() ?: 30
+        val pkg = if (parts.size > 1 && parts[0].isNotBlank()) parts[0].trim() else data.optString("pkg")
+        val key = "ncd_" + rule.optString("id") + "_" + pkg
+        val now = System.currentTimeMillis()
+        val last = prefs(ctx).getLong(key, 0)
+        if (now - last < minutes.coerceAtLeast(1) * 60_000L) return false
+        prefs(ctx).edit().putLong(key, now).apply()
+        return true
+    }
+
     fun constraintsPass(ctx: Context, rule: JSONObject): Boolean {
         val arr = rule.optJSONArray("constraints") ?: return true
         return evalConstraintList(ctx, arr,
@@ -1067,6 +1111,10 @@ object Automation {
         var saw = false
         for (i in 0 until arr.length()) {
             val c = arr.optJSONObject(i) ?: continue
+            // v1.4.7: notif_cooldown is enforced in onEvent (it
+            // needs the rule id) — never judge it here, so a
+            // negated cooldown cannot invert the no-op.
+            if (c.optString("type") == "notif_cooldown") continue
             saw = true
             var ok = evalConstraintItem(ctx, c)
             if (c.optBoolean("negate")) ok = !ok
@@ -1131,6 +1179,10 @@ object Automation {
         return try {
             when (type) {
                 "notif_present" -> FlowNotifListener.hasNotification(param.trim())
+                // v1.4.7: enforced in onEvent (it needs the rule id
+                // for its timestamp); here it always passes so the
+                // trace view doesn't misreport it.
+                "notif_cooldown" -> true
                 "gps_state" -> gpsEnabled(ctx) ==
                     (param.trim().lowercase() != "off")
                 "hotspot_state" -> (hotspotState(ctx) ?: false) ==
@@ -2321,6 +2373,33 @@ object Automation {
                 "clear_notif" ->
                     if (param.isBlank() || param == "all") FlowNotifListener.dismissAll()
                     else FlowNotifListener.cancelPackage(param.trim())
+                // v1.4.7: snooze — param "match|minutes" (match =
+                // package or title/body text; blank = most recent;
+                // a bare number = minutes for the most recent).
+                "snooze_notif" -> {
+                    val parts = param.split("|")
+                    val (match, mins) = if (parts.size > 1) {
+                        parts[0].trim() to (parts[1].trim().toLongOrNull() ?: 15)
+                    } else if (param.trim().toLongOrNull() != null) {
+                        "" to param.trim().toLong()
+                    } else {
+                        param.trim() to 15L
+                    }
+                    if (!FlowNotifListener.snoozeByMatch(match, mins))
+                        log(ctx, "স্নুজ ব্যর্থ: মিলে যাওয়া নোটিফিকেশন নেই")
+                }
+                // v1.4.7: undo — re-post the most recently dismissed
+                // notification (see FlowNotifListener.restoreLatest).
+                "restore_notif" -> {
+                    if (!FlowNotifListener.restoreLatest(ctx))
+                        log(ctx, "ফেরানোর মতো মোছা নোটিফিকেশন নেই")
+                }
+                // v1.4.7: JavaScript (Rhino) — hub.getVar/setVar/log;
+                // the result lands in variable "js_result".
+                "run_js" -> JsRunner.run(param,
+                    { name -> getVar(ctx, name) },
+                    { name, value -> setVar(ctx, name, value) },
+                    { msg -> log(ctx, msg) })
                 "global_key" -> A11yService.globalKey(param)
                 "stopwatch_start" ->
                     prefs(ctx).edit().putLong("sw_${param.trim()}",

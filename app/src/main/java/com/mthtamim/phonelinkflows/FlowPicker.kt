@@ -148,7 +148,9 @@ object FlowPicker {
             "mobile_data" to R.string.pg_conn,
             "notif_present" to R.string.pg_msg,
             "gps_state" to R.string.pg_loc,
-            "hotspot_state" to R.string.pg_conn
+            "hotspot_state" to R.string.pg_conn,
+            // v1.4.7.
+            "notif_cooldown" to R.string.pg_msg
         )
         else -> listOf(
             "notify_peer" to R.string.pg_notify,
@@ -256,7 +258,11 @@ object FlowPicker {
             // v1.4.3.
             "qr_scan" to R.string.pg_media,
             "wol" to R.string.pg_conn,
-            "ping" to R.string.pg_conn
+            "ping" to R.string.pg_conn,
+            // v1.4.7.
+            "snooze_notif" to R.string.pg_msg,
+            "restore_notif" to R.string.pg_msg,
+            "run_js" to R.string.pg_flow
         )
     }
 

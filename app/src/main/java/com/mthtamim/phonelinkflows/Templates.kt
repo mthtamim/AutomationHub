@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Templates gallery (new 2026-11-06, Tamim's choice): 155 ready-made
+ * Templates gallery (new 2026-11-06, Tamim's choice): 159 ready-made
  * Rules + Flows (51 in v1.4.0, +100 in v1.4.3), picked from the
  * Automation screen's ⋮ menu
  * (TemplatesActivity). Every trigger/action type used here was
@@ -22,6 +22,10 @@ import org.json.JSONObject
  *  music_started/stopped, steps_goal, applock_failed, volume_up/down,
  *  sms_sent, qs_tile, widget_tap (v1.4.6: tile/widget taps fire via
  *  Automation.onEvent from TriggerTileService/TriggerWidgetProvider).
+ *  v1.4.7 actions: snooze_notif ("match|minutes"), restore_notif,
+ *  run_js (script text; hub.getVar/setVar/log; result in js_result).
+ *  notif_cooldown is a rule constraint / flow condition ("pkg|minutes",
+ *  default 30) — enforced at dispatch, not in the walk.
  *  Deliberately NOT used in rules: call_incoming/missed,
  *  sms_received, headphone_in/out, screen_on/off, geofence_in/out —
  *  those events are dispatched to FlowEngine.onEvent only (or, for
@@ -913,6 +917,28 @@ object Templates {
             "হোম উইজেট চাপলেই মুখে বলবে",
             "widget_tap", "",
             listOf("speak_local" to "উইজেট চাপা হয়েছে")),
+        // v1.4.7: snooze / cooldown / undo / JavaScript (4) — 155 -> 159.
+        Template("r4_snooze_night", "rule",
+            "রাতে WhatsApp স্নুজ",
+            "রাত ১০টায় WhatsApp নোটিফিকেশন ৮ ঘণ্টা স্নুজ করবে",
+            "time_at", "22:00",
+            listOf("snooze_notif" to "WhatsApp|480")),
+        Template("r4_js_var", "rule",
+            "প্রতি ঘণ্টায় JS চালাও",
+            "প্রতি ঘণ্টায় JavaScript চালিয়ে ভেরিয়েবল সেট করবে",
+            "time_interval", "60",
+            listOf("run_js" to "hub.setVar('js_demo', 'ok'); hub.log('JS চলেছে');")),
+        Template("f4_notif_cooldown", "flow",
+            "WhatsApp: ৩০ মিনিটে একবার",
+            "WhatsApp মেসেজ ৩০ মিনিটে একবারের বেশি জানাবে না",
+            "notif_received", "WhatsApp",
+            listOf("local_notify" to "WhatsApp: নতুন মেসেজ এসেছে"),
+            condType = "notif_cooldown", condParam = "WhatsApp|30"),
+        Template("f4_qs_restore", "flow",
+            "QS টাইল চাপলে নোটিফিকেশন ফেরাও",
+            "QS টাইল চাপলেই সবশেষে মোছা নোটিফিকেশন আবার দেখাবে",
+            "qs_tile", "",
+            listOf("restore_notif" to "")),
     )
 
     // ---------------- Builders ----------------

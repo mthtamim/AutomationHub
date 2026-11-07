@@ -11,6 +11,11 @@
 # AppWidget provider + configure activity (manifest-declared).
 -keep public class com.mthtamim.phonelinkflows.RuleWidgetProvider
 -keep public class com.mthtamim.phonelinkflows.RuleWidgetConfigure
+# Rhino JS engine (v1.4.7): the hub API is reached reflectively
+# by Rhino (LiveConnect) — R8 must not rename/strip it.
+-keep class com.mthtamim.phonelinkflows.JsApi {
+    *;
+}
 # Shizuku: newProcess is reached reflectively by name
 # (ShizukuHelper.kt, ShizukuTap.kt) — R8 must not rename/strip it.
 -keep class rikka.shizuku.Shizuku {

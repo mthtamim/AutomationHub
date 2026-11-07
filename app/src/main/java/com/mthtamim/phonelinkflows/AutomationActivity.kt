@@ -94,9 +94,13 @@ object AutoCatalog {
         // v2.10 Shizuku round
         "mobile_data",
         // v2.16 MacroDroid shortlist round
-        "notif_present", "gps_state", "hotspot_state")
+        "notif_present", "gps_state", "hotspot_state",
+        // v1.4.7: notification cooldown (enforced in onEvent).
+        "notif_cooldown")
     val actions = listOf(
         "local_notify", "speak_local", "command_peer",
+        // v1.4.7: snooze / undo / JavaScript.
+        "snooze_notif", "restore_notif", "run_js",
         "send_sms", "torch", "torch_on", "torch_off", "torch_toggle",
         "ringer", "open_app", "http", "write_file",
         "set_var", "if_var", "if_else", "wait", "mode_set", "lost_on", "lost_off", "tap_text",

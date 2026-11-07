@@ -87,9 +87,13 @@ object FlowCatalog {
         "battery_saver", "data_saver", "speed_above", "uptime_above",
         "calendar_busy", "headset_mic", "process_running", "mobile_data",
         "notif_present", "gps_state", "hotspot_state",
+        // v1.4.7: notification cooldown (enforced in dispatchFlow).
+        "notif_cooldown",
     )
     val actions = listOf(
         "local_notify", "speak_local", "speak_peer",
+        // v1.4.7: snooze / undo / JavaScript.
+        "snooze_notif", "restore_notif", "run_js",
         "send_sms", "torch", "torch_on",
         "torch_off", "torch_toggle", "ringer", "open_app",
         "http", "write_file", "set_var", "if_var",

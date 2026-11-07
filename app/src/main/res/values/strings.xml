@@ -303,6 +303,12 @@
     <string name="aa_end_call">End the current call</string>
     <string name="aa_set_wallpaper">Set wallpaper</string>
     <string name="aa_clear_notif">Clear notifications</string>
+    <string name="aa_snooze_notif">Snooze notification</string>
+    <string name="aah_snooze_notif">match|minutes — snooze the newest matching notification</string>
+    <string name="aa_restore_notif">Restore dismissed notification</string>
+    <string name="aah_restore_notif">Re-post the most recently dismissed notification</string>
+    <string name="aa_run_js">Run JavaScript</string>
+    <string name="aah_run_js">JavaScript — hub.getVar/setVar/log; result in js_result; 5s limit</string>
     <string name="aa_global_key">Press Home/Back/Recents</string>
     <string name="aa_stopwatch_start">Start stopwatch</string>
     <string name="aa_stopwatch_stop">Stop stopwatch</string>
@@ -626,6 +632,8 @@
     <string name="at_call_active">Call becomes active</string>
     <string name="ath_call_active">Call is answered or starts</string>
     <string name="ac_notif_present">Notification present</string>
+    <string name="ac_notif_cooldown">Notification cooldown</string>
+    <string name="ach_notif_cooldown">pkg|minutes — fire at most once per window per app</string>
     <string name="ach_notif_present">App package (empty = any app)</string>
     <string name="ac_gps_state">GPS is</string>
     <string name="ach_gps_state">on or off</string>

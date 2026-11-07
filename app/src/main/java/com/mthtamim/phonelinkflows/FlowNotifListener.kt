@@ -1,11 +1,14 @@
 package com.mthtamim.phonelinkflows
 
 import android.app.Notification
+import android.app.PendingIntent
 import android.app.RemoteInput
 import android.content.Context
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import androidx.core.app.NotificationCompat
+import org.json.JSONArray
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -132,6 +135,84 @@ class FlowNotifListener : NotificationListenerService() {
             }
         }
 
+        // ---------------- v1.4.7: snooze / undo ----------------
+        private const val DISMISSED_KEY = "dismissed_notifs"
+        private const val DISMISSED_MAX = 10
+
+        /** Snooze the newest notification matching [match]
+         *  (package, or title/body text; blank = most recent) for
+         *  [minutes]. False when the listener is off or nothing
+         *  matches. */
+        fun snoozeByMatch(match: String, minutes: Long): Boolean {
+            val svc = instance ?: return false
+            return try {
+                val target = svc.activeNotifications
+                    .filter { sbn ->
+                        if (match.isEmpty()) true
+                        else sbn.packageName == match ||
+                            (sbn.notification?.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: "").contains(match, ignoreCase = true) ||
+                            (sbn.notification?.extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: "").contains(match, ignoreCase = true)
+                    }
+                    .maxByOrNull { it.postTime } ?: return false
+                svc.snoozeNotification(target.key, minutes.coerceAtLeast(1) * 60_000L)
+                true
+            } catch (_: Exception) { false }
+        }
+
+        /** Stash a dismissed notification for undo. Keeps the last
+         *  [DISMISSED_MAX] in the shared state prefs. */
+        private fun stashDismissed(ctx: Context, sbn: StatusBarNotification) {
+            try {
+                val n = sbn.notification ?: return
+                val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+                val body = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+                if (title.isEmpty() && body.isEmpty()) return
+                val item = org.json.JSONObject().put("title", title).put("body", body)
+                    .put("pkg", sbn.packageName).put("time", sbn.postTime)
+                val prefs = ctx.getSharedPreferences("phonelink_state", Context.MODE_PRIVATE)
+                val arr = try { JSONArray(prefs.getString(DISMISSED_KEY, "[]")) } catch (_: Exception) { JSONArray() }
+                arr.put(item)
+                while (arr.length() > DISMISSED_MAX) arr.remove(0)
+                prefs.edit().putString(DISMISSED_KEY, arr.toString()).apply()
+            } catch (_: Exception) { }
+        }
+
+        /** Re-post the most recently dismissed notification as an
+         *  AutomationHub notification (tap opens the source app).
+         *  False when nothing is stashed. */
+        fun restoreLatest(ctx: Context): Boolean {
+            try {
+                val prefs = ctx.getSharedPreferences("phonelink_state", Context.MODE_PRIVATE)
+                val arr = try { JSONArray(prefs.getString(DISMISSED_KEY, "[]")) } catch (_: Exception) { JSONArray() }
+                if (arr.length() == 0) return false
+                val item = arr.optJSONObject(arr.length() - 1) ?: return false
+                arr.remove(arr.length() - 1)
+                prefs.edit().putString(DISMISSED_KEY, arr.toString()).apply()
+                val title = item.optString("title")
+                val body = item.optString("body")
+                val pkg = item.optString("pkg")
+                val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                if (android.os.Build.VERSION.SDK_INT >= 26) {
+                    nm.createNotificationChannel(android.app.NotificationChannel(
+                        FlowEngine.NOTIF_CHANNEL_ID,
+                        ctx.getString(R.string.notif_channel),
+                        android.app.NotificationManager.IMPORTANCE_DEFAULT))
+                }
+                val launch = try { ctx.packageManager.getLaunchIntentForPackage(pkg) } catch (_: Exception) { null }
+                val pi = if (launch != null) PendingIntent.getActivity(ctx, 0, launch,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT) else null
+                val builder = NotificationCompat.Builder(ctx, FlowEngine.NOTIF_CHANNEL_ID)
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setContentTitle(if (title.isNotEmpty()) title else pkg)
+                    .setContentText(body)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                    .setAutoCancel(true)
+                if (pi != null) builder.setContentIntent(pi)
+                nm.notify((System.currentTimeMillis() % 100000).toInt(), builder.build())
+                return true
+            } catch (_: Exception) { return false }
+        }
+
         /**
          * Reply [text] to the first active notification whose title
          * or body contains [match] (case-insensitive) and whose
@@ -256,6 +337,14 @@ class FlowNotifListener : NotificationListenerService() {
         if (sbn != null) {
             active.remove(sbn.key)
             rankingByKey.remove(sbn.key)
+            // v1.4.7: stash user/app/listener dismissals for undo.
+            // Snoozes, timeouts and summary cleanups are NOT stashed
+            // (a snoozed notification comes back on its own).
+            if (reason == REASON_CLICK || reason == REASON_CANCEL ||
+                reason == REASON_APP_CANCEL || reason == REASON_LISTENER_CANCEL ||
+                reason == -1) {
+                try { stashDismissed(applicationContext, sbn) } catch (_: Exception) { }
+            }
             val ctx = appCtx ?: applicationContext
             try {
                 val n = sbn.notification

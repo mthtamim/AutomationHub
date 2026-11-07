@@ -337,6 +337,33 @@ object FlowEngine {
             return
         }
         FlowStore.markFired(ctx, "deb_flow_" + flowId + "_" + nodeId, now)
+        // v1.4.7: notif_cooldown — a condition node in this flow
+        // means "fire at most once per N minutes per app". Key:
+        // "ncd_<flowId>_<pkg>"; param "pkg|minutes" or "minutes"
+        // (default 30, pkg = the event's app). The walk's
+        // constraintOk returns true for it (no-op) — the real
+        // check lives here, where the flow id is known.
+        val nodes = flow.optJSONArray("nodes")
+        var cdParam: String? = null
+        if (nodes != null) {
+            for (k in 0 until nodes.length()) {
+                val n = nodes.optJSONObject(k) ?: continue
+                if (n.optString("kind") == "c" && n.optString("type") == "notif_cooldown") {
+                    cdParam = n.optString("param")
+                    break
+                }
+            }
+        }
+        if (cdParam != null) {
+            val parts = cdParam.split("|")
+            val minutes = (if (parts.size > 1) parts[1].trim() else parts[0].trim()).toLongOrNull() ?: 30
+            val pkg = if (parts.size > 1 && parts[0].isNotBlank()) parts[0].trim() else data.optString("pkg")
+            val cdKey = "ncd_" + flowId + "_" + pkg
+            if (now - FlowStore.lastFired(ctx, cdKey) < minutes.coerceAtLeast(1) * 60_000L) {
+                return
+            }
+            FlowStore.markFired(ctx, cdKey, now)
+        }
         FlowStore.log(ctx, "run flow " + flow.optString("name") + " (" + event + ")")
         Thread {
             try {
@@ -1860,6 +1887,10 @@ object FlowEngine {
                     // title/body contains, or package equals.
                     FlowNotifListener.hasActive(param.trim())
                 }
+                // v1.4.7: enforced in dispatchFlow (it needs the
+                // flow id for its timestamp); here it always passes
+                // so the walk doesn't stop on it.
+                "notif_cooldown" -> true
                 "peer_online", "peer_battery_above" -> {
                     FlowStore.log(ctx, ctx.getString(R.string.flow_dropped_action, type))
                     false
@@ -2925,6 +2956,34 @@ object FlowEngine {
                     val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
                     nm.cancelAll()
                 }
+                // v1.4.7: snooze — param "match|minutes" (match =
+                // package or title/body text; blank = most recent;
+                // a bare number = minutes for the most recent).
+                "snooze_notif" -> {
+                    val parts = param.split("|")
+                    val (match, mins) = if (parts.size > 1) {
+                        parts[0].trim() to (parts[1].trim().toLongOrNull() ?: 15)
+                    } else if (param.trim().toLongOrNull() != null) {
+                        "" to param.trim().toLong()
+                    } else {
+                        param.trim() to 15L
+                    }
+                    if (!FlowNotifListener.snoozeByMatch(match, mins))
+                        FlowStore.log(ctx, "স্নুজ ব্যর্থ: মিলে যাওয়া নোটিফিকেশন নেই")
+                }
+                // v1.4.7: undo — re-post the most recently dismissed
+                // notification (see FlowNotifListener.restoreLatest).
+                "restore_notif" -> {
+                    if (!FlowNotifListener.restoreLatest(ctx))
+                        FlowStore.log(ctx, "ফেরানোর মতো মোছা নোটিফিকেশন নেই")
+                }
+                // v1.4.7: JavaScript (Rhino) — hub.getVar/setVar/log;
+                // the result lands in variable "js_result" (usable
+                // as ${js_result} in later actions).
+                "run_js" -> JsRunner.run(param,
+                    { name -> FlowStore.getVar(ctx, name) },
+                    { name, value -> FlowStore.setVar(ctx, name, value) },
+                    { msg -> FlowStore.log(ctx, msg) })
                 "kill_app" -> {
                     val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
                     am.killBackgroundProcesses(param.trim())
