@@ -51,12 +51,54 @@ object Automation {
         ctx.getSharedPreferences("phonelink_auto", Context.MODE_PRIVATE)
 
     // ---------------- rule store ----------------
-    fun rules(ctx: Context): MutableList<JSONObject> {
+    // v1.4.3: in-memory rules cache + trigger index. rules() used
+    // to re-read + re-parse the whole rules JSON from
+    // SharedPreferences on EVERY call, and onEvent did that on every
+    // system event, then looped every rule to find the ones matching
+    // the event. With dozens of rules that parse + scan ran on every
+    // battery/wifi/unlock/app event. The cache is keyed on the raw
+    // stored string (the string compare is cheap; the JSONArray
+    // parse is the cost) and the index maps trigger type -> the
+    // enabled rules carrying it. The ONLY writer of the "rules" key
+    // is saveAll, which invalidates both, so the cache can never go
+    // stale. Callers still get a fresh mutable list (same rule
+    // objects), so importJson/setEnabled keep working unchanged.
+    @Volatile private var rulesCache: List<JSONObject>? = null
+    @Volatile private var rulesCacheRaw: String? = null
+    @Volatile private var rulesIndex: Map<String, List<JSONObject>>? = null
+    private val rulesLock = Any()
+
+    private fun cachedRules(ctx: Context): List<JSONObject> {
         val raw = prefs(ctx).getString("rules", "[]") ?: "[]"
-        val arr = try { JSONArray(raw) } catch (e: Exception) { JSONArray() }
-        val out = mutableListOf<JSONObject>()
-        for (i in 0 until arr.length()) arr.optJSONObject(i)?.let { out.add(it) }
-        return out
+        synchronized(rulesLock) {
+            if (rulesCacheRaw != raw || rulesCache == null) {
+                val arr = try { JSONArray(raw) } catch (e: Exception) { JSONArray() }
+                val out = mutableListOf<JSONObject>()
+                for (i in 0 until arr.length()) arr.optJSONObject(i)?.let { out.add(it) }
+                val idx = mutableMapOf<String, MutableList<JSONObject>>()
+                for (rule in out) {
+                    if (!rule.optBoolean("enabled", true)) continue
+                    for (trig in ruleTriggers(rule)) {
+                        val t = trig.optString("type")
+                        if (t.isNotEmpty()) idx.getOrPut(t) { mutableListOf() }.add(rule)
+                    }
+                }
+                rulesCache = out
+                rulesCacheRaw = raw
+                rulesIndex = idx
+            }
+            return rulesCache!!
+        }
+    }
+
+    fun rules(ctx: Context): MutableList<JSONObject> = cachedRules(ctx).toMutableList()
+
+    /** The enabled rules carrying a trigger of this event type — the
+     *  onEvent fast path. The index is built with the cache, so a
+     *  miss here means no rule wants this event at all. */
+    fun rulesForEvent(ctx: Context, event: String): List<JSONObject> {
+        cachedRules(ctx)
+        synchronized(rulesLock) { return rulesIndex?.get(event) ?: emptyList() }
     }
 
     /** Raw stored rules JSON. The Automation screen fingerprints
@@ -85,6 +127,7 @@ object Automation {
             } catch (_: Exception) { }
         }
         prefs(ctx).edit().putString("rules", newJson).apply()
+        synchronized(rulesLock) { rulesCache = null; rulesCacheRaw = null; rulesIndex = null }
         refreshWatchers(ctx)
         scheduleTimeRules(ctx)
         // v2.18 (WS4): the MQTT subscription set follows the rules.
@@ -823,7 +866,7 @@ object Automation {
                 // v1.2.0: exits first — one event can end a rule
                 // while starting another.
                 fireExits(ctx, event, data, now)
-                for (rule in rules(ctx)) {
+                for (rule in rulesForEvent(ctx, event)) {
                     if (!rule.optBoolean("enabled", true)) continue
                     val trig = ruleTriggers(rule).firstOrNull {
                         it.optString("type") == event } ?: continue

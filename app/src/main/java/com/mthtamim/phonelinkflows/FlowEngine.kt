@@ -244,6 +244,39 @@ object FlowEngine {
 
     // ---------------- event entry (mirrors Automation.onEvent) ----------------
 
+    // v1.4.3: trigger index for flows. FlowStore.flows() is cached
+    // since v1.4.1, but onEvent/sensorTick still scanned every flow
+    // and every node on every event. The index maps trigger type ->
+    // (flow, trigger node) pairs and is rebuilt only when the flows
+    // version changes (saveFlow/deleteFlow bump it via
+    // invalidateFlowsCache), so it can never go stale. Disabled
+    // flows are left out of the index at build time.
+    @Volatile private var flowTrigIndex: Map<String, List<Pair<JSONObject, JSONObject>>>? = null
+    @Volatile private var flowTrigVer = -1L
+    private val flowTrigLock = Any()
+
+    private fun flowsForTrigger(ctx: Context, event: String): List<Pair<JSONObject, JSONObject>> {
+        val ver = FlowStore.flowsVersion()
+        synchronized(flowTrigLock) {
+            if (flowTrigIndex == null || flowTrigVer != ver) {
+                val idx = mutableMapOf<String, MutableList<Pair<JSONObject, JSONObject>>>()
+                for (flow in FlowStore.flows(ctx)) {
+                    if (!flow.optBoolean("enabled", true)) continue
+                    val nodes = flow.optJSONArray("nodes") ?: continue
+                    for (k in 0 until nodes.length()) {
+                        val n = nodes.optJSONObject(k) ?: continue
+                        if (n.optString("kind") != "t") continue
+                        val t = n.optString("type")
+                        if (t.isNotEmpty()) idx.getOrPut(t) { mutableListOf() }.add(flow to n)
+                    }
+                }
+                flowTrigIndex = idx
+                flowTrigVer = ver
+            }
+            return flowTrigIndex?.get(event) ?: emptyList()
+        }
+    }
+
     fun onEvent(ctx: Context, event: String, data: JSONObject = JSONObject()) {
         if (!FlowStore.flowServiceOn(ctx)) {
             return
@@ -255,24 +288,11 @@ object FlowEngine {
                 // ever fired from manual Run-now. Dispatch enabled
                 // flows whose trigger node matches this event, starting
                 // the walk AT that trigger node.
-                for (flow in FlowStore.flows(ctx)) {
-                    if (!flow.optBoolean("enabled", true)) {
+                for ((flow, n) in flowsForTrigger(ctx, event)) {
+                    if (!triggerParamMatches(event, n.optString("param"), data)) {
                         continue
                     }
-                    val nodes = flow.optJSONArray("nodes") ?: continue
-                    for (k in 0 until nodes.length()) {
-                        val n = nodes.optJSONObject(k) ?: continue
-                        if (n.optString("kind") != "t") {
-                            continue
-                        }
-                        if (n.optString("type") != event) {
-                            continue
-                        }
-                        if (!triggerParamMatches(event, n.optString("param"), data)) {
-                            continue
-                        }
-                        dispatchFlow(ctx, flow, n, event, data)
-                    }
+                    dispatchFlow(ctx, flow, n, event, data)
                 }
             } catch (_: Exception) {
             }
@@ -329,20 +349,8 @@ object FlowEngine {
                 val types = SENSOR_TICK_TYPES[kind] ?: return@Thread
                 // v1.4.1: sensor flows, same as rules above but with
                 // the flow id as the sensorFire state-key namespace.
-                for (flow in FlowStore.flows(ctx)) {
-                    if (!flow.optBoolean("enabled", true)) {
-                        continue
-                    }
-                    val nodes = flow.optJSONArray("nodes") ?: continue
-                    for (k in 0 until nodes.length()) {
-                        val n = nodes.optJSONObject(k) ?: continue
-                        if (n.optString("kind") != "t") {
-                            continue
-                        }
-                        val type = n.optString("type")
-                        if (type !in types) {
-                            continue
-                        }
+                for (type in types) {
+                    for ((flow, n) in flowsForTrigger(ctx, type)) {
                         val data = sensorFire(
                             ctx, flow.optString("id"), type,
                             n.optString("param"), kind, value

@@ -1484,6 +1484,37 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.3 — +100 templates (51 → 151)
+
+Why: Tamim's order (2026-11-07 03:31) — "R aro erokom useful 100 ta
+template add Kore dio". 50 new rules (`r2_*`) + 50 new flows (`f2_*`),
+all Bangla names/descriptions, no key/name/trigger+action overlap
+with the existing 51. Every trigger/action/constraint was validated
+against `AutoCatalog`/`FlowCatalog` and the engines' dispatch
+(`Automation.runAction`, `FlowEngine.runAction`); rule triggers only
+from the engine-reachable set in the `Templates.kt` KDoc (no
+call/sms_received/headphone/screen_on/off/geofence in rules);
+sunrise/sunset never in flows; no NFC/MQTT/relay/FocusLock/AutoTap/
+redial/`send_sms`/`call_number` anywhere. Flow params follow the
+flow formats (`volume_set` `music=N` raw, `brightness_set` 0–255,
+`dnd_set` on/off, `screen_timeout_set` ms); rule params follow the
+rule formats (`volume_set` `music:N` percent, `brightness_set`
+percent, `dnd_set` none/off, `screen_timeout_set` seconds).
+Constraints only `time_range`/`battery_above`/`battery_below`;
+flow conditions the same. Sheet subtitle now "১৫১টা তৈরি টেমপ্লেট".
+
+Engine fix (same version, Tamim's "ইঞ্জিন ঠিক করো" 2026-11-07):
+`Automation.rules()` re-parsed the whole rules JSON on every call
+and `onEvent` looped every rule on every system event; flows were
+cached since v1.4.1 but `FlowEngine.onEvent`/`sensorTick` still
+scanned every flow x node per event. Now: rules have an in-memory
+cache keyed on the raw stored string + a trigger-type index
+(`rulesForEvent`), invalidated only in `saveAll` (the sole writer
+of the "rules" key); flows have the same trigger index
+(`flowsForTrigger`), rebuilt only when `flowsVersion()` changes.
+Per-event work is now only the rules/flows that actually want that
+event — no behaviour change, same debounce/constraints/log paths.
+
 ## v1.4.2 — pill bar back, Settings crash fixed, FocusLock card to Settings
 
 Why: Tamim's verdict on 1.4.1 (2026-11-07 03:20) — "Almost okay",
