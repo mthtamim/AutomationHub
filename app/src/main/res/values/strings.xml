@@ -593,7 +593,9 @@
     <string name="aah_shell_to_var">command|varName</string>    <string name="btn_accent">Accent colour</string>
     <string name="btn_update">Check for updates</string>    <string name="btn_open">Open</string>    <string name="update_checking">Checking for updates…</string>
     <string name="update_found">New version v%s</string>
-    <string name="update_found_msg">A newer AutomationHub build is on GitHub. Open the release page to download it.</string>
+    <string name="update_found_msg">A newer AutomationHub build is available. Download and install it right here — no browser needed.</string>
+    <string name="btn_download_install">Download &amp; install</string>
+    <string name="update_downloading">Downloading update…</string>
     <string name="update_latest">You are on the latest version (or no release info found).</string>
     <string name="accent_emerald">Emerald (default)</string>
     <string name="accent_blue">Blue</string>

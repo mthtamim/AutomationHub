@@ -11,11 +11,13 @@ import java.net.URL
 import kotlin.concurrent.thread
 
 /**
- * v2.11: checks the GitHub releases of mthtamim/PhoneLink-Flows for a
+ * v2.11: checks the GitHub releases of mthtamim/AutomationHub for a
  * version newer than the installed one. Version strings are read from
  * release tags, names and asset names (the CI release keeps one tag,
  * so all three places are scanned). Manual checks report back through
  * the callback; the daily background check only notifies on a hit.
+ * v1.4.11: the manual check now downloads and installs in-app too —
+ * it used to just open the release page in the browser.
  */
 object Update {
 
@@ -36,14 +38,16 @@ object Update {
     }
 
     fun check(ctx: Context, manual: Boolean,
-              onResult: ((newer: String?, releaseUrl: String?) -> Unit)? = null) {
+              onResult: ((newer: String?, releaseUrl: String?,
+                          apkUrl: String?) -> Unit)? = null) {
         thread {
             var best: String? = null
             var bestUrl: String? = null
             var bestApk: String? = null
+            var ok = false
             try {
                 val conn = URL(
-                    "https://api.github.com/repos/mthtamim/PhoneLink-Flows/releases?per_page=10"
+                    "https://api.github.com/repos/mthtamim/AutomationHub/releases?per_page=10"
                 ).openConnection() as HttpURLConnection
                 conn.connectTimeout = 12000
                 conn.readTimeout = 12000
@@ -77,12 +81,16 @@ object Update {
                         }
                     }
                 }
+                ok = true
             } catch (_: Exception) { }
-            Config.setUpdateLastCheck(ctx, System.currentTimeMillis())
+            // v1.4.11: only stamp the check when the API actually
+            // answered — a failed check (offline) used to block any
+            // retry for 24 hours.
+            if (ok) Config.setUpdateLastCheck(ctx, System.currentTimeMillis())
             val newer = best?.takeIf { cmp(it, currentVersion(ctx)) > 0 }
             if (onResult != null) {
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    onResult(newer, bestUrl)
+                    onResult(newer, bestUrl, bestApk)
                 }
             } else if (newer != null) {
                 // v2.16: actually UPDATE, don't just announce —
@@ -123,6 +131,22 @@ object Update {
                             "v$version নিজে নিজে ইনস্টল হয়েছে।", null)
                         return@thread
                     }
+                }
+                // v1.4.11: without the one-time "install unknown
+                // apps" grant the system installer would just
+                // refuse — send the user to that setting instead,
+                // with the APK already downloaded.
+                if (!ctx.packageManager.canRequestPackageInstalls()) {
+                    val settings = Intent(
+                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        android.net.Uri.parse("package:" + ctx.packageName))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    val settingsPi = PendingIntent.getActivity(ctx, 779, settings,
+                        PendingIntent.FLAG_IMMUTABLE or
+                            PendingIntent.FLAG_UPDATE_CURRENT)
+                    notifyUpdate(ctx, "⬆️ ইনস্টলের অনুমতি দরকার",
+                        "একবার অনুমতি দাও, তারপর আবার আপডেট চেক করো।", settingsPi)
+                    return@thread
                 }
                 val uri = androidx.core.content.FileProvider.getUriForFile(
                     ctx, ctx.packageName + ".files", file)

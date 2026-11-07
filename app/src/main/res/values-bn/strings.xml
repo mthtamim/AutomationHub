@@ -583,7 +583,9 @@
     <string name="aah_shell_to_var">কমান্ড|ভেরিয়েবল</string>    <string name="btn_accent">অ্যাকসেন্ট রঙ</string>
     <string name="btn_update">আপডেট খোঁজো</string>    <string name="btn_open">খোলো</string>    <string name="update_checking">আপডেট খোঁজা হচ্ছে…</string>
     <string name="update_found">নতুন সংস্করণ v%s</string>
-    <string name="update_found_msg">GitHub-এ নতুন AutomationHub আছে। ডাউনলোড করতে রিলিজ পেজ খোলো।</string>
+    <string name="update_found_msg">AutomationHub-এর নতুন সংস্করণ এসেছে। এখান থেকেই ডাউনলোড করে ইনস্টল করো — ব্রাউজার লাগবে না।</string>
+    <string name="btn_download_install">ডাউনলোড ও ইনস্টল করো</string>
+    <string name="update_downloading">আপডেট ডাউনলোড হচ্ছে…</string>
     <string name="update_latest">তুমি সর্বশেষ সংস্করণেই আছো (অথবা রিলিজের তথ্য পাওয়া যায়নি)।</string>
     <string name="accent_emerald">এমারল্ড (ডিফল্ট)</string>
     <string name="accent_blue">নীল</string>

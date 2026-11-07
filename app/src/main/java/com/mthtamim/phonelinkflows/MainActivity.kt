@@ -726,13 +726,20 @@ class MainActivity : LocalizedActivity() {
         }
         findViewById<Button>(R.id.btnCheckUpdate).setOnClickListener {
             toast(getString(R.string.update_checking))
-            Update.check(this, true) { newer, url ->
+            Update.check(this, true) { newer, url, apkUrl ->
                 if (newer != null) {
                     MaterialAlertDialogBuilder(this)
                         .setTitle(getString(R.string.update_found, newer))
                         .setMessage(getString(R.string.update_found_msg))
-                        .setPositiveButton(getString(R.string.btn_open)) { _, _ ->
-                            if (!url.isNullOrEmpty()) try {
+                        .setPositiveButton(getString(R.string.btn_download_install)) { _, _ ->
+                            // v1.4.11: download and install in-app —
+                            // the old code just opened the release
+                            // page in the browser. The browser is
+                            // only the fallback when no APK link came back.
+                            if (!apkUrl.isNullOrEmpty()) {
+                                toast(getString(R.string.update_downloading))
+                                Update.downloadAndInstall(this, apkUrl, newer)
+                            } else if (!url.isNullOrEmpty()) try {
                                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                             } catch (_: Exception) { }
                         }

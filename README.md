@@ -62,6 +62,7 @@ Open the project in Android Studio and build the `app` module. CI builds the deb
 
 | Version | What's new |
 | --- | --- |
+| 1.4.11 | In-app updates: "Check for updates" now downloads and installs inside the app instead of opening the browser; the update check uses the renamed repo (mthtamim/AutomationHub); a failed check no longer blocks retry for 24 hours; if the one-time "install unknown apps" grant is missing, the app points you straight to that setting |
 | 1.4.10 | Snoozed notifications now come back instead of being re-snoozed in a loop |
 | 1.4.9 | Wi-Fi on/off triggers work with Location off (transport-based detection) |
 | 1.4.8 | Snooze matches app names; mobile-data detection; Flow Editor canvas pan; notification triggers reach rules |
