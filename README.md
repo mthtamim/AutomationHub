@@ -2,6 +2,7 @@
 
 [![Build APK](https://github.com/mthtamim/AutomationHub/actions/workflows/build-apk.yml/badge.svg)](https://github.com/mthtamim/AutomationHub/actions/workflows/build-apk.yml)
 [![Latest release](https://img.shields.io/github/v/release/mthtamim/AutomationHub)](https://github.com/mthtamim/AutomationHub/releases/latest)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 **Automation for Android — rules and visual flows, everything on your phone.**
 
@@ -74,6 +75,10 @@ Open the project in Android Studio and build the `app` module. CI builds the deb
 | 1.4.0 | Material 3 redesign with 8 themes |
 
 Full release notes are on the [Releases page](https://github.com/mthtamim/AutomationHub/releases).
+
+## License
+
+Copyright (C) 2026 MD Tamim Hasan Akando. Licensed under the GNU General Public License v3.0 — see [LICENSE](LICENSE).
 
 ## Support
 
