@@ -1484,6 +1484,25 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.8 — snooze match fix, mobile-data detection, Flow Editor pan
+
+Why: Tamim 2026-11-07 — three reports from phone testing v1.4.7.
+- Snooze didn't match: snooze matched the package exactly
+  ("com.whatsapp") or title/body text — "WhatsApp" (the app NAME)
+  matched nothing. Now one shared matcher (notifMatches) checks
+  package equals/contains, app label contains, title/body contains
+  (all ignoreCase) — used by snooze, reply and notif_present alike.
+  Snooze failure logs now name the match text.
+- Mobile data on/off never detected (rules): the rules tick read
+  Settings.Global "mobile_data", which never flips on this phone
+  (XOS). Rules now use TelephonyManager.isDataEnabled, like flows
+  already did — same for the "mobile_data" constraint.
+- Flow Editor: dragging empty canvas did nothing, so left/right
+  swipe couldn't move the canvas. Empty-space drag now pans it
+  (both directions, after the 8dp tap threshold); pan is clamped
+  so at least a quarter of the content stays visible — the canvas
+  can't be lost. Pinch zoom unchanged.
+
 ## v1.4.7 — notification snooze / cooldown / undo + JavaScript action
 
 Why: Tamim 2026-11-07 — the remaining two of the three comparison

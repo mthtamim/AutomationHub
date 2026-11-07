@@ -16,8 +16,8 @@ android {
         applicationId "com.mthtamim.phonelinkflows"
         minSdk 26
         targetSdk 34
-        versionCode 18
-        versionName "1.4.7"
+        versionCode 19
+        versionName "1.4.8"
         // Same arm64-only trade-off as PhoneLink: the APK does not
         // install on emulators or 32-bit-only phones.
         ndk {

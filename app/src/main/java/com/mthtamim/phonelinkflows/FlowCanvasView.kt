@@ -79,6 +79,11 @@ class FlowCanvasView @JvmOverloads constructor(
     // screen = pan + zoom * world, so pan follows the focal point.
     private var panX = 0f
     private var panY = 0f
+    // v1.4.8: empty-space drag pans the canvas.
+    private var panning = false
+    private var panMoved = false
+    private var panLastX = 0f
+    private var panLastY = 0f
 
     private val density = context.resources.displayMetrics.density
     private val nodeW = 230f * density
@@ -222,6 +227,42 @@ class FlowCanvasView @JvmOverloads constructor(
         panX = focusX - wx * newZoom
         panY = focusY - wy * newZoom
         applyZoom(newZoom)
+        clampPan()
+        invalidate()
+    }
+
+    /** v1.4.8: keep at least a quarter of the content visible so
+     *  the canvas can never be panned away and lost. */
+    private fun clampPan() {
+        var cLeft = 0f
+        var cTop = 0f
+        var cRight = 0f
+        var cBottom = 0f
+        var first = true
+        for (i in 0 until nodes.length()) {
+            val n = nodes.optJSONObject(i) ?: continue
+            val x = n.optDouble("x", 0.0).toFloat()
+            val y = n.optDouble("y", 0.0).toFloat()
+            if (first) {
+                cLeft = x; cTop = y; cRight = x; cBottom = y; first = false
+            } else {
+                if (x < cLeft) cLeft = x
+                if (y < cTop) cTop = y
+                if (x > cRight) cRight = x
+                if (y > cBottom) cBottom = y
+            }
+        }
+        val pad = 48f * density
+        cRight += nodeW + pad
+        cBottom += nodeH + pad
+        cLeft -= pad
+        cTop -= pad
+        val visX = width * 0.25f
+        val visY = height * 0.25f
+        if (panX < visX - cRight * zoom) panX = visX - cRight * zoom
+        if (panX > width - visX - cLeft * zoom) panX = width - visX - cLeft * zoom
+        if (panY < visY - cBottom * zoom) panY = visY - cBottom * zoom
+        if (panY > height - visY - cTop * zoom) panY = height - visY - cTop * zoom
     }
 
     /** Zooms out just enough that every node is visible (never zooms in past 1x). */
@@ -734,6 +775,7 @@ class FlowCanvasView @JvmOverloads constructor(
             dragId = null
             resizeId = null
             portDragFrom = null
+            panning = false
             return true
         }
         val wx = (event.x - panX) / zoom
@@ -742,6 +784,8 @@ class FlowCanvasView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 downX = event.x
                 downY = event.y
+                panning = false
+                panMoved = false
                 moved = false
                 dragStarted = false
                 resizeStarted = false
@@ -766,6 +810,12 @@ class FlowCanvasView @JvmOverloads constructor(
                     selectedId = null
                     lastTapNodeId = null
                     onNodeSelected?.invoke(null)
+                    // v1.4.8: empty-space drag pans the canvas
+                    // (before this, swiping left/right did nothing).
+                    panning = true
+                    panMoved = false
+                    panLastX = event.x
+                    panLastY = event.y
                     invalidate()
                     return true
                 }
@@ -800,6 +850,24 @@ class FlowCanvasView @JvmOverloads constructor(
                         node.put("s", s.toDouble())
                         invalidate()
                     }
+                    return true
+                }
+                // v1.4.8: drag on empty canvas pans it.
+                if (panning) {
+                    val dx = event.x - panLastX
+                    val dy = event.y - panLastY
+                    panLastX = event.x
+                    panLastY = event.y
+                    if (!panMoved &&
+                        kotlin.math.abs(event.x - downX) <= 8f * density &&
+                        kotlin.math.abs(event.y - downY) <= 8f * density) {
+                        return true
+                    }
+                    panMoved = true
+                    panX += dx
+                    panY += dy
+                    clampPan()
+                    invalidate()
                     return true
                 }
                 val did = dragId ?: return true
@@ -890,6 +958,14 @@ class FlowCanvasView @JvmOverloads constructor(
                     return true
                 }
                 if (did == null) {
+                    // v1.4.8: a pan is not a tap — don't select an
+                    // edge after dragging the canvas.
+                    if (panMoved) {
+                        panMoved = false
+                        panning = false
+                        return true
+                    }
+                    panning = false
                     val edge = hitEdge(wx, wy)
                     if (edge != null) {
                         selectedEdge = edge
@@ -905,6 +981,8 @@ class FlowCanvasView @JvmOverloads constructor(
                 resizeId = null
                 portDragFrom = null
                 portDragPort = null
+                panning = false
+                panMoved = false
                 return true
             }
             else -> {

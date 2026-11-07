@@ -2969,7 +2969,7 @@ object FlowEngine {
                         param.trim() to 15L
                     }
                     if (!FlowNotifListener.snoozeByMatch(match, mins))
-                        FlowStore.log(ctx, "স্নুজ ব্যর্থ: মিলে যাওয়া নোটিফিকেশন নেই")
+                        FlowStore.log(ctx, "স্নুজ ব্যর্থ: '" + match + "' মিলে যাওয়া নোটিফিকেশন নেই")
                 }
                 // v1.4.7: undo — re-post the most recently dismissed
                 // notification (see FlowNotifListener.restoreLatest).

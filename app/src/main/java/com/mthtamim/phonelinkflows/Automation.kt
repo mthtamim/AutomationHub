@@ -1353,9 +1353,11 @@ object Automation {
                 }
                 "process_running" -> appRecentlyUsed(ctx, param.trim())
                 "mobile_data" -> {
+                    // v1.4.8: same fix as poll_mdata — isDataEnabled,
+                    // not Settings.Global (never flips on this phone).
                     val on = try {
-                        android.provider.Settings.Global.getInt(
-                            ctx.contentResolver, "mobile_data", 0) == 1
+                        (ctx.getSystemService(Context.TELEPHONY_SERVICE)
+                            as android.telephony.TelephonyManager).isDataEnabled
                     } catch (e: Exception) { false }
                     on == (param != "off")
                 }
@@ -2386,7 +2388,7 @@ object Automation {
                         param.trim() to 15L
                     }
                     if (!FlowNotifListener.snoozeByMatch(match, mins))
-                        log(ctx, "স্নুজ ব্যর্থ: মিলে যাওয়া নোটিফিকেশন নেই")
+                        log(ctx, "স্নুজ ব্যর্থ: '" + match + "' মিলে যাওয়া নোটিফিকেশন নেই")
                 }
                 // v1.4.7: undo — re-post the most recently dismissed
                 // notification (see FlowNotifListener.restoreLatest).
@@ -3292,9 +3294,13 @@ object Automation {
                 if (locked && !prev) onEvent(ctx, "screen_locked", JSONObject())
                 if (locked != prev) wp.edit().putBoolean("edge_locked", locked).apply()
             } else wp.edit().putBoolean("edge_locked", locked).apply()
+            // v1.4.8: was Settings.Global "mobile_data" — on this
+            // phone (XOS) that key never flips, so mobile_data_on/
+            // off never fired. TelephonyManager.isDataEnabled is
+            // the reliable read (flows already used it).
             stateEdge(ctx, "poll_mdata", try {
-                android.provider.Settings.Global.getInt(
-                    ctx.contentResolver, "mobile_data", 0) == 1
+                (ctx.getSystemService(Context.TELEPHONY_SERVICE)
+                    as android.telephony.TelephonyManager).isDataEnabled
             } catch (e: Exception) { false }, "mobile_data_on", "mobile_data_off")
             stateEdge(ctx, "poll_gps", try { gpsEnabled(ctx) }
                 catch (e: Exception) { false }, "gps_on", "gps_off")

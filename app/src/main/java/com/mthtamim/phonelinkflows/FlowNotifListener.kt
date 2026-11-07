@@ -139,6 +139,31 @@ class FlowNotifListener : NotificationListenerService() {
         private const val DISMISSED_KEY = "dismissed_notifs"
         private const val DISMISSED_MAX = 10
 
+        /** v1.4.8: one definition of "this notification matches
+         *  [match]" — package equals/contains, app NAME contains
+         *  (users type "WhatsApp", not "com.whatsapp"), or title/
+         *  body contains (all ignoreCase). Used by snooze, reply
+         *  and notif_present so all three agree. */
+        private fun notifMatches(sbn: StatusBarNotification, match: String): Boolean {
+            if (match.isEmpty()) return true
+            val pkg = sbn.packageName ?: ""
+            if (pkg.equals(match, ignoreCase = true) ||
+                pkg.contains(match, ignoreCase = true)) return true
+            val ctx = appCtx ?: instance?.applicationContext
+            if (ctx != null) {
+                val label = try {
+                    val ai = ctx.packageManager.getApplicationInfo(pkg, 0)
+                    ctx.packageManager.getApplicationLabel(ai).toString()
+                } catch (_: Exception) { "" }
+                if (label.isNotEmpty() && label.contains(match, ignoreCase = true)) return true
+            }
+            val n = sbn.notification ?: return false
+            val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+            val body = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+            return title.contains(match, ignoreCase = true) ||
+                body.contains(match, ignoreCase = true)
+        }
+
         /** Snooze the newest notification matching [match]
          *  (package, or title/body text; blank = most recent) for
          *  [minutes]. False when the listener is off or nothing
@@ -147,12 +172,8 @@ class FlowNotifListener : NotificationListenerService() {
             val svc = instance ?: return false
             return try {
                 val target = svc.activeNotifications
-                    .filter { sbn ->
-                        if (match.isEmpty()) true
-                        else sbn.packageName == match ||
-                            (sbn.notification?.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: "").contains(match, ignoreCase = true) ||
-                            (sbn.notification?.extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: "").contains(match, ignoreCase = true)
-                    }
+                    // v1.4.8: shared match — package, app name, title, body.
+                    .filter { notifMatches(it, match) }
                     .maxByOrNull { it.postTime } ?: return false
                 svc.snoozeNotification(target.key, minutes.coerceAtLeast(1) * 60_000L)
                 true
@@ -222,14 +243,8 @@ class FlowNotifListener : NotificationListenerService() {
         fun reply(match: String, text: String): Boolean {
             val ctx = appCtx ?: return false
             for ((_, sbn) in active) {
-                val n = sbn.notification ?: continue
-                val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-                val body = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-                if (!title.contains(match, ignoreCase = true) &&
-                    !body.contains(match, ignoreCase = true)
-                ) {
-                    continue
-                }
+                // v1.4.8: shared match — package, app name, title, body.
+                if (!notifMatches(sbn, match)) continue
                 val actions = n.actions ?: continue
                 for (action in actions) {
                     val inputs = action.remoteInputs ?: continue
@@ -253,28 +268,19 @@ class FlowNotifListener : NotificationListenerService() {
         /**
          * PhoneLink v2.24.0: the notif_present condition. Blank
          * [match] means any active notification; otherwise true
-         * when some active notification's title or body contains
-         * the text (case-insensitive) or its package equals it.
-         * False when the listener is off (nothing tracked) — the
-         * condition then honestly never matches, it never claims
-         * a notification that is not there.
+         * when some active notification matches the text — package,
+         * app name, title or body (see notifMatches). False when
+         * the listener is off (nothing tracked) — the condition
+         * then honestly never matches, it never claims a
+         * notification that is not there.
          */
         fun hasActive(match: String): Boolean {
             if (match.isEmpty()) {
                 return active.isNotEmpty()
             }
             for ((_, sbn) in active) {
-                if (sbn.packageName == match) {
-                    return true
-                }
-                val n = sbn.notification ?: continue
-                val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-                val body = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-                if (title.contains(match, ignoreCase = true) ||
-                    body.contains(match, ignoreCase = true)
-                ) {
-                    return true
-                }
+                // v1.4.8: shared match — package, app name, title, body.
+                if (notifMatches(sbn, match)) return true
             }
             return false
         }
