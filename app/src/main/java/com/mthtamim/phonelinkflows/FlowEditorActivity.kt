@@ -490,7 +490,12 @@ class FlowEditorActivity : LocalizedActivity() {
                 addPanelField(inputContainer, "time", R.string.panel_time, param, InputType.TYPE_CLASS_TEXT, "09:00")
             }
             "time_interval", "wait" -> {
-                addPanelField(inputContainer, "seconds", R.string.panel_seconds, param, InputType.TYPE_CLASS_NUMBER, "30")
+                // v1.4.4: both units everywhere — "30s" seconds,
+                // "5m" minutes, plain number keeps the field's old
+                // unit (wait: seconds, time_interval: minutes).
+                // Text input so the suffix can be typed at all.
+                val label = if (type == "time_interval") R.string.panel_minutes else R.string.panel_seconds
+                addPanelField(inputContainer, "seconds", label, param, InputType.TYPE_CLASS_TEXT, "30s / 5m")
             }
             "time_at_days" -> {
                 val time = param.substringAfter("time=", "").substringBefore("|")

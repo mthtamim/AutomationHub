@@ -72,6 +72,14 @@ class FlowCanvasView @JvmOverloads constructor(
     var zoom: Float = 1f
         private set
 
+    // v1.4.4: pan offset (screen px). Zoom used to scale around the
+    // view origin (0,0), so pinching moved the point under the
+    // fingers — "zoom from one side, no focus point". Now every
+    // zoom keeps the world point under the focal point fixed:
+    // screen = pan + zoom * world, so pan follows the focal point.
+    private var panX = 0f
+    private var panY = 0f
+
     private val density = context.resources.displayMetrics.density
     private val nodeW = 230f * density
     private val nodeH = 92f * density
@@ -123,6 +131,8 @@ class FlowCanvasView @JvmOverloads constructor(
     private var gridKeyW = -1
     private var gridKeyH = -1
     private var gridKeyZoom = -1f
+    private var gridKeyStartX = Float.NaN
+    private var gridKeyStartY = Float.NaN
     private val rectsCache = HashMap<String, RectF>()
     private var edgePathKey: String? = null
     private var edgePathCache: List<EdgeDraw> = emptyList()
@@ -152,7 +162,7 @@ class FlowCanvasView @JvmOverloads constructor(
         context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
-                setZoom(zoom * detector.scaleFactor)
+                setZoomAt(zoom * detector.scaleFactor, detector.focusX, detector.focusY)
                 return true
             }
         }
@@ -188,10 +198,30 @@ class FlowCanvasView @JvmOverloads constructor(
         paintTemp.color = ThemeColors.onSurface(context)
     }
 
-    fun setZoom(value: Float) {
+    private fun applyZoom(value: Float) {
         zoom = value.coerceIn(0.5f, 2.0f)
         invalidate()
         onZoomChanged?.invoke(zoom)
+    }
+
+    /** Zoom keeping the view centre fixed (the +/- buttons). */
+    fun setZoom(value: Float) {
+        setZoomAt(value, width / 2f, height / 2f)
+    }
+
+    /** Zoom keeping the world point under (focusX, focusY) fixed —
+     *  the pinch focal point. Screen = pan + zoom * world, so the
+     *  pan is moved so that world point maps back to the same
+     *  screen point after the zoom change. */
+    fun setZoomAt(value: Float, focusX: Float, focusY: Float) {
+        val oldZoom = zoom
+        val newZoom = value.coerceIn(0.5f, 2.0f)
+        if (newZoom == oldZoom) return
+        val wx = (focusX - panX) / oldZoom
+        val wy = (focusY - panY) / oldZoom
+        panX = focusX - wx * newZoom
+        panY = focusY - wy * newZoom
+        applyZoom(newZoom)
     }
 
     /** Zooms out just enough that every node is visible (never zooms in past 1x). */
@@ -217,7 +247,9 @@ class FlowCanvasView @JvmOverloads constructor(
         val contentW = max(1f, right - left)
         val contentH = max(1f, bottom - top)
         val fit = min(width / contentW, height / contentH)
-        setZoom(min(1.0f, fit))
+        panX = 0f
+        panY = 0f
+        applyZoom(min(1.0f, fit))
     }
 
     /** Per-node scale factor from the node's JSON ("s", default 1.0, clamped). */
@@ -490,23 +522,33 @@ class FlowCanvasView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.save()
+        canvas.translate(panX, panY)
         canvas.scale(zoom, zoom)
 
         // Dotted grid under everything (24dp world spacing). One
         // drawPoints call from a cached array — the old nested
         // loops issued ~2000 drawCircle calls per frame. Dots are
         // 3dp wide (the old radius was 1.5dp), same positions.
+        // The visible world rect moves with the pan, so the dots
+        // start at the first grid step at/after its top-left; the
+        // cache key is that start point, so the array only rebuilds
+        // when the visible step set changes, not on every pan pixel.
+        val step = 24f * density
+        val visLeft = -panX / zoom
+        val visTop = -panY / zoom
+        val visW = width / zoom
+        val visH = height / zoom
+        val startX = kotlin.math.floor(visLeft / step) * step
+        val startY = kotlin.math.floor(visTop / step) * step
         if (gridPts.isEmpty() || width != gridKeyW ||
-            height != gridKeyH || zoom != gridKeyZoom
+            height != gridKeyH || zoom != gridKeyZoom ||
+            startX != gridKeyStartX || startY != gridKeyStartY
         ) {
-            val worldW = width / zoom
-            val worldH = height / zoom
-            val step = 24f * density
             val list = ArrayList<Float>()
-            var gx = 0f
-            while (gx <= worldW) {
-                var gy = 0f
-                while (gy <= worldH) {
+            var gx = startX
+            while (gx <= visLeft + visW + step) {
+                var gy = startY
+                while (gy <= visTop + visH + step) {
                     list.add(gx); list.add(gy)
                     gy += step
                 }
@@ -514,6 +556,7 @@ class FlowCanvasView @JvmOverloads constructor(
             }
             gridPts = FloatArray(list.size) { list[it] }
             gridKeyW = width; gridKeyH = height; gridKeyZoom = zoom
+            gridKeyStartX = startX; gridKeyStartY = startY
         }
         canvas.drawPoints(gridPts, paintGrid)
 
@@ -693,8 +736,8 @@ class FlowCanvasView @JvmOverloads constructor(
             portDragFrom = null
             return true
         }
-        val wx = event.x / zoom
-        val wy = event.y / zoom
+        val wx = (event.x - panX) / zoom
+        val wy = (event.y - panY) / zoom
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.x
@@ -775,8 +818,10 @@ class FlowCanvasView @JvmOverloads constructor(
                 }
                 val node = FlowFlow.nodeByIdFromArray(nodes, did) ?: return true
                 val s = nodeScale(node)
-                val worldW = width / zoom
-                val worldH = height / zoom
+                val left = -panX / zoom
+                val top = -panY / zoom
+                val right = left + width / zoom
+                val bottom = top + height / zoom
                 var nx = wx - dragDx
                 var ny = wy - dragDy
                 if (snapToGrid) {
@@ -784,17 +829,17 @@ class FlowCanvasView @JvmOverloads constructor(
                     nx = (nx / step).roundToInt() * step
                     ny = (ny / step).roundToInt() * step
                 }
-                if (nx < 0f) {
-                    nx = 0f
+                if (nx < left) {
+                    nx = left
                 }
-                if (ny < 0f) {
-                    ny = 0f
+                if (ny < top) {
+                    ny = top
                 }
-                if (nx > worldW - nodeW * s) {
-                    nx = (worldW - nodeW * s).coerceAtLeast(0f)
+                if (nx > right - nodeW * s) {
+                    nx = (right - nodeW * s).coerceAtLeast(left)
                 }
-                if (ny > worldH - nodeH * s) {
-                    ny = (worldH - nodeH * s).coerceAtLeast(0f)
+                if (ny > bottom - nodeH * s) {
+                    ny = (bottom - nodeH * s).coerceAtLeast(top)
                 }
                 node.put("x", nx.toDouble())
                 node.put("y", ny.toDouble())

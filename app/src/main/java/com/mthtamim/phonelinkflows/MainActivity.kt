@@ -501,6 +501,17 @@ class MainActivity : LocalizedActivity() {
         // settingsOpen is the same truth showPage() maintains.
         selectNavTab(if (settingsOpen) R.id.navSettings else R.id.navHome)
         refreshStatus()
+        // v1.4.4: watchdog — if the Flows switch is ON but the
+        // service hasn't ticked for >10 min (XOS killed it),
+        // start it again. Re-entering a running service is a
+        // no-op (FlowService.onStartCommand is idempotent).
+        try {
+            if (FlowStore.flowServiceOn(this) &&
+                System.currentTimeMillis() - FlowStore.serviceLastTick(this) > 10 * 60_000L
+            ) {
+                startForegroundService(Intent(this, FlowService::class.java))
+            }
+        } catch (_: Exception) { }
         Automation.checkClipboard(this)
         // v2.4 NFC tag trigger (foreground dispatch).
         try {
@@ -532,6 +543,8 @@ class MainActivity : LocalizedActivity() {
             android.nfc.NfcAdapter.ACTION_TECH_DISCOVERED,
             android.nfc.NfcAdapter.ACTION_NDEF_DISCOVERED -> {
                 Automation.onEvent(this, "nfc_tag", org.json.JSONObject())
+                // v1.4.4: nfc_tag was rules-only — feed flows too.
+                FlowEngine.onEvent(this, "nfc_tag", org.json.JSONObject())
                 toast(getString(R.string.toast_nfc))
             }
         }

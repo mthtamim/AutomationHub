@@ -109,13 +109,17 @@ class FlowService : Service() {
     private val wifiCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
             try {
+                // v1.4.4: fire even when the SSID is unknown
+                // (Location off masks it to ""). Blank-param rules
+                // match any network; SSID-param rules still
+                // correctly don't match an unknown SSID. Skipping
+                // here used to make wifi_connected never fire at
+                // all with Location off.
                 val ssid = currentWifiSsid(this@FlowService)
-                if (ssid.isNotEmpty()) {
-                    FlowEngine.onEvent(this@FlowService, "wifi_connected",
-                        JSONObject().put("ssid", ssid).put("title", ssid))
-                    Automation.onEvent(this@FlowService, "wifi_connected",
-                        JSONObject().put("ssid", ssid).put("title", ssid))
-                }
+                FlowEngine.onEvent(this@FlowService, "wifi_connected",
+                    JSONObject().put("ssid", ssid).put("title", ssid))
+                Automation.onEvent(this@FlowService, "wifi_connected",
+                    JSONObject().put("ssid", ssid).put("title", ssid))
             } catch (_: Exception) {
             }
         }
@@ -188,6 +192,12 @@ class FlowService : Service() {
         // LAN webhook trigger host, formerly started by
         // LinkService: the webhook trigger still works locally.
         try { WebhookServer.start(this) } catch (_: Exception) { }
+        // v1.4.4: register the system receiver (BT ACL, airplane,
+        // hotspot AP state, battery saver, ACTION_FOUND). It used
+        // to be registered only when rules were saved, so after
+        // every reboot/kill those 10 rule triggers were dead
+        // until the next save. The service owns it now.
+        try { Automation.refreshWatchers(this) } catch (_: Exception) { }
         running = true
         FlowStore.setServiceLastTick(this, System.currentTimeMillis())
         handler.post(tickRunnable)

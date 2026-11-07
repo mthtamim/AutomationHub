@@ -30,9 +30,12 @@ import org.json.JSONObject
  *  rule engine in places: volume_set is "stream=raw" (e.g. music=10),
  *  brightness_set is 0-255 (e.g. 76 ≈ 30%), dnd_set "on" = full
  *  silent / "off" = normal, screen_timeout_set is milliseconds,
- *  set_alarm is "HH:MM" only, set_timer is seconds only, vibrate and
- *  play_sound take no param. "wait" does not exist in FlowEngine and
- *  "ringer"/"mode_set" are not flow actions — none are used here.
+ *  set_alarm is "HH:MM" only, vibrate and play_sound take no
+ *  param. Durations accept a "30s"/"5m" suffix in both engines
+ *  (v1.4.4); a plain number keeps the field's old unit — wait:
+ *  rules minutes / flows seconds, time_interval minutes,
+ *  set_timer seconds. "ringer"/"mode_set" are not flow actions —
+ *  none are used here.
  *  Sunrise/sunset are in FlowEngine's TICK_IGNORED set with no
  *  event source, so they are rules-only. No NFC anywhere (Tamim),
  *  no MQTT, no relay/peer actions, no FocusLock/AutoTap/redial

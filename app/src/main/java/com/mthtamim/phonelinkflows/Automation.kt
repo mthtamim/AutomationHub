@@ -1633,6 +1633,37 @@ object Automation {
      * a loop it sleeps the (background) thread instead. A wait resumed after
      * parking continues flat from that index (the loop is not re-entered).
      */
+    /** v1.4.4: wait delay in ms — plain number is minutes (the
+     *  historical unit), a trailing "s" means seconds ("30s"). */
+    private fun parseWaitDelay(param: String): Long {
+        val p = param.trim()
+        if (p.endsWith("s", ignoreCase = true)) {
+            val secs = p.dropLast(1).toLongOrNull() ?: 1
+            return secs.coerceAtLeast(0) * 1000
+        }
+        if (p.endsWith("m", ignoreCase = true)) {
+            val mins = p.dropLast(1).toLongOrNull() ?: 1
+            return mins.coerceAtLeast(0) * 60_000
+        }
+        val mins = p.toLongOrNull() ?: 1
+        return mins.coerceAtLeast(0) * 60_000
+    }
+
+    /** v1.4.4: duration in seconds — "30s" = 30s, "5m" = 300s,
+     *  plain number = the field's historical unit (plainIsMinutes
+     *  true for time_interval, false for set_timer). Garbage -> 0. */
+    private fun parseDurationSecs(param: String, plainIsMinutes: Boolean): Long {
+        val p = param.trim()
+        if (p.endsWith("s", ignoreCase = true)) {
+            return (p.dropLast(1).toLongOrNull() ?: 0).coerceAtLeast(0)
+        }
+        if (p.endsWith("m", ignoreCase = true)) {
+            return (p.dropLast(1).toLongOrNull() ?: 0).coerceAtLeast(0) * 60
+        }
+        val n = p.toLongOrNull() ?: 0
+        return if (plainIsMinutes) n.coerceAtLeast(0) * 60 else n.coerceAtLeast(0)
+    }
+
     private fun execRange(ctx: Context, rule: JSONObject, data: JSONObject,
                           start: Int, end: Int, depth: Int): Int {
         val arr = rule.optJSONArray("actions") ?: return SIG_OK
@@ -1644,13 +1675,15 @@ object Automation {
             val param = fill(a.optString("param"), data)
             when (type) {
                 "wait" -> {
-                    val mins = param.toLongOrNull() ?: 1
+                    // v1.4.4: plain number = minutes (unchanged);
+                    // a trailing "s" means seconds ("30s").
+                    val delayMs = parseWaitDelay(param)
                     if (depth == 0) {
                         scheduleWait(ctx, rule, i + 1,
-                            System.currentTimeMillis() + mins * 60_000, data)
+                            System.currentTimeMillis() + delayMs, data)
                         return SIG_STOP
                     }
-                    try { Thread.sleep(mins * 60_000) } catch (_: Exception) { }
+                    try { Thread.sleep(delayMs) } catch (_: Exception) { }
                     i++
                 }
                 "wait_until" -> {
@@ -2430,7 +2463,8 @@ object Automation {
                     }
                 }
                 "set_timer" -> {
-                    val secs = param.split("|").getOrNull(0)?.trim()?.toIntOrNull() ?: 0
+                    val secs = parseDurationSecs(param.split("|").getOrNull(0) ?: "", false)
+                        .coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
                     if (secs > 0) {
                         try {
                             ctx.startActivity(Intent(android.provider.AlarmClock.ACTION_SET_TIMER)
@@ -3392,8 +3426,8 @@ object Automation {
                                 minutesNow() - mins < 65
                         }
                         "time_interval" -> {
-                            val mins = param.toLongOrNull() ?: 0
-                            mins > 0 && now - prefs(ctx).getLong("fired_${rule.optString("id")}", 0) >= mins * 60_000
+                            val intervalMs = parseDurationSecs(param, true) * 1000
+                            intervalMs > 0 && now - prefs(ctx).getLong("fired_${rule.optString("id")}", 0) >= intervalMs
                         }
                         "sunrise", "sunset" -> sunTriggerDue(ctx, type, rule.optString("id"))
                         "battery_below", "battery_above" -> batteryCrossing(ctx, rule, type, param)
@@ -4139,15 +4173,21 @@ object Automation {
                             @Suppress("DEPRECATION")
                             val dev = intent.getParcelableExtra<android.bluetooth.BluetoothDevice>(
                                 android.bluetooth.BluetoothDevice.EXTRA_DEVICE)
-                            onEvent(ctx, "bt_connected", JSONObject()
-                                .put("title", try { dev?.name ?: "" } catch (e: Exception) { "" }))
+                            val d = JSONObject()
+                                .put("title", try { dev?.name ?: "" } catch (e: Exception) { "" })
+                            onEvent(ctx, "bt_connected", d)
+                            // v1.4.4: flows had no BT source at all.
+                            FlowEngine.onEvent(ctx, "bt_connected", d)
                         }
                         android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
                             @Suppress("DEPRECATION")
                             val dev = intent.getParcelableExtra<android.bluetooth.BluetoothDevice>(
                                 android.bluetooth.BluetoothDevice.EXTRA_DEVICE)
-                            onEvent(ctx, "bt_disconnected", JSONObject()
-                                .put("title", try { dev?.name ?: "" } catch (e: Exception) { "" }))
+                            val d = JSONObject()
+                                .put("title", try { dev?.name ?: "" } catch (e: Exception) { "" })
+                            onEvent(ctx, "bt_disconnected", d)
+                            // v1.4.4: flows had no BT source at all.
+                            FlowEngine.onEvent(ctx, "bt_disconnected", d)
                         }
                         android.app.NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> {
                             val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE)
@@ -4171,8 +4211,16 @@ object Automation {
                             // returned false on modern Android, so the
                             // poll never saw the hotspot at all.
                             val st = intent.getIntExtra("wifi_state", -1)
-                            if (st == 13) onEvent(ctx, "hotspot_on", JSONObject())
-                            if (st == 11) onEvent(ctx, "hotspot_off", JSONObject())
+                            if (st == 13) {
+                                onEvent(ctx, "hotspot_on", JSONObject())
+                                // v1.4.4: flows had no hotspot source.
+                                FlowEngine.onEvent(ctx, "hotspot_on", JSONObject())
+                            }
+                            if (st == 11) {
+                                onEvent(ctx, "hotspot_off", JSONObject())
+                                // v1.4.4: flows had no hotspot source.
+                                FlowEngine.onEvent(ctx, "hotspot_off", JSONObject())
+                            }
                             if (st == 13 || st == 11) prefs(ctx).edit()
                                 .putBoolean("hotspot_state", st == 13).apply()
                         }
@@ -4195,8 +4243,16 @@ object Automation {
                                 Short.MIN_VALUE).toInt()
                             if (name.isNotEmpty()) {
                                 val d = JSONObject().put("title", name)
-                                if (rssi >= -70) onEvent(ctx, "bt_near", d)
-                                if (rssi in -200..-90) onEvent(ctx, "bt_far", d)
+                                if (rssi >= -70) {
+                                    onEvent(ctx, "bt_near", d)
+                                    // v1.4.4: flows had no BT source.
+                                    FlowEngine.onEvent(ctx, "bt_near", d)
+                                }
+                                if (rssi in -200..-90) {
+                                    onEvent(ctx, "bt_far", d)
+                                    // v1.4.4: flows had no BT source.
+                                    FlowEngine.onEvent(ctx, "bt_far", d)
+                                }
                             }
                         }
                     }

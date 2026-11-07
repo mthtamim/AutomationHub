@@ -1484,6 +1484,71 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.4 — wait in seconds
+
+Why: Tamim wants wait in seconds. Two gaps found: (1) the flow
+editor already labels wait's field "seconds" (numeric, hint "30")
+but `FlowEngine` had no "wait" case at all — the walk silently
+skipped it, so a wait node in a flow did nothing. (2) In rules,
+wait was minutes-only (`aa_wait` "Wait (minutes)").
+Fix: `FlowEngine.runAction` now has a "wait" case — plain number
+is seconds (capped at 3600), sleeping the walk thread, which is
+safe because every walk runs on a background thread (dispatch,
+manual run, tick, call_flow). `Automation.execRange` now parses
+"30s" as 30 seconds via `parseWaitDelay`; a plain number is
+still minutes, so existing rules are unchanged. Hint updated to
+"Minutes (30s = 30 seconds)". `wait_until` stays minutes.
+
+Zoom-to-point (same version, Tamim's video 2026-11-07): the canvas
+scaled around the view origin (0,0), so pinching moved the point
+under the fingers — zoom "from one side". `FlowCanvasView` now
+keeps a pan offset (screen px): `setZoomAt` holds the world point
+under the focal point fixed (pinch focus, or the view centre for
+the +/- buttons), touch mapping and node-drag clamps use the
+visible world rect, the dotted grid is generated over that rect,
+and fit-to-screen resets the pan. No pan gesture was added —
+dragging empty space still deselects, as before.
+
+Seconds AND minutes everywhere (same version, Tamim 2026-11-07):
+durations now accept a "30s"/"5m" suffix in both engines, a plain
+number keeping the field's old unit — wait (rules minutes, flows
+seconds), time_interval (minutes), set_timer (seconds). The flow
+editor's wait/time_interval fields were numeric-only and labelled
+"Seconds" even for time_interval (minutes in the engine); they
+are text now with hint "30s / 5m" and the right label per field.
+`parseDurationSecs` in both engines; rule hints updated. The
+Templates KDoc line claiming wait does not exist in FlowEngine
+is corrected.
+
+Trigger-detection fix (same version, Tamim 2026-11-07 — service
+was running ("running" in the Flows tab) and all other rules /
+flows worked, only the battery + connectivity triggers never
+fired). Audit + code verification found four separate causes:
+(1) `Automation.registerSysReceiver` (BT ACL, airplane, hotspot
+AP state, battery saver, ACTION_FOUND) was registered only when
+rules were saved — after every reboot/kill those 10 rule triggers
+were dead until the next save; `FlowService.onCreate` now calls
+`Automation.refreshWatchers()`. (2) Flows had NO event source
+for BT / hotspot / NFC at all — `registerSysReceiver` now also
+dispatches bt_connected/disconnected/near/far and hotspot_on/off
+to `FlowEngine.onEvent`, and the flow tick starts BT discovery
+when any enabled flow uses bt_near/bt_far (rules already did
+this from `pollEdges`). (3) Flow battery/charging triggers used
+a 60-minute `edgeOnce` window — toggling the charger twice in
+an hour fired only once; all six branches (battery_below/above/
+full/temp_above, charging_on/off) now use arm/disarm `edgeTo`
+edges like the rules engine. (4) `wifi_connected` never fired
+with Location off — the live callback skipped empty SSIDs and
+the poll only fires on SSID change; the callback now fires even
+with an unknown SSID (blank-param rules match, SSID-param rules
+still correctly don't). Also: NFC tag now fires flows too
+(`onNewIntent` dual-dispatch) + a bare NDEF intent-filter on
+MainActivity so a tag tap cold-starts the app from background;
+and a watchdog in `MainActivity.onResume` re-starts the service
+when the switch is ON but the tick is stale >10 min (XOS kill).
+`hotspot_clients` still needs a Shizuku grant for AutomationHub
+itself — it already logs that once a day in the Log.
+
 ## v1.4.3 — +100 templates (51 → 151)
 
 Why: Tamim's order (2026-11-07 03:31) — "R aro erokom useful 100 ta

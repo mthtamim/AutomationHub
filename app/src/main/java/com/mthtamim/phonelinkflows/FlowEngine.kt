@@ -277,6 +277,21 @@ object FlowEngine {
         }
     }
 
+    /** v1.4.4: duration in seconds — "30s" = 30s, "5m" = 300s,
+     *  plain number = the field's historical unit (plainIsMinutes
+     *  true for time_interval, false for wait/set_timer). */
+    private fun parseDurationSecs(param: String, plainIsMinutes: Boolean): Long {
+        val p = param.trim()
+        if (p.endsWith("s", ignoreCase = true)) {
+            return (p.dropLast(1).toLongOrNull() ?: 0).coerceAtLeast(0)
+        }
+        if (p.endsWith("m", ignoreCase = true)) {
+            return (p.dropLast(1).toLongOrNull() ?: 0).coerceAtLeast(0) * 60
+        }
+        val n = p.toLongOrNull() ?: 0
+        return if (plainIsMinutes) n.coerceAtLeast(0) * 60 else n.coerceAtLeast(0)
+    }
+
     fun onEvent(ctx: Context, event: String, data: JSONObject = JSONObject()) {
         if (!FlowStore.flowServiceOn(ctx)) {
             return
@@ -529,6 +544,30 @@ object FlowEngine {
         }
         try {
             val now = System.currentTimeMillis()
+            // v1.4.4: BT near/far flows need discovery running —
+            // rules get it from Automation.pollEdges, flows had
+            // nothing, so ACTION_FOUND never arrived. Same shape
+            // as the rules side: start it when any enabled flow
+            // uses bt_near/bt_far and it isn't already running.
+            try {
+                var needsBt = false
+                for (flow in FlowStore.flows(ctx)) {
+                    if (!flow.optBoolean("enabled", true)) continue
+                    val nodes = flow.optJSONArray("nodes") ?: continue
+                    for (k in 0 until nodes.length()) {
+                        val t = nodes.optJSONObject(k)?.optString("type") ?: continue
+                        if (t == "bt_near" || t == "bt_far") { needsBt = true; break }
+                    }
+                    if (needsBt) break
+                }
+                if (needsBt) {
+                    @Suppress("MissingPermission")
+                    try {
+                        android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+                            ?.takeIf { !it.isDiscovering }?.startDiscovery()
+                    } catch (_: Exception) { }
+                }
+            } catch (_: Exception) { }
             // v1.4.1: time/state flows in background (same tick, same
             // once-per-window semantics via tickTriggerDue; the flow
             // id + node id form the state-key namespace so a flow
@@ -609,9 +648,10 @@ object FlowEngine {
                 return null
             }
             "time_interval" -> {
-                val mins = param.toIntOrNull() ?: return null
+                val secs = parseDurationSecs(param, true)
+                if (secs <= 0) return null
                 val last = FlowStore.lastFired(ctx, "int_" + ruleId)
-                if (last == 0L || now - last >= mins * 60_000L) {
+                if (last == 0L || now - last >= secs * 1000L) {
                     FlowStore.markFired(ctx, "int_" + ruleId, now)
                     return JSONObject()
                 }
@@ -644,42 +684,38 @@ object FlowEngine {
             }
             "battery_below" -> {
                 val want = param.toIntOrNull() ?: return null
-                if (batteryPct(ctx) > want) {
-                    return null
-                }
-                return if (edgeOnce(ctx, "batlo_" + ruleId, now, 60 * 60_000L)) JSONObject() else null
+                // v1.4.4: arm/disarm edge, not the old 60-min
+                // window — re-crossing the threshold fires again.
+                val cur = if (batteryPct(ctx) <= want) "below" else "above"
+                return if (edgeTo(ctx, "batlo_" + ruleId, cur, "below")) JSONObject() else null
             }
             "battery_above" -> {
                 val want = param.toIntOrNull() ?: return null
-                if (batteryPct(ctx) < want) {
-                    return null
-                }
-                return if (edgeOnce(ctx, "bathi_" + ruleId, now, 60 * 60_000L)) JSONObject() else null
+                // v1.4.4: arm/disarm edge (see battery_below).
+                val cur = if (batteryPct(ctx) >= want) "above" else "below"
+                return if (edgeTo(ctx, "bathi_" + ruleId, cur, "above")) JSONObject() else null
             }
             "battery_full" -> {
-                if (batteryPct(ctx) < 100) {
-                    return null
-                }
-                return if (edgeOnce(ctx, "batfull_" + ruleId, now, 60 * 60_000L)) JSONObject() else null
+                // v1.4.4: arm/disarm edge (see battery_below).
+                val cur = if (batteryPct(ctx) >= 100) "full" else "not"
+                return if (edgeTo(ctx, "batfull_" + ruleId, cur, "full")) JSONObject() else null
             }
             "battery_temp_above" -> {
                 val want = param.toFloatOrNull() ?: return null
-                if (batteryTempC(ctx) < want) {
-                    return null
-                }
-                return if (edgeOnce(ctx, "battemp_" + ruleId, now, 60 * 60_000L)) JSONObject() else null
+                // v1.4.4: arm/disarm edge (see battery_below).
+                val cur = if (batteryTempC(ctx) >= want) "hot" else "cool"
+                return if (edgeTo(ctx, "battemp_" + ruleId, cur, "hot")) JSONObject() else null
             }
             "charging_on" -> {
-                if (!isCharging(ctx)) {
-                    return null
-                }
-                return if (edgeOnce(ctx, "chgon_" + ruleId, now, 60 * 60_000L)) JSONObject() else null
+                // v1.4.4: arm/disarm edge (see battery_below) —
+                // plug/unplug/plug within an hour fires every time.
+                val cur = if (isCharging(ctx)) "on" else "off"
+                return if (edgeTo(ctx, "chgon_" + ruleId, cur, "on")) JSONObject() else null
             }
             "charging_off" -> {
-                if (isCharging(ctx)) {
-                    return null
-                }
-                return if (edgeOnce(ctx, "chgoff_" + ruleId, now, 60 * 60_000L)) JSONObject() else null
+                // v1.4.4: arm/disarm edge (see battery_below).
+                val cur = if (isCharging(ctx)) "on" else "off"
+                return if (edgeTo(ctx, "chgoff_" + ruleId, cur, "off")) JSONObject() else null
             }
             "stopwatch" -> {
                 val secs = param.toIntOrNull() ?: return null
@@ -2389,6 +2425,18 @@ object FlowEngine {
                 "toast_local" -> toastMain(ctx, param)
                 "speak_local" -> speak(ctx, param)
                 "vibrate" -> vibrate(ctx)
+                // v1.4.4: the editor labels this field "seconds"
+                // (numeric, hint "30") but the engine had no case
+                // for it — the walk silently skipped it. Seconds,
+                // plain number, capped at 1 hour. Every walk runs
+                // on a background thread (dispatch / manual run /
+                // tick), so sleeping here can never block the UI.
+                "wait" -> {
+                    val secs = parseDurationSecs(param, false).coerceIn(0, 3600)
+                    if (secs > 0) {
+                        try { Thread.sleep(secs * 1000) } catch (_: Exception) { }
+                    }
+                }
                 "torch", "torch_on" -> setTorch(ctx, true)
                 "torch_off" -> setTorch(ctx, false)
                 "torch_toggle" -> toggleTorch(ctx)
@@ -2811,7 +2859,7 @@ object FlowEngine {
                     val intent = Intent(android.provider.AlarmClock.ACTION_SET_TIMER)
                     intent.putExtra(
                         android.provider.AlarmClock.EXTRA_LENGTH,
-                        param.toIntOrNull() ?: 0
+                        parseDurationSecs(param, false).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
                     )
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     ctx.startActivity(intent)

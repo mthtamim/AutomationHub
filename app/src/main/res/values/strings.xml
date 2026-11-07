@@ -116,7 +116,7 @@
     <string name="aah_speak_peer">Text to speak</string>
     <string name="aah_tap_text">Text on the button</string>
     <string name="aah_torch">on / off</string>
-    <string name="aah_wait">Minutes</string>
+    <string name="aah_wait">Minutes — 30s for seconds, 5m for minutes</string>
     <string name="aah_write_file">File name | text</string>
     <string name="ac_battery_above">Battery above</string>
     <string name="ac_battery_below">Battery below</string>
@@ -195,7 +195,7 @@
     <string name="ath_sunrise">Offset minutes (empty = 0)</string>
     <string name="ath_sunset">Offset minutes (empty = 0)</string>
     <string name="ath_time_at">HH:MM, e.g. 07:30</string>
-    <string name="ath_time_interval">Minutes, e.g. 60</string>
+    <string name="ath_time_interval">Minutes, e.g. 60 — 30s for seconds</string>
     <string name="ath_weather">rain / clear / cloud / snow</string>
     <string name="ath_wifi_connected">Wi-Fi name (empty = any)</string>
     <string name="auto_actions_count">%1$d action(s)</string>
@@ -400,7 +400,7 @@
     <string name="aah_send_email">to|subject|body — needs SMTP set up in Settings</string>
     <string name="aah_calendar_event">title|delay minutes|duration minutes</string>
     <string name="aah_set_alarm">HH:MM|label, e.g. 07:30|Wake up</string>
-    <string name="aah_set_timer">seconds|label</string>
+    <string name="aah_set_timer">seconds, 5m for minutes|label</string>
     <string name="aah_file_copy">source|destination (app folders/Downloads)</string>
     <string name="aah_file_move">source|destination (app folders/Downloads)</string>
     <string name="aah_file_zip">folder|destination.zip</string>
@@ -1256,6 +1256,7 @@
     <string name="panel_radius">Radius (meters)</string>
     <string name="panel_range">Time range</string>
     <string name="panel_seconds">Seconds</string>
+    <string name="panel_minutes">Minutes</string>
     <string name="panel_separator">Separator</string>
     <string name="panel_ssid">Wi-Fi name</string>
     <string name="panel_state">State</string>

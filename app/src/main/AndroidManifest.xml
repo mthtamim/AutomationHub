@@ -103,6 +103,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- v1.4.4: nfc_tag was foreground-only (MainActivity had
+                 to be open). A bare NDEF filter cold-starts the app
+                 on any NDEF tag tap so the trigger can fire from
+                 background; onNewIntent then fires both engines. -->
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <activity
