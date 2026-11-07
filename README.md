@@ -1,7 +1,7 @@
 # AutomationHub
 
-[![Build APK](https://github.com/mthtamim/PhoneLink-Flows/actions/workflows/build-apk.yml/badge.svg)](https://github.com/mthtamim/PhoneLink-Flows/actions/workflows/build-apk.yml)
-[![Latest release](https://img.shields.io/github/v/release/mthtamim/PhoneLink-Flows)](https://github.com/mthtamim/PhoneLink-Flows/releases/latest)
+[![Build APK](https://github.com/mthtamim/AutomationHub/actions/workflows/build-apk.yml/badge.svg)](https://github.com/mthtamim/AutomationHub/actions/workflows/build-apk.yml)
+[![Latest release](https://img.shields.io/github/v/release/mthtamim/AutomationHub)](https://github.com/mthtamim/AutomationHub/releases/latest)
 
 **Automation for Android — rules and visual flows, everything on your phone.**
 
@@ -22,7 +22,7 @@ AutomationHub turns your phone into an automation hub: simple if-this-then-that 
 
 ## Download
 
-Get the latest APK from the [Releases page](https://github.com/mthtamim/PhoneLink-Flows/releases/latest).
+Get the latest APK from the [Releases page](https://github.com/mthtamim/AutomationHub/releases/latest).
 
 - Android 8.0 or newer, 64-bit (arm64) phones.
 - If your browser asks, allow installing apps from that source.
@@ -73,8 +73,8 @@ Open the project in Android Studio and build the `app` module. CI builds the deb
 | 1.4.1 | Launch crash fixes |
 | 1.4.0 | Material 3 redesign with 8 themes |
 
-Full release notes are on the [Releases page](https://github.com/mthtamim/PhoneLink-Flows/releases).
+Full release notes are on the [Releases page](https://github.com/mthtamim/AutomationHub/releases).
 
 ## Support
 
-Found a bug or have an idea? Open an [issue](https://github.com/mthtamim/PhoneLink-Flows/issues).
+Found a bug or have an idea? Open an [issue](https://github.com/mthtamim/AutomationHub/issues).
