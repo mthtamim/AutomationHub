@@ -29,7 +29,7 @@ object Sftp {
                       remote: String, local: String,
                       upload: Boolean): Boolean {
         if (host.isEmpty() || remote.isEmpty() || local.isEmpty()) return false
-        val jsch = com.github.mwiede.jsch.JSch()
+        val jsch = com.jcraft.jsch.JSch()
         val session = try {
             val s = jsch.getSession(user.ifEmpty { "anonymous" }, host, 22)
             s.setPassword(pass)
@@ -43,7 +43,7 @@ object Sftp {
         }
         val channel = try {
             val c = session.openChannel("sftp")
-                as com.github.mwiede.jsch.ChannelSftp
+                as com.jcraft.jsch.ChannelSftp
             c.connect(15000)
             c
         } catch (e: Exception) {
