@@ -1484,6 +1484,24 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.10 — snoozed notifications never came back (re-snooze loop)
+
+Why: Tamim 2026-11-07 — "Snooze হয় তবে ফিরে আসে না।" A rule
+"Notification arrives → snooze WhatsApp 1 min" loops by
+construction: the system re-posts the notification after the
+delay, onNotificationPosted fires notif_received again, the rule
+fires again and snoozes it again — forever. The notification is
+perpetually snoozed and never stays visible. (The v1.4.8 dispatch
+fix made this possible for rules: before it, a rule never saw
+notif_received at all, so it couldn't loop.)
+- snoozeByMatch now records every snoozed notification key with
+  its return time (state prefs, key "snoozed_keys", so the guard
+  survives a service restart) and never re-snoozes a key whose
+  snooze hasn't expired. A NEW notification (different key) is
+  still snoozed normally. Expired entries are pruned on each
+  snooze. Applies to rules and flows alike — both call this one
+  function.
+
 ## v1.4.9 — Wi-Fi on/off triggers fixed (transport-based detection)
 
 Why: Tamim 2026-11-07 — "আগে ওয়াইফাই অন অফ এর ট্রিগার গুলো কাজ

@@ -164,18 +164,43 @@ class FlowNotifListener : NotificationListenerService() {
                 body.contains(match, ignoreCase = true)
         }
 
+        private const val SNOOZED_KEY = "snoozed_keys"
+
         /** Snooze the newest notification matching [match]
          *  (package, or title/body text; blank = most recent) for
          *  [minutes]. False when the listener is off or nothing
-         *  matches. */
+         *  matches.
+         *  v1.4.10: never re-snooze a notification that just came
+         *  back from OUR snooze — otherwise a notif_received →
+         *  snooze rule loops forever: the system re-posts it after
+         *  the delay, the rule fires again and snoozes it again,
+         *  so it never stays visible ("snooze হয় তবে ফিরে আসে
+         *  না"). Snoozed keys are recorded (key → return time)
+         *  in the state prefs so the guard survives a service
+         *  restart. */
         fun snoozeByMatch(match: String, minutes: Long): Boolean {
             val svc = instance ?: return false
             return try {
+                val now = System.currentTimeMillis()
+                val durMs = minutes.coerceAtLeast(1) * 60_000L
+                val prefs = svc.getSharedPreferences("phonelink_state", Context.MODE_PRIVATE)
+                val snoozed = try {
+                    org.json.JSONObject(prefs.getString(SNOOZED_KEY, "{}") ?: "{}")
+                } catch (_: Exception) { org.json.JSONObject() }
+                // Prune expired entries.
+                val keys = ArrayList<String>()
+                val kit = snoozed.keys()
+                while (kit.hasNext()) keys.add(kit.next())
+                for (k in keys) if (snoozed.optLong(k, 0) <= now) snoozed.remove(k)
                 val target = svc.activeNotifications
                     // v1.4.8: shared match — package, app name, title, body.
                     .filter { notifMatches(it, match) }
+                    // v1.4.10: skip one that just returned from our snooze.
+                    .filter { snoozed.optLong(it.key, 0) <= now }
                     .maxByOrNull { it.postTime } ?: return false
-                svc.snoozeNotification(target.key, minutes.coerceAtLeast(1) * 60_000L)
+                svc.snoozeNotification(target.key, durMs)
+                snoozed.put(target.key, now + durMs)
+                prefs.edit().putString(SNOOZED_KEY, snoozed.toString()).apply()
                 true
             } catch (_: Exception) { false }
         }
