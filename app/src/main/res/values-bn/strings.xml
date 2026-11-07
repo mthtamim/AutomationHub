@@ -233,6 +233,8 @@
     <string name="at_stopwatch">স্টপওয়াচ পৌঁছালে</string>
     <string name="at_date_at">নির্দিষ্ট তারিখ ও সময়ে</string>
     <string name="at_music_started">গান/মিডিয়া শুরু হলে</string>
+    <string name="at_qs_tile">QS টাইল চাপলে</string>
+    <string name="at_widget_tap">উইজেট চাপলে</string>
     <string name="at_music_stopped">গান/মিডিয়া থামলে</string>
     <string name="at_vpn_on">VPN যুক্ত হলে</string>
     <string name="at_vpn_off">VPN বিচ্ছিন্ন হলে</string>
@@ -341,6 +343,8 @@
     <string name="auto_imported">%1$d টি নিয়ম ইমপোর্ট হয়েছে</string>
     <string name="auto_import_failed">ইমপোর্ট হয়নি — JSON ঠিক নেই</string>
     <string name="auto_cat_hint">ক্যাটেগরি (ঐচ্ছিক, তালিকায় গ্রুপ হয়)</string>    <string name="widget_rule_label">AutomationHub নিয়ম বোতাম</string>
+    <string name="widget_trigger_label">AutomationHub ট্রিগার বোতাম</string>
+    <string name="widget_trigger_name">ট্রিগার #%1$d</string>
     <string name="widget_rule_unset">নিয়ম বেছে নাও</string>
     <string name="at_volume_up">ভলিউম আপ চাপলে</string>
     <string name="at_volume_down">ভলিউম ডাউন চাপলে</string>
@@ -1320,8 +1324,10 @@
     <string name="template_geo_needed">আগে জিও-ফেন্সের লোকেশন ঠিক করো (Settings → জিও-ফেন্স)</string>
     <string name="flow_card_share">শেয়ার</string>
     <string name="tile_add">Quick Settings টাইল যোগ করো</string>
+    <string name="tile_add_trigger">ট্রিগার QS টাইল যোগ করো</string>
     <string name="tile_requested">টাইল যোগ করার অনুরোধ গেছে — প্যানেলে নিশ্চিত করো</string>
     <string name="tile_add_manually">নিজে যোগ করো: QS প্যানেল → Edit</string>
     <string name="tile_state_on">চালু আছে</string>
     <string name="tile_state_off">বন্ধ আছে</string>
+    <string name="tile_trigger_hint">চাপলে ট্রিগার চলবে</string>
 </resources>

@@ -1484,6 +1484,29 @@ fast on a rule with many rows, redial timing unchanged
 (gap 5 s -> ~5 s after the call ends), no RunnerService
 notification remains after an AutoTap run ends, version 1.2.5.
 
+## v1.4.6 — QS tile / widget tap triggers
+
+Why: Tamim 2026-11-07 — the first of the three comparison gaps he
+chose (QS tile/widget trigger, notification snooze/cooldown/undo,
+JavaScript action). Two new trigger types, qs_tile and widget_tap,
+that fire into BOTH engines (rules via Automation.onEvent, flows
+via FlowEngine.onEvent) — any rule/flow with one of them runs on
+tap. New surfaces: TriggerTileService (a second QS tile,
+"AutomationHub ট্রিগার", always INACTIVE — it has no on/off
+state, it just fires; add it from Settings → Smart → "ট্রিগার QS
+টাইল যোগ করো", Android 13+, or the QS Edit screen) and
+TriggerWidgetProvider (home widget "ট্রিগার #N", one per widget
+instance; place it from the widget picker). A widget_tap param
+holds the widget id ("42") to listen to one widget only; blank
+param means any widget. Both types are in AutoCatalog/FlowCatalog
+(picker group Device), TICK_IGNORED (pure events — the tick never
+evaluates them), and both engines' triggerParamMatches. Templates
+151 → 155 (r3_qs_torch, r3_widget_notify, f3_qs_vibrate,
+f3_widget_speak). Notes: the tile/widget fire only while the
+master switch (rules) / Flows service (flows) is on, like every
+other event trigger; the old rule widget (runs one chosen rule)
+is unchanged.
+
 ## v1.4.5 — music triggers, event-driven
 
 Why: Tamim 2026-11-07 — music_started/stopped "ঠিকভাবে কাজ করে

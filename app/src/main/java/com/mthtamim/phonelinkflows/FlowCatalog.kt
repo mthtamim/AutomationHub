@@ -9,7 +9,7 @@ import android.content.Context
  * Flow tile/widget ships in this merge) and lost_on + lost_off +
  * autotap_control actions (lost-tracking is not ported; the
  * AutoTap engine is not wired into Flow — it stays rule-side).
- * Result: 184 triggers / 43 conditions / 175 actions. Everything
+ * Result: 186 triggers / 43 conditions / 175 actions. Everything
  * else is Lab's catalog verbatim, so Lab flows import unchanged
  * except for the excluded types, which import reports as unmapped.
  */
@@ -71,6 +71,9 @@ object FlowCatalog {
         "docked", "dialog_interacted", "key_pressed", "media_button",
         "headset_button", "keyboard_visible", "toast_posted",
         "ui_focused", "wallpaper_changed",
+        // v1.4.6: QS tile / widget tap triggers (fire from
+        // TriggerTileService / TriggerWidgetProvider via onEvent).
+        "qs_tile", "widget_tap",
     )
     val constraints = listOf(
         "time_range", "day_of_week", "battery_above", "battery_below",

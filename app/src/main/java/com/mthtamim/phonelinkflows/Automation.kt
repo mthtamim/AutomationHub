@@ -1004,6 +1004,9 @@ object Automation {
             "bt_connected", "bt_disconnected", "bt_near", "bt_far" ->
                 data.optString("title").contains(param, ignoreCase = true)
             "orientation_changed" -> data.optString("kind") == param
+            // v1.4.6: param = widget id ("42") for one widget only;
+            // blank param (handled above) means any widget.
+            "widget_tap" -> data.optString("widget_id") == param
             "webhook" -> data.optString("title") == param
             "wifi_connected" -> data.optString("ssid").equals(param, true)
             "var_changed" -> data.optString("title") == param

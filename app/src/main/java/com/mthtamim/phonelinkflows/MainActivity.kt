@@ -872,6 +872,28 @@ class MainActivity : LocalizedActivity() {
                 toast(getString(R.string.tile_add_manually))
             }
         }
+        findViewById<Button>(R.id.btnAddQsTriggerTile).setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val sbm = getSystemService(StatusBarManager::class.java)
+                if (sbm != null) {
+                    sbm.requestAddTileService(
+                        ComponentName(this, TriggerTileService::class.java),
+                        "AutomationHub ট্রিগার",
+                        Icon.createWithResource(this, R.drawable.ic_nav_auto),
+                        mainExecutor,
+                        java.util.function.Consumer<Int> { result ->
+                            toast(getString(if (result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED ||
+                                result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED)
+                                R.string.tile_requested else R.string.tile_add_manually))
+                        }
+                    )
+                } else {
+                    toast(getString(R.string.tile_add_manually))
+                }
+            } else {
+                toast(getString(R.string.tile_add_manually))
+            }
+        }
         // geo_radius finally gets a UI (was stuck at 200 m).
         findViewById<Button>(R.id.btnGeoRadius).setOnClickListener {
             val options = intArrayOf(100, 200, 300, 500, 1000)

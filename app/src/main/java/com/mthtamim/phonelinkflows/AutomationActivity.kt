@@ -74,7 +74,10 @@ object AutoCatalog {
         "screen_on_continuous",
         // v2.23 Day-time (picker card in the rule editor,
         // like screen_on_continuous — not the raw trigger picker)
-        "time_at_days")
+        "time_at_days",
+        // v1.4.6: QS tile / widget tap triggers (fire from
+        // TriggerTileService / TriggerWidgetProvider via onEvent).
+        "qs_tile", "widget_tap")
     val constraints = listOf(
         "time_range", "day_of_week", "battery_above", "battery_below", "charging",
         "wifi_ssid", "location_in", "screen", "foreground_app", "variable",

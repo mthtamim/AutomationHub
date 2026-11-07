@@ -328,6 +328,15 @@
                     android:text="@string/tile_add"
                     app:icon="@drawable/ic_nav_auto" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddQsTriggerTile"
+                    style="@style/PL.BtnTonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/tile_add_trigger"
+                    app:icon="@drawable/ic_nav_auto" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

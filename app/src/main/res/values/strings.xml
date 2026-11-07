@@ -243,6 +243,8 @@
     <string name="at_stopwatch">Stopwatch reaches</string>
     <string name="at_date_at">Specific date &amp; time</string>
     <string name="at_music_started">Music started</string>
+    <string name="at_qs_tile">QS tile tapped</string>
+    <string name="at_widget_tap">Widget tapped</string>
     <string name="at_music_stopped">Music stopped</string>
     <string name="at_vpn_on">VPN connected</string>
     <string name="at_vpn_off">VPN disconnected</string>
@@ -351,6 +353,8 @@
     <string name="auto_imported">%1$d rule(s) imported</string>
     <string name="auto_import_failed">Could not import — invalid JSON</string>
     <string name="auto_cat_hint">Category (optional, groups the list)</string>    <string name="widget_rule_label">AutomationHub rule button</string>
+    <string name="widget_trigger_label">AutomationHub trigger button</string>
+    <string name="widget_trigger_name">Trigger #%1$d</string>
     <string name="widget_rule_unset">Pick a rule</string>
     <string name="at_volume_up">Volume up pressed</string>
     <string name="at_volume_down">Volume down pressed</string>
@@ -1336,8 +1340,10 @@
     <string name="template_geo_needed">Set your geofence location first (Settings → Geofence)</string>
     <string name="flow_card_share">Share</string>
     <string name="tile_add">Add Quick Settings tile</string>
+    <string name="tile_add_trigger">Add trigger QS tile</string>
     <string name="tile_requested">Tile add requested — confirm in the panel</string>
     <string name="tile_add_manually">Add it yourself: QS panel → Edit</string>
     <string name="tile_state_on">On</string>
     <string name="tile_state_off">Off</string>
+    <string name="tile_trigger_hint">Tap to fire the trigger</string>
 </resources>

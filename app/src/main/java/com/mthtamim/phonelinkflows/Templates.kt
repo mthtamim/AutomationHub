@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Templates gallery (new 2026-11-06, Tamim's choice): 151 ready-made
+ * Templates gallery (new 2026-11-06, Tamim's choice): 155 ready-made
  * Rules + Flows (51 in v1.4.0, +100 in v1.4.3), picked from the
  * Automation screen's ⋮ menu
  * (TemplatesActivity). Every trigger/action type used here was
@@ -20,7 +20,9 @@ import org.json.JSONObject
  *  screen_unlocked/locked, bt_connected/disconnected, dnd_on/off,
  *  airplane_on/off, dark_on/off, vpn_on/off, roaming_on/off,
  *  music_started/stopped, steps_goal, applock_failed, volume_up/down,
- *  sms_sent. Deliberately NOT used in rules: call_incoming/missed,
+ *  sms_sent, qs_tile, widget_tap (v1.4.6: tile/widget taps fire via
+ *  Automation.onEvent from TriggerTileService/TriggerWidgetProvider).
+ *  Deliberately NOT used in rules: call_incoming/missed,
  *  sms_received, headphone_in/out, screen_on/off, geofence_in/out —
  *  those events are dispatched to FlowEngine.onEvent only (or, for
  *  geofence, proximity alerts are registered from FLOW nodes only),
@@ -890,6 +892,27 @@ object Templates {
             "দিনে ৫,০০০ স্টেপ হলেই জানাবে আর ভাইব্রেট করবে",
             "steps_goal", "5000",
             listOf("local_notify" to "৫,০০০ স্টেপ হয়েছে — আরো ৫,০০০ বাকি", "vibrate" to "")),
+        // v1.4.6: QS tile / widget tap templates (4) — 151 -> 155.
+        Template("r3_qs_torch", "rule",
+            "QS টাইল চাপলে টর্চ",
+            "QS টাইল চাপলেই টর্চ জ্বলবে বা নিভবে",
+            "qs_tile", "",
+            listOf("torch_toggle" to "")),
+        Template("r3_widget_notify", "rule",
+            "উইজেট চাপলে জানাবে",
+            "হোম উইজেট চাপলেই নোটিফিকেশন দেবে",
+            "widget_tap", "",
+            listOf("local_notify" to "উইজেট চাপা হয়েছে")),
+        Template("f3_qs_vibrate", "flow",
+            "QS টাইল চাপলে ভাইব্রেট",
+            "QS টাইল চাপলেই জানাবে আর ভাইব্রেট করবে",
+            "qs_tile", "",
+            listOf("local_notify" to "QS টাইল চাপা হয়েছে", "vibrate" to "")),
+        Template("f3_widget_speak", "flow",
+            "উইজেট চাপলে বলবে",
+            "হোম উইজেট চাপলেই মুখে বলবে",
+            "widget_tap", "",
+            listOf("speak_local" to "উইজেট চাপা হয়েছে")),
     )
 
     // ---------------- Builders ----------------

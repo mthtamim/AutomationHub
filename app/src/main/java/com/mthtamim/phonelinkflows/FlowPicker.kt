@@ -112,7 +112,9 @@ object FlowPicker {
             "temp" to R.string.pg_device,
             "account_sync" to R.string.pg_system,
             "cell_signal" to R.string.pg_conn,
-            "docked" to R.string.pg_device
+            "docked" to R.string.pg_device,
+            // v1.4.6: QS tile / widget tap triggers group under Device.
+            "qs_tile" to R.string.pg_device
         )
         "c" -> listOf(
             "time_range" to R.string.pg_time,

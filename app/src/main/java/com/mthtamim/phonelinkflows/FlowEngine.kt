@@ -86,7 +86,10 @@ object FlowEngine {
         "clipboard", "airplane_on", "airplane_off",
         "storage_low", "timezone_changed", "locale_changed",
         "bt_connected", "bt_disconnected", "sms_sent",
-        "notif_received", "notif_cleared"
+        "notif_received", "notif_cleared",
+        // v1.4.6: QS tile / widget tap are pure events (onEvent
+        // only) — the tick must never evaluate them.
+        "qs_tile", "widget_tap"
     )
 
     /** v1.4.0: SensorHub kind -> rule trigger types it feeds. */
@@ -1545,6 +1548,9 @@ object FlowEngine {
             "bt_connected", "bt_disconnected", "bt_near", "bt_far" ->
                 data.optString("title").contains(param, ignoreCase = true)
             "orientation_changed" -> data.optString("kind") == param
+            // v1.4.6: param = widget id ("42") for one widget only;
+            // blank param (handled above) means any widget.
+            "widget_tap" -> data.optString("widget_id") == param
             "webhook" -> data.optString("title") == param
             "wifi_connected" -> data.optString("ssid").equals(param, true)
             "var_changed" -> data.optString("title") == param
