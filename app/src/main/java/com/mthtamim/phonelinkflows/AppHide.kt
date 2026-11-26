@@ -87,7 +87,11 @@ object AppHide {
      *  when it fails. pm's error text goes to stderr on some
      *  ROMs, so it is merged into stdout (" 2>&1") — otherwise
      *  the reason is lost. A success is also verified: some
-     *  ROMs accept the command and change nothing. */
+     *  ROMs accept the command and change nothing. v1.4.17: the
+     *  reason carries pm's first 3 non-blank lines, not just
+     *  the first — pm's real cause (e.g. a SecurityException)
+     *  sits on the line after "Exception occurred while
+     *  executing 'disable':". */
     fun hideDetailed(ctx: Context, pkg: String): HideResult {
         if (!ShizukuHelper.granted())
             return HideResult(false, "Shizuku not granted")
@@ -102,9 +106,10 @@ object AppHide {
             if (code != 0) {
                 ok = false
                 val reason = out.lineSequence()
-                    .firstOrNull { it.isNotBlank() }
-                    ?: ShizukuHelper.lastError ?: "pm exit $code"
-                notes.add(reason.take(200))
+                    .filter { it.isNotBlank() }.take(3)
+                    .joinToString(" / ").take(400)
+                    .ifBlank { ShizukuHelper.lastError ?: "pm exit $code" }
+                notes.add(reason)
             }
         }
         if (!ok) return HideResult(false, notes.firstOrNull() ?: "pm failed")

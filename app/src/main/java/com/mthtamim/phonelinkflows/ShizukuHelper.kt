@@ -2,7 +2,6 @@ package com.mthtamim.phonelinkflows
 
 import android.content.Context
 import android.content.pm.PackageManager
-import java.util.concurrent.TimeUnit
 import rikka.shizuku.Shizuku
 
 /**
@@ -83,7 +82,14 @@ object ShizukuHelper {
      *  exitValue() failed — that is why App Hide hid 0 apps in
      *  v1.4.14 even though Shizuku was granted and pm was never
      *  the problem. The same fix also covers Update's pm
-     *  install check, which uses runCodeOut too. */
+     *  install check, which uses runCodeOut too.
+     *
+     *  v1.4.17: waitFor(timeout) itself can throw the same
+     *  "process hasn't exited" (Lark Player still failed that
+     *  way on v1.4.16 while another app the same minute reached
+     *  pm's own error), so the wait is now an isAlive() poll:
+     *  isAlive()'s default implementation catches that
+     *  exception and only reports true, so it cannot throw it. */
     fun runCodeOut(command: String, timeoutSec: Long = 60): Pair<Int, String> {
         lastError = null
         if (!granted()) {
@@ -95,7 +101,11 @@ object ShizukuHelper {
             val proc = newProcess(arrayOf("sh", "-c",
                 "$command; echo $marker\$?"))
             val out = proc.inputStream.bufferedReader().readText()
-            val finished = proc.waitFor(timeoutSec, TimeUnit.SECONDS)
+            val deadline = System.currentTimeMillis() + timeoutSec * 1000
+            while (proc.isAlive && System.currentTimeMillis() < deadline) {
+                Thread.sleep(100)
+            }
+            val finished = !proc.isAlive
             if (!finished) {
                 proc.destroyForcibly()
                 lastError = "timeout"
