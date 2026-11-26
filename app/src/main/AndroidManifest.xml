@@ -130,6 +130,14 @@
             android:exported="false" />
 
         <activity
+            android:name=".AppHideActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AppHidePickerActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".TemplatesActivity"
             android:exported="false" />
 

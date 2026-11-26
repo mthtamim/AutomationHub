@@ -929,6 +929,9 @@ object Automation {
             val label = appLabel(ctx, pkg)
             onEvent(ctx, kind, JSONObject().put("pkg", pkg)
                 .put("app", label).put("title", label))
+            // v1.4.14 App Hide: an app opened from the vault is
+            // hidden again once it closes (off-thread inside).
+            if (kind == "app_closed") AppHide.onAppClosed(ctx, pkg)
         } catch (_: Exception) { }
     }
 

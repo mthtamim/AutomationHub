@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App Hide vault (v1.4.14): hidden apps live here. Tap a row to
+     open it; the row dialog offers Show again. "Hide all again"
+     re-applies hiding after an app update restores an icon. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <ImageButton
+            android:id="@+id/btnAhBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_back_chip"
+            android:contentDescription="@string/btn_back"
+            android:padding="10dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="?attr/colorOnSurface" />
+
+        <TextView
+            style="@style/PL.H1"
+            android:layout_width="0dp"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:text="@string/ah_title" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <TextView
+            android:id="@+id/tvAhShizuku"
+            style="@style/PL.BodySmall" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/swAhAutoRehide"
+            style="@style/PL.SwitchRow"
+            android:text="@string/ah_autorehide" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAhAdd"
+                style="@style/PL.BtnTonal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:text="@string/ah_add"
+                app:icon="@drawable/ic_eye" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAhRehideAll"
+                style="@style/PL.BtnTonal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="@string/ah_rehide_all"
+                app:icon="@drawable/ic_eye" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvAhEmpty"
+            style="@style/PL.BodySmall"
+            android:layout_marginTop="16dp"
+            android:text="@string/ah_empty"
+            android:visibility="gone" />
+
+        <ListView
+            android:id="@+id/lvAhApps"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:divider="@null" />
+    </LinearLayout>
+</LinearLayout>

@@ -43,6 +43,7 @@ class MainActivity : LocalizedActivity() {
     private lateinit var tvGeoInfo: TextView
     private lateinit var tvFocusGuardInfo: TextView
     private lateinit var tvFocusAppsInfo: TextView
+    private lateinit var tvAppHideInfo: TextView
     private lateinit var btnFocusStart: Button
     private lateinit var btnFocusEnd: Button
     private var focusGuardUpdating = false
@@ -501,6 +502,7 @@ class MainActivity : LocalizedActivity() {
         // settingsOpen is the same truth showPage() maintains.
         selectNavTab(if (settingsOpen) R.id.navSettings else R.id.navHome)
         refreshStatus()
+        refreshAppHide()
         // v1.4.4: watchdog — if the Flows switch is ON but the
         // service hasn't ticked for >10 min (XOS killed it),
         // start it again. Re-entering a running service is a
@@ -809,6 +811,15 @@ class MainActivity : LocalizedActivity() {
         findViewById<Button>(R.id.chipFocusWork).setOnClickListener {
             applyFocusPreset(9 * 60, 17 * 60)
         }
+
+        // ----- App Hide card (v1.4.14): vault of launcher-hidden
+        // apps. The card only opens the vault; hiding itself
+        // happens in the vault + picker (Shizuku).
+        tvAppHideInfo = findViewById(R.id.tvAppHideInfo)
+        findViewById<Button>(R.id.btnAppHideOpen).setOnClickListener {
+            startActivity(Intent(this, AppHideActivity::class.java))
+        }
+        refreshAppHide()
 
         // ----- v2.2 toggles & actions -----
         findViewById<Button>(R.id.btnSetGeo).setOnClickListener {
@@ -1342,6 +1353,19 @@ class MainActivity : LocalizedActivity() {
         })
         setTextIfChanged(btnFocusStart, getString(R.string.focus_time_start, fmt(fs)))
         setTextIfChanged(btnFocusEnd, getString(R.string.focus_time_end, fmt(fe)))
+    }
+
+    /** App Hide card summary (v1.4.14): how many apps are in the
+     *  hidden set. Same panel-ready guard as refreshFocusGuard. */
+    private fun refreshAppHide() {
+        if (!isPanelReady(R.id.panelSmart)) return
+        if (!::tvAppHideInfo.isInitialized) return
+        val n = Config.hidePkgs(this).size
+        setTextIfChanged(tvAppHideInfo, if (n == 0) {
+            getString(R.string.ah_info_empty)
+        } else {
+            getString(R.string.ah_info_count, n)
+        })
     }
 
     /** v1.4.2: FocusLock card — moved from the DIY Rules list into

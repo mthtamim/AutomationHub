@@ -218,6 +218,63 @@
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+<!-- ===== App Hide card (v1.4.14): launcher-icon hiding via
+     Shizuku. The vault (hidden apps) opens from here. ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_eye"
+                        app:tint="?attr/colorPrimary" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/PL.CardTitle"
+                            android:text="@string/ah_card_title" />
+
+                        <TextView
+                            style="@style/PL.BodySmall"
+                            android:text="@string/ah_card_sub" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvAppHideInfo"
+                    style="@style/PL.BodySmall"
+                    android:layout_marginTop="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAppHideOpen"
+                    style="@style/PL.BtnTonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/ah_open"
+                    app:icon="@drawable/ic_eye" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
         <!-- v1.4.2: FocusLock connection card — moved here from the
              DIY Rules list (Tamim, 2026-11-07). Same ids and wiring,
              now bound in MainActivity.bindPanelSmart. One-time token

@@ -264,6 +264,20 @@ object Config {
     fun setFocusWindow(ctx: Context, start: Int, end: Int) {
         prefs(ctx).edit().putInt("focus_start", start).putInt("focus_end", end).apply()
     }
+    // v1.4.14 App Hide: packages hidden from the launcher (their
+    // launcher activity is disabled via Shizuku; the apps stay
+    // installed and usable). hide_pending = apps opened from the
+    // vault that auto re-hide should hide again once closed.
+    fun hidePkgs(ctx: Context): Set<String> =
+        (prefs(ctx).getString("hide_pkgs", "") ?: "")
+            .split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+    fun setHidePkgs(ctx: Context, v: String) { prefs(ctx).edit().putString("hide_pkgs", v).apply() }
+    fun hideAutoRehide(ctx: Context): Boolean = prefs(ctx).getBoolean("hide_autorehide", true)
+    fun setHideAutoRehide(ctx: Context, v: Boolean) { prefs(ctx).edit().putBoolean("hide_autorehide", v).apply() }
+    fun hidePending(ctx: Context): Set<String> =
+        (prefs(ctx).getString("hide_pending", "") ?: "")
+            .split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+    fun setHidePending(ctx: Context, v: String) { prefs(ctx).edit().putString("hide_pending", v).apply() }
     // ---- v2.11.1 launcher hide (icon lives on .MainAlias) ----
     fun updateLastCheck(ctx: Context): Long = prefs(ctx).getLong("update_last_check", 0L)
     fun setUpdateLastCheck(ctx: Context, v: Long) { prefs(ctx).edit().putLong("update_last_check", v).apply() }
