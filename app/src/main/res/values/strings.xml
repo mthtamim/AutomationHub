@@ -1368,6 +1368,9 @@
     <string name="ah_open_failed">Could not open %1$s</string>
     <string name="ah_rehide_done">%1$d app(s) hidden again</string>
     <string name="ah_autorehide">Re-hide after closing</string>
+    <string name="ah_save_result_title">Hide result</string>
+    <string name="ah_hide_ok">hidden</string>
+    <string name="ah_hide_fail">failed</string>
     <string name="ah_empty">Nothing hidden yet — tap “Hide more apps” to pick apps.</string>
     <string name="geo_no_provider_title">Location is turned off</string>
     <string name="geo_no_provider_msg">Turn on location (GPS) to set the geofence centre.</string>

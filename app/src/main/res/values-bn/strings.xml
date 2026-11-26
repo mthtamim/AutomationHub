@@ -1352,6 +1352,9 @@
     <string name="ah_open_failed">%1$s খোলা যায়নি</string>
     <string name="ah_rehide_done">%1$dটি অ্যাপ আবার লুকানো হয়েছে</string>
     <string name="ah_autorehide">বন্ধ করলে আবার লুকিয়ে ফেলো</string>
+    <string name="ah_save_result_title">লুকানোর ফলাফল</string>
+    <string name="ah_hide_ok">লুকানো হয়েছে</string>
+    <string name="ah_hide_fail">ব্যর্থ</string>
     <string name="ah_empty">এখনো কিছু লুকানো হয়নি — “আরো অ্যাপ লুকাও” চেপে অ্যাপ বাছো।</string>
     <string name="geo_no_provider_title">লোকেশন বন্ধ আছে</string>
     <string name="geo_no_provider_msg">জিওফেন্স কেন্দ্র দিতে লোকেশন (GPS) চালু করো।</string>

@@ -13,6 +13,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.snackbar.Snackbar
 import kotlin.concurrent.thread
@@ -109,8 +111,8 @@ class AppHidePickerActivity : LocalizedActivity() {
             val old = Config.hidePkgs(this)
             val added = checked - old
             val removed = old - checked
-            var ok = 0
-            for (pkg in added) if (AppHide.hide(this, pkg)) ok++
+            val results = mutableListOf<Pair<String, AppHide.HideResult>>()
+            for (pkg in added) results.add(pkg to AppHide.hideDetailed(this, pkg))
             for (pkg in removed) AppHide.unhide(this, pkg)
             // Keep only what is actually hidden now (a failed hide
             // must not be recorded as hidden).
@@ -118,11 +120,35 @@ class AppHidePickerActivity : LocalizedActivity() {
                 pkg !in added || AppHide.isHidden(this, pkg)
             }.toSet()
             Config.setHidePkgs(this, kept.joinToString(","))
+            val ok = results.count { it.second.ok }
             runOnUiThread {
-                toast(getString(R.string.ah_saved_count, ok))
-                finish()
+                // Toast on the application context: a Snackbar
+                // dies with this activity when it finishes, which
+                // is why v1.4.14's "0 app(s) hidden" was never seen.
+                Toast.makeText(applicationContext,
+                    getString(R.string.ah_saved_count, ok),
+                    Toast.LENGTH_SHORT).show()
+                showResultDialog(results)
             }
         }
+    }
+
+    /** v1.4.15: after Save, show every app's outcome with the
+     *  real failure reason — a failed hide must never again
+     *  look like nothing happened. */
+    private fun showResultDialog(results: List<Pair<String, AppHide.HideResult>>) {
+        if (results.isEmpty()) { finish(); return }
+        val lines = results.joinToString("\n") { (pkg, r) ->
+            val label = AppLocker.appLabel(this, pkg)
+            if (r.ok) "$label — ${getString(R.string.ah_hide_ok)}"
+            else "$label — ${getString(R.string.ah_hide_fail)}: ${r.detail}"
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.ah_save_result_title))
+            .setMessage(lines)
+            .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
+            .setOnCancelListener { finish() }
+            .show()
     }
 
     private inner class PickerAdapter : BaseAdapter() {

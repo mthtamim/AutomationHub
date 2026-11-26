@@ -77,20 +77,46 @@ object AppHide {
         } catch (_: Exception) { false }
     }
 
+    /** Result of one hide attempt, with the real reason when it
+     *  fails — v1.4.15: the picker used to swallow pm's error
+     *  and only count successes, so a failed Save looked like
+     *  nothing happened at all. */
+    data class HideResult(val ok: Boolean, val detail: String)
+
+    /** Disable every launcher activity via Shizuku, and say why
+     *  when it fails. pm's error text goes to stderr on some
+     *  ROMs, so it is merged into stdout (" 2>&1") — otherwise
+     *  the reason is lost. A success is also verified: some
+     *  ROMs accept the command and change nothing. */
+    fun hideDetailed(ctx: Context, pkg: String): HideResult {
+        if (!ShizukuHelper.granted())
+            return HideResult(false, "Shizuku not granted")
+        val comps = launcherComponents(ctx, pkg)
+        if (comps.isEmpty())
+            return HideResult(false, "no launcher activity found")
+        val notes = mutableListOf<String>()
+        var ok = true
+        for (c in comps) {
+            val (code, out) =
+                ShizukuHelper.runCodeOut("pm disable " + compArg(c) + " 2>&1")
+            if (code != 0) {
+                ok = false
+                val reason = out.lineSequence()
+                    .firstOrNull { it.isNotBlank() }
+                    ?: ShizukuHelper.lastError ?: "pm exit $code"
+                notes.add(reason.take(200))
+            }
+        }
+        if (!ok) return HideResult(false, notes.firstOrNull() ?: "pm failed")
+        if (!isHidden(ctx, pkg))
+            return HideResult(false, "pm said ok but icon state did not change")
+        return HideResult(true, "")
+    }
+
     /** Disable every launcher activity via Shizuku. False when
      *  Shizuku is missing, the app has no launcher, or any pm
      *  call fails (ShizukuHelper.lastError explains why). */
-    fun hide(ctx: Context, pkg: String): Boolean {
-        if (!ShizukuHelper.granted()) return false
-        val comps = launcherComponents(ctx, pkg)
-        if (comps.isEmpty()) return false
-        var ok = true
-        for (c in comps) {
-            val (code, _) = ShizukuHelper.runCodeOut("pm disable " + compArg(c))
-            if (code != 0) ok = false
-        }
-        return ok
-    }
+    fun hide(ctx: Context, pkg: String): Boolean = hideDetailed(ctx, pkg).ok
 
     /** Re-enable every launcher activity via Shizuku. */
     fun unhide(ctx: Context, pkg: String): Boolean {
