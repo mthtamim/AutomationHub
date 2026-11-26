@@ -9,11 +9,13 @@ import kotlin.concurrent.thread
 /**
  * App Hide (v1.4.14): hide apps from the launcher, keep them usable.
  *
- * How it works: Shizuku runs `pm disable <pkg>/<launcher-activity>`
- * for every launcher activity of the app, so its icon disappears
- * from the launcher. The app itself stays installed and fully
- * usable — AutomationHub opens it from the vault by enabling the
- * launcher again first, then launching it.
+ * How it works: Shizuku runs `pm disable-user --user 0
+ * <pkg>/<launcher-activity>` (v1.4.18; plain `pm disable` is
+ * refused for shell on this phone) for every launcher activity
+ * of the app, so its icon disappears from the launcher. The app
+ * itself stays installed and fully usable — AutomationHub opens
+ * it from the vault by enabling the launcher again first, then
+ * launching it.
  *
  * What this is NOT: it is not XHide and not a Device Owner hide.
  * A regular app cannot hide another app the system way (that needs
@@ -71,8 +73,10 @@ object AppHide {
         return try {
             val pm = ctx.packageManager
             comps.all {
-                pm.getComponentEnabledSetting(it) ==
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                // v1.4.18: DISABLED_USER counts too — see hideDetailed.
+                val st = pm.getComponentEnabledSetting(it)
+                st == PackageManager.COMPONENT_ENABLED_STATE_DISABLED ||
+                    st == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER
             }
         } catch (_: Exception) { false }
     }
@@ -91,7 +95,16 @@ object AppHide {
      *  reason carries pm's first 3 non-blank lines, not just
      *  the first — pm's real cause (e.g. a SecurityException)
      *  sits on the line after "Exception occurred while
-     *  executing 'disable':". */
+     *  executing 'disable':".
+     *
+     *  v1.4.18: uses "pm disable-user --user 0", NOT "pm
+     *  disable". On this phone pm refuses plain disable with
+     *  "SecurityException: Shell cannot change component state
+     *  ... to 2" (state 2 = DISABLED); disable-user sets state
+     *  3 (DISABLED_USER) instead, which is the same thing the
+     *  Settings app's Disable button does — the launcher icon
+     *  hides, the app stays installed, and "pm enable" brings
+     *  it back. isHidden() accepts both states. */
     fun hideDetailed(ctx: Context, pkg: String): HideResult {
         if (!ShizukuHelper.granted())
             return HideResult(false, "Shizuku not granted")
@@ -101,8 +114,8 @@ object AppHide {
         val notes = mutableListOf<String>()
         var ok = true
         for (c in comps) {
-            val (code, out) =
-                ShizukuHelper.runCodeOut("pm disable " + compArg(c) + " 2>&1")
+            val (code, out) = ShizukuHelper.runCodeOut(
+                "pm disable-user --user 0 " + compArg(c) + " 2>&1")
             if (code != 0) {
                 ok = false
                 val reason = out.lineSequence()

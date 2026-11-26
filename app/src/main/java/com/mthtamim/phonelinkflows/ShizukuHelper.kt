@@ -2,6 +2,7 @@ package com.mthtamim.phonelinkflows
 
 import android.content.Context
 import android.content.pm.PackageManager
+import kotlin.concurrent.thread
 import rikka.shizuku.Shizuku
 
 /**
@@ -89,7 +90,19 @@ object ShizukuHelper {
      *  way on v1.4.16 while another app the same minute reached
      *  pm's own error), so the wait is now an isAlive() poll:
      *  isAlive()'s default implementation catches that
-     *  exception and only reports true, so it cannot throw it. */
+     *  exception and only reports true, so it cannot throw it.
+     *
+     *  v1.4.18: the isAlive() poll did NOT stop it either —
+     *  on v1.4.17 three of four hides in one minute still
+     *  failed with "process hasn't exited" while the fourth
+     *  reached pm's own error, so on this phone EVERY Process
+     *  exit query is unreliable (exitValue, waitFor(timeout),
+     *  isAlive). This code now never asks the Process object
+     *  anything: stdout is read on a thread with a deadline,
+     *  stdout EOF means the shell is done, and the sentinel
+     *  line carries the exit code. run() (no-arg waitFor) is
+     *  left alone — it is a different path and has not shown
+     *  this failure. */
     fun runCodeOut(command: String, timeoutSec: Long = 60): Pair<Int, String> {
         lastError = null
         if (!granted()) {
@@ -100,13 +113,12 @@ object ShizukuHelper {
             val marker = "__AH_EXIT_7f3a__:"
             val proc = newProcess(arrayOf("sh", "-c",
                 "$command; echo $marker\$?"))
-            val out = proc.inputStream.bufferedReader().readText()
-            val deadline = System.currentTimeMillis() + timeoutSec * 1000
-            while (proc.isAlive && System.currentTimeMillis() < deadline) {
-                Thread.sleep(100)
+            var out = ""
+            val reader = thread(start = true) {
+                out = proc.inputStream.bufferedReader().readText()
             }
-            val finished = !proc.isAlive
-            if (!finished) {
+            reader.join(timeoutSec * 1000)
+            if (reader.isAlive) {
                 proc.destroyForcibly()
                 lastError = "timeout"
                 -1 to ""
