@@ -59,55 +59,58 @@ object ShizukuHelper {
     /** v2.24.0 (Lab merge): exit code of a shell command, for
      *  callers that care about success, not output (answer/end
      *  call keyevents). -1 when ungranted, timed out, or failed;
-     *  lastError explains why. Logic copied from Lab's LabShizuku. */
-    fun runCode(command: String): Int {
-        lastError = null
-        if (!granted()) {
-            lastError = "not granted"
-            return -1
-        }
-        return try {
-            val proc = newProcess(arrayOf("sh", "-c", command))
-            val finished = proc.waitFor(10, TimeUnit.SECONDS)
-            if (!finished) {
-                proc.destroyForcibly()
-                lastError = "timeout"
-                -1
-            } else {
-                proc.exitValue()
-            }
-        } catch (t: Throwable) {
-            val cause = (t as? java.lang.reflect.InvocationTargetException)
-                ?.targetException ?: t
-            lastError = cause.javaClass.simpleName + ": " +
-                (cause.message ?: "").take(120)
-            -1
-        }
-    }
+     *  lastError explains why. Logic copied from Lab's LabShizuku.
+     *  v1.4.16: delegates to runCodeOut — its old exitValue()
+     *  call threw "process hasn't exited" on this phone (see
+     *  runCodeOut). Timeout kept at 10 s as before. */
+    fun runCode(command: String): Int = runCodeOut(command, 10).first
 
     /** v1.4.13: exit code AND stdout of a shell command, for
      *  callers that must tell success from failure (Update's
      *  pm install: a failed install prints "Failure [...]" on
      *  stdout and exits non-zero without throwing, so run()
      *  alone cannot see it). -1 when ungranted, timed out, or
-     *  failed; lastError explains why. run()/runCode() are
-     *  unchanged. */
-    fun runCodeOut(command: String): Pair<Int, String> {
+     *  failed; lastError explains why. run() is unchanged;
+     *  runCode() delegates to this (v1.4.16).
+     *
+     *  v1.4.16: the exit code is read from a sentinel line the
+     *  shell itself prints ("; echo MARKER:$?") — NEVER from
+     *  Process.exitValue(). On this phone exitValue() throws
+     *  "IllegalArgumentException: process hasn't exited" even
+     *  after waitFor(timeout) returns true: Shizuku's remote
+     *  process reports completion (streams closed) before the
+     *  exit code itself arrives, so every call that trusted
+     *  exitValue() failed — that is why App Hide hid 0 apps in
+     *  v1.4.14 even though Shizuku was granted and pm was never
+     *  the problem. The same fix also covers Update's pm
+     *  install check, which uses runCodeOut too. */
+    fun runCodeOut(command: String, timeoutSec: Long = 60): Pair<Int, String> {
         lastError = null
         if (!granted()) {
             lastError = "not granted"
             return -1 to ""
         }
         return try {
-            val proc = newProcess(arrayOf("sh", "-c", command))
+            val marker = "__AH_EXIT_7f3a__:"
+            val proc = newProcess(arrayOf("sh", "-c",
+                "$command; echo $marker\$?"))
             val out = proc.inputStream.bufferedReader().readText()
-            val finished = proc.waitFor(60, TimeUnit.SECONDS)
+            val finished = proc.waitFor(timeoutSec, TimeUnit.SECONDS)
             if (!finished) {
                 proc.destroyForcibly()
                 lastError = "timeout"
                 -1 to ""
             } else {
-                proc.exitValue() to out.trim()
+                val idx = out.lastIndexOf(marker)
+                if (idx < 0) {
+                    lastError = "no exit marker"
+                    -1 to out.trim()
+                } else {
+                    val code = out.substring(idx + marker.length)
+                        .trim().takeWhile { it.isDigit() }
+                        .toIntOrNull() ?: -1
+                    code to out.substring(0, idx).trim()
+                }
             }
         } catch (t: Throwable) {
             val cause = (t as? java.lang.reflect.InvocationTargetException)
